@@ -31,6 +31,8 @@ Ardından `.key.pub` dosyasının içeriğini `tauri.conf.json` > `plugins.updat
 
 ## Sürüm adımları
 
+> **Önemli:** Sürümü yalnızca etiket göndererek oluşturun. Aynı etiket için önceden elle bir sürüm oluşturursanız iş akışı o sürümün yapıtlarını CI'da derlenenlerle değiştirir; elle yazılmış sürüm notlarındaki özetler geçersiz kalır.
+
 1. `CHANGELOG.md` dosyasını güncelleyin.
 2. `package.json` ve `src-tauri/Cargo.toml` sürümlerini artırın; `src-tauri` içinde `cargo check` çalıştırarak `Cargo.lock`'u güncelleyin.
 3. Yerelde doğrulayın: `npm run check`, `npm run build`, `cd src-tauri; cargo test`.

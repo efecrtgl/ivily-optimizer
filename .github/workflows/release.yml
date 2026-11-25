@@ -100,6 +100,7 @@ jobs:
           $zip = Join-Path $out "Ivily.Optimizer_${v}_x64_tasinabilir.zip"
           Compress-Archive -Path $stage -DestinationPath $zip -Force
           $files = @(Get-ChildItem src-tauri/target/release/bundle/nsis -File) + @(Get-Item $zip)
-          $lines = $files | ForEach-Object { "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name }
+          # GitHub, yüklenen dosya adlarındaki boşlukları noktaya çevirir; özet dosyası aynı adları kullanmalı.
+          $lines = $files | ForEach-Object { "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), ($_.Name -replace ' ', '.') }
           $lines | Set-Content -Encoding utf8 "$out/SHA256SUMS.txt"
           gh release upload "${{ github.ref_name }}" "$zip" "$out/SHA256SUMS.txt" --clobber

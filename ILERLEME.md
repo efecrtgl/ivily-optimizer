@@ -44,7 +44,7 @@ Sistem durumunu değiştiren yollar (başlangıç öğesini değiştirme, servis
 - **Dosya Yönetimi:** gezgin, meta veri, imza, özet, klasör karşılaştırma, envanter, boş klasörler; depolama içgörüleri.
 - **Sistem yönetimi:** imza doğrulaması ve göstergeler, başlangıç görevleri ve otomatik servisler, açılış performansı, süreç ağacı/ayrıntıları/yeniden başlatma, servis bağımlılıkları ve yeniden başlatma, görev geçmişi.
 - **İşlem Geçmişi v2:** şema 2, önceki/yeni durum, onay, geri alma durumu, arka uçta doğrulanan geri alma, dışa aktarma.
-- **Sürüm:** taşınabilir paket ve yapıt doğrulaması eklenmiş sürüm iş akışı; 0.2.0 yerel imzalı derlemesi.
+- **Sürüm:** taşınabilir paket ve yapıt doğrulaması eklenmiş sürüm iş akışı; **v0.2.0 GitHub'da yayımlandı**: https://github.com/efecrtgl/ivily-optimizer/releases/tag/v0.2.0
 
 ### Doğrulama
 
@@ -53,10 +53,11 @@ Sistem durumunu değiştiren yollar (başlangıç öğesini değiştirme, servis
 - GitHub Actions CI: özellik commit'leri için başarılı.
 - Uygulama geliştirme modunda çalıştırıldı; yeni pano ve Temizlik sayfası gerçek verilerle ekran görüntüsüyle doğrulandı.
 - Yerel üretim derlemesi: `Ivily Optimizer_0.2.0_x64-setup.exe` (4,3 MB), uygulama ve yükleyici sürümü 0.2.0.
-- Güncelleme imzası, uygulamaya gömülü genel anahtarla bağımsız olarak doğrulandı; değiştirilmiş dosya reddedildi.
+- Güncelleme imzası (hem yerel hem CI derlemesi), uygulamaya gömülü genel anahtarla bağımsız olarak doğrulandı; değiştirilmiş dosya reddedildi.
+- GitHub Actions "Sürüm" iş akışı v0.2.0 etiketiyle baştan sona başarılı oldu (testler, imzalama, yapıt doğrulaması, taşınabilir paket, SHA-256). Yayımlanan yapıtlar bu CI derlemesidir; genel indirme ve özetler doğrulandı.
+- Uygulamanın güncelleme denetimi gerçek sürüme karşı çalıştırıldı: sürüm 0.2.0 bulundu, imza ve `latest.json` tanındı, "güncel" sonucu verildi.
 
 ### Açık noktalar
 
-- GitHub Actions sürüm iş akışı için `TAURI_SIGNING_PRIVATE_KEY` ve `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` gizli değişkenleri **depo sahibi tarafından** eklenmelidir; özel anahtar otomatik olarak GitHub'a gönderilmedi.
 - Sistem değiştiren işlemler (servis, görev, başlangıç, güç planı, süreç yeniden başlatma) ve geri alınmaları gerçek sistemde elle test edilmeli.
 - Yükleyicinin temiz bir sistemde kurulumu/kaldırılması ve önceki sürümden uygulama içi güncelleme henüz denenmedi.
