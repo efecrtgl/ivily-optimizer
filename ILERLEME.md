@@ -20,7 +20,7 @@ Son güncelleme: 25 Kasım 2026
 - `npm run check` (svelte-check): 0 hata, 0 uyarı.
 - `npm run build`: başarılı.
 - Uygulama geliştirme modunda çalıştırıldı ve arayüzün doğru çizildiği ekran görüntüsüyle doğrulandı.
-- Yerel üretim derlemesi ve NSIS yükleyici oluşturma: bkz. aşağıdaki not.
+- Yerel üretim derlemesi (`npm run tauri build`) başarılı: `Ivily Optimizer_0.1.0_x64-setup.exe` (4,0 MB) ve minisign güncelleme imzası oluşturuldu. Yükleyicinin temiz bir sistemde kurulumu ve kaldırılması henüz test edilmedi.
 
 ### Bilinçli olarak çalıştırılmayanlar
 
