@@ -30,6 +30,15 @@ pub struct QuarantineItem {
     pub original_exists: bool,
 }
 
+/// Geri yükleme sonucu: dosyanın yazıldığı yol ve hedefte doğrulanıp
+/// doğrulanamadığı (dosya var ve boyutu kayıtlı boyutla aynı).
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RestoreOutcome {
+    pub path: String,
+    pub verified: bool,
+}
+
 pub struct Quarantine<'a> {
     pub db: &'a Db,
     pub root: PathBuf,
@@ -172,7 +181,7 @@ impl<'a> Quarantine<'a> {
 
     /// Geri yükler. `rename_on_conflict` false ise ve hedef doluysa
     /// `Conflict` döner; true ise yanına "(geri yüklendi)" adıyla yazar.
-    pub fn restore(&self, id: &str, rename_on_conflict: bool) -> AppResult<String> {
+    pub fn restore(&self, id: &str, rename_on_conflict: bool) -> AppResult<RestoreOutcome> {
         let item = self.get(id)?;
         if item.state != "quarantined" {
             return Err(AppError::InvalidInput("bu öğe artık karantinada değil".into()));
@@ -202,7 +211,11 @@ impl<'a> Quarantine<'a> {
             let _ = std::fs::remove_dir(dir);
         }
         self.set_state(id, "restored")?;
-        Ok(target.to_string_lossy().into_owned())
+        let verified = std::fs::symlink_metadata(&target).map(|m| m.is_file() && m.len() == item.size).unwrap_or(false);
+        if !verified {
+            tracing::warn!(id, target = %target.display(), "geri yüklenen dosya doğrulanamadı");
+        }
+        Ok(RestoreOutcome { path: target.to_string_lossy().into_owned(), verified })
     }
 
     /// Karantinadaki dosyayı kalıcı olarak siler.
@@ -293,7 +306,8 @@ mod tests {
         assert!(Path::new(&item.stored_path).exists());
         assert_eq!(q.total_size().unwrap(), (1, 7));
         let back = q.restore(&item.id, false).unwrap();
-        assert_eq!(PathBuf::from(back), f);
+        assert_eq!(PathBuf::from(&back.path), f);
+        assert!(back.verified);
         assert_eq!(std::fs::read(&f).unwrap(), b"merhaba");
         assert_eq!(q.list(false).unwrap().len(), 0);
         assert_eq!(q.get(&item.id).unwrap().state, "restored");
@@ -309,7 +323,7 @@ mod tests {
         std::fs::write(&f, b"yeni").unwrap();
         assert!(matches!(q.restore(&item.id, false), Err(AppError::Conflict(_))));
         assert_eq!(std::fs::read(&f).unwrap(), b"yeni");
-        let alt = q.restore(&item.id, true).unwrap();
+        let alt = q.restore(&item.id, true).unwrap().path;
         assert!(alt.ends_with("a (geri yüklendi).txt"));
         assert_eq!(std::fs::read(&alt).unwrap(), b"eski");
         assert_eq!(std::fs::read(&f).unwrap(), b"yeni");
@@ -342,6 +356,20 @@ mod tests {
         assert!(!Path::new(&item.stored_path).exists());
         assert!(!f.exists());
         assert_eq!(q.get(&item.id).unwrap().state, "deleted");
+    }
+
+    #[test]
+    fn restore_reports_unverified_when_size_differs() {
+        let (db, data, qdir) = setup();
+        let q = Quarantine::new(&db, qdir.path().to_path_buf());
+        let f = data.path().join("c.txt");
+        std::fs::write(&f, b"12345").unwrap();
+        let item = q.add(&f, "test", 30).unwrap();
+        // Karantinadaki kopya bozulmuş gibi: kayıtlı boyut artık tutmuyor.
+        std::fs::write(&item.stored_path, b"12").unwrap();
+        let out = q.restore(&item.id, false).unwrap();
+        assert!(!out.verified);
+        assert!(f.exists());
     }
 
     #[test]

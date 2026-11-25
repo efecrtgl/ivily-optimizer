@@ -218,6 +218,42 @@ pub fn scan_categories(
     Ok(CleanupScan { items, files: files_map, created_at: now, recycle_bin: recycle })
 }
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CleanupFile {
+    pub path: String,
+    pub size: u64,
+    pub modified: i64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CleanupItemFiles {
+    pub id: String,
+    pub files: Vec<CleanupFile>,
+    pub total: u64,
+    pub total_bytes: u64,
+}
+
+impl CleanupScan {
+    /// Bir kategorinin aday dosyaları, büyükten küçüğe.
+    pub fn item_files(&self, id: &str, limit: usize) -> Option<CleanupItemFiles> {
+        let cands = self.files.get(id)?;
+        let mut v: Vec<&Candidate> = cands.iter().collect();
+        v.sort_by(|a, b| b.size.cmp(&a.size).then_with(|| a.path.cmp(&b.path)));
+        Some(CleanupItemFiles {
+            id: id.to_string(),
+            total: cands.len() as u64,
+            total_bytes: cands.iter().map(|c| c.size).sum(),
+            files: v
+                .into_iter()
+                .take(limit)
+                .map(|c| CleanupFile { path: c.path.to_string_lossy().into_owned(), size: c.size, modified: c.modified })
+                .collect(),
+        })
+    }
+}
+
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ItemResult {
@@ -264,10 +300,18 @@ impl Remover for DeleteRemover {
 pub struct QuarantineRemover<'a> {
     pub q: crate::quarantine::Quarantine<'a>,
     pub retention_days: u32,
+    /// Karantinaya alınan öğelerin kimlikleri (geri alma için).
+    pub ids: parking_lot::Mutex<Vec<String>>,
+}
+impl<'a> QuarantineRemover<'a> {
+    pub fn new(q: crate::quarantine::Quarantine<'a>, retention_days: u32) -> Self {
+        Self { q, retention_days, ids: Default::default() }
+    }
 }
 impl Remover for QuarantineRemover<'_> {
     fn remove(&self, c: &Candidate) -> AppResult<bool> {
-        self.q.add(&c.path, "cleanup", self.retention_days)?;
+        let item = self.q.add(&c.path, "cleanup", self.retention_days)?;
+        self.ids.lock().push(item.id);
         Ok(true)
     }
 }
@@ -519,9 +563,10 @@ mod tests {
         let db = Db::open_in_memory().unwrap();
         let root = t.path().join("c");
         let s = scan_one(cat("q", &root, Risk::Safe, vec![]), &[]);
-        let rem = QuarantineRemover { q: crate::quarantine::Quarantine::new(&db, qdir.path().to_path_buf()), retention_days: 7 };
+        let rem = QuarantineRemover::new(crate::quarantine::Quarantine::new(&db, qdir.path().to_path_buf()), 7);
         let rep = execute(&s, &["q".into()], &rem, &AtomicBool::new(false), &|_, _| {});
         assert_eq!(rep.items[0].quarantined, 3);
+        assert_eq!(rem.ids.lock().len(), 3);
         let q = crate::quarantine::Quarantine::new(&db, qdir.path().to_path_buf());
         let items = q.list(false).unwrap();
         assert_eq!(items.len(), 3);
@@ -529,6 +574,19 @@ mod tests {
             q.restore(&i.id, false).unwrap();
         }
         assert!(root.join("sub/deep/c.tmp").exists());
+    }
+
+    #[test]
+    fn item_files_sorted_by_size() {
+        let t = fixture();
+        let s = scan_one(cat("x", &t.path().join("c"), Risk::Safe, vec![]), &[]);
+        let f = s.item_files("x", 2).unwrap();
+        assert_eq!(f.total, 3);
+        assert_eq!(f.total_bytes, 60);
+        assert_eq!(f.files.len(), 2);
+        assert_eq!(f.files[0].size, 30);
+        assert_eq!(f.files[1].size, 20);
+        assert!(s.item_files("yok", 10).is_none());
     }
 
     #[test]

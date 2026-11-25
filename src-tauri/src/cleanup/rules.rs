@@ -203,6 +203,32 @@ pub fn categories(temp_min_age_hours: u64, user_rules: &[crate::settings::UserCl
             needs_admin: false,
         });
     }
+    let logs = windir.join("Logs");
+    out.push(Category {
+        id: "windows-logs".into(),
+        group: "Windows",
+        name: "Windows bakım günlükleri".into(),
+        description: "Windows bileşen (CBS) ve DISM bakım günlükleri. Yalnızca 7 günden eski .log ve arşivlenmiş .cab günlük dosyaları seçilir; Windows bu günlükleri yalnızca kayıt amacıyla tutar ve yenilerini kendisi oluşturur.",
+        consequence: "Geçmiş bakım veya güncelleme sorunlarını incelemek için gereken günlükler kaybolur. Windows'un çalışması etkilenmez.",
+        risk: Risk::Review,
+        kind: Kind::Files,
+        targets: vec![
+            Target {
+                extensions: vec!["log".into(), "cab".into()],
+                recursive: false,
+                min_age_hours: 7 * 24,
+                ..Target::dir(logs.join("CBS"))
+            },
+            Target {
+                extensions: vec!["log".into()],
+                recursive: false,
+                min_age_hours: 7 * 24,
+                ..Target::dir(logs.join("DISM"))
+            },
+        ],
+        blocking_processes: vec![],
+        needs_admin: true,
+    });
     out.push(Category {
         id: "recycle-bin".into(),
         group: "Windows",
@@ -381,6 +407,19 @@ pub fn categories(temp_min_age_hours: u64, user_rules: &[crate::settings::UserCl
     out
 }
 
+/// Dar istisna: yalnızca `Windows\Logs\CBS` ve `Windows\Logs\DISM`
+/// klasörlerinin **doğrudan** içindeki `.log`/`.cab` dosyaları. Klasörlerin
+/// kendisi ve alt klasörleri korunmaya devam eder.
+fn is_allowed_windows_log(normalized: &str, windir: &str) -> bool {
+    let Some((parent, name)) = normalized.rsplit_once('\\') else { return false };
+    let ext = crate::scan::walker::extension_of(name);
+    if ext != "log" && ext != "cab" {
+        return false;
+    }
+    let w = paths::normalize(windir);
+    parent == format!("{w}\\logs\\cbs") || parent == format!("{w}\\logs\\dism")
+}
+
 /// Hiçbir koşulda silinmemesi, taşınmaması veya temizlik kuralına konu
 /// edilmemesi gereken konumlar.
 pub fn is_protected_path(path: &str) -> bool {
@@ -393,6 +432,9 @@ pub fn is_protected_path(path: &str) -> bool {
         return true;
     }
     let windir = std::env::var("SystemRoot").unwrap_or_else(|_| "C:\\Windows".into());
+    if is_allowed_windows_log(&p, &windir) {
+        return false;
+    }
     let windir_temp = format!("{windir}\\Temp");
     if paths::is_within(&p, &windir) && !paths::is_within(&p, &windir_temp) {
         return true;
@@ -482,11 +524,33 @@ mod tests {
     }
 
     #[test]
+    fn windows_log_exception_is_narrow() {
+        let w = std::env::var("SystemRoot").unwrap_or_else(|_| "C:\\Windows".into());
+        assert!(!is_protected_path(&format!("{w}\\Logs\\CBS\\CbsPersist_20240101.log")));
+        assert!(!is_protected_path(&format!("{w}\\Logs\\CBS\\CbsPersist_20240101.cab")));
+        assert!(!is_protected_path(&format!("{w}\\logs\\dism\\dism.log")));
+        assert!(is_protected_path(&format!("{w}\\Logs\\CBS")));
+        assert!(is_protected_path(&format!("{w}\\Logs\\CBS\\")));
+        assert!(is_protected_path(&format!("{w}\\Logs\\DISM")));
+        assert!(is_protected_path(&format!("{w}\\Logs\\x.log")));
+        assert!(is_protected_path(&format!("{w}\\Logs\\CBS\\alt\\x.log")));
+        assert!(is_protected_path(&format!("{w}\\Logs\\CBS\\x.dll")));
+        assert!(is_protected_path(&format!("{w}\\Logs\\MeasuredBoot\\x.log")));
+        assert!(is_protected_path("C:\\Windows\\Logs\\CBS"));
+        assert!(is_protected_path("C:\\Windows\\Logs\\x.log"));
+        let c = categories(24, &[]).into_iter().find(|c| c.id == "windows-logs").unwrap();
+        assert_eq!(c.risk, Risk::Review);
+        assert!(c.needs_admin);
+        assert!(c.targets.iter().all(|t| !t.recursive && t.min_age_hours == 168));
+    }
+
+    #[test]
     fn categories_never_target_protected_roots() {
         for c in categories(24, &[]) {
             for t in &c.targets {
                 let s = t.path.to_string_lossy();
-                assert!(!is_protected_path(&format!("{s}\\ornek.tmp")), "{} korunan bir yolu hedefliyor: {s}", c.id);
+                let ext = t.extensions.first().map(String::as_str).unwrap_or("tmp");
+                assert!(!is_protected_path(&format!("{s}\\ornek.{ext}")), "{} korunan bir yolu hedefliyor: {s}", c.id);
             }
         }
     }

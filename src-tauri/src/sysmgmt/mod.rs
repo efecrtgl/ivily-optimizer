@@ -9,9 +9,13 @@
 //! - Kritik Windows bileşenleri korunur; her değişiklik geri alınabilmesi için
 //!   önceki durumuyla birlikte işlem geçmişine yazılır.
 
+pub mod events;
+pub mod indicators;
 pub mod network;
 pub mod power;
+pub mod procinfo;
 pub mod services;
+pub mod signature;
 pub mod startup;
 pub mod tasks;
 pub mod update;

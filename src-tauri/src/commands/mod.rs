@@ -1,4 +1,7 @@
 pub mod disk;
+pub mod files;
+pub mod history;
+pub mod intel;
 pub mod maintenance;
 pub mod settings;
 pub mod sysmgmt;

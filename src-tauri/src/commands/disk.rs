@@ -37,7 +37,7 @@ fn volume_of(st: &AppState, root: &Path) -> Option<(u64, u64)> {
         .map(|d| (d.total, d.available))
 }
 
-fn spawn_job<F>(app: AppHandle, ctl: JobCtl, estimate: Option<u64>, work: F)
+pub(crate) fn spawn_job<F>(app: AppHandle, ctl: JobCtl, estimate: Option<u64>, work: F)
 where
     F: FnOnce(&Arc<AppState>, &JobCtl) -> (String, Option<String>, serde_json::Value) + Send + 'static,
 {
@@ -364,8 +364,9 @@ pub async fn files_remove(st: St<'_>, paths: Vec<String>, mode: String, source: 
     };
     let st2 = st.inner().clone();
     let mode2 = mode.clone();
-    let res = tauri::async_runtime::spawn_blocking(move || -> AppResult<FileOpResult> {
+    let (res, quarantine_ids) = tauri::async_runtime::spawn_blocking(move || -> AppResult<(FileOpResult, Vec<String>)> {
         let mut out = FileOpResult::default();
+        let mut qids = Vec::new();
         let mut ok_paths = Vec::new();
         for p in &paths {
             let path = Path::new(p);
@@ -389,7 +390,8 @@ pub async fn files_remove(st: St<'_>, paths: Vec<String>, mode: String, source: 
                 let q = st2.quarantine();
                 for (p, len) in ok_paths {
                     match q.add(Path::new(&p), &source, days) {
-                        Ok(_) => {
+                        Ok(item) => {
+                            qids.push(item.id);
                             out.bytes += len;
                             out.succeeded.push(p);
                         }
@@ -412,7 +414,7 @@ pub async fn files_remove(st: St<'_>, paths: Vec<String>, mode: String, source: 
             }
             _ => return Err(AppError::InvalidInput("geçersiz işlem türü".into())),
         }
-        Ok(out)
+        Ok((out, qids))
     })
     .await
     .map_err(|e| AppError::System(e.to_string()))??;
@@ -439,6 +441,7 @@ pub async fn files_remove(st: St<'_>, paths: Vec<String>, mode: String, source: 
             "items": res.succeeded.iter().take(200).collect::<Vec<_>>(),
             "failed": res.failed.iter().take(50).collect::<Vec<_>>(),
             "count": res.succeeded.len(),
+            "quarantineIds": quarantine_ids,
         }),
     )?;
     Ok(res)

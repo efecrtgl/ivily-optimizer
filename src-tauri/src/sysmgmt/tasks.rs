@@ -299,9 +299,164 @@ pub fn set_enabled(db: &Db, path: &str, name: &str, enabled: bool) -> AppResult<
     Ok(ChangeResult { item: after, message, elevated, oplog_id })
 }
 
+// ---------------------------------------------------------------------------
+// Görev geçmişi
+// ---------------------------------------------------------------------------
+
+/// Görev geçmişi betiği. Tam görev yolu `IVILY_TASK_FULL` ortam
+/// değişkeninden okunur ve tam eşitlikle (joker karakter olmadan)
+/// karşılaştırılır. Günlük kapalıysa hiçbir şey değiştirilmez.
+const HISTORY_SCRIPT: &str = r#"[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;
+$ErrorActionPreference='SilentlyContinue';
+$full=$env:IVILY_TASK_FULL;
+$ln='Microsoft-Windows-TaskScheduler/Operational';
+$enabled=$null;
+try { $l=Get-WinEvent -ListLog $ln -ErrorAction Stop; $enabled=[bool]$l.IsEnabled } catch { $enabled=$null }
+$out=New-Object System.Collections.ArrayList;
+$err=$null;
+if ($enabled -ne $false) {
+  try {
+    $evs=@(Get-WinEvent -LogName $ln -MaxEvents 4000 -ErrorAction Stop)
+    foreach ($e in $evs) {
+      $x=[xml]$e.ToXml(); $tn=$null; $rc=$null;
+      foreach ($d in @($x.Event.EventData.Data)) {
+        if ($d.Name -eq 'TaskName') { $tn=$d.'#text' }
+        elseif ($d.Name -eq 'ResultCode') { $rc=$d.'#text' }
+      }
+      if ($tn -ne $null -and $tn -eq $full) {
+        [void]$out.Add([pscustomobject]@{ t=([DateTimeOffset]$e.TimeCreated).ToUnixTimeSeconds(); id=$e.Id; rc=$rc })
+        if ($out.Count -ge 30) { break }
+      }
+    }
+  } catch {
+    if ($_.FullyQualifiedErrorId -notmatch 'NoMatchingEventsFound') { $err=[string]$_.FullyQualifiedErrorId }
+  }
+}
+ConvertTo-Json -InputObject ([pscustomobject]@{ enabled=$enabled; error=$err; events=@($out) }) -Depth 4 -Compress"#;
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskHistoryEvent {
+    pub ts: i64,
+    pub event_id: u32,
+    pub label: String,
+    pub result_code: Option<i64>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TaskHistory {
+    pub log_enabled: Option<bool>,
+    pub events: Vec<TaskHistoryEvent>,
+    pub note: String,
+}
+
+pub fn history_label(id: u32) -> &'static str {
+    match id {
+        100 => "Görev başlatıldı",
+        101 => "Başlatma hatası",
+        102 => "Görev tamamlandı",
+        103 => "Başlatılamadı",
+        110 => "Kullanıcı tarafından tetiklendi",
+        111 => "Sonlandırıldı",
+        200 => "Eylem başlatıldı",
+        201 => "Eylem tamamlandı",
+        _ => "Diğer",
+    }
+}
+
+fn parse_result_code(v: &Value) -> Option<i64> {
+    match v {
+        Value::Number(n) => n.as_i64(),
+        Value::String(s) => {
+            let t = s.trim();
+            if let Some(h) = t.strip_prefix("0x").or_else(|| t.strip_prefix("0X")) {
+                i64::from_str_radix(h, 16).ok()
+            } else {
+                t.parse::<i64>().ok()
+            }
+        }
+        _ => None,
+    }
+}
+
+const NOTE_DISABLED: &str = "Windows, zamanlanmış görev geçmişini varsayılan olarak kapalı tutar; bu nedenle geçmiş kayıt bulunmuyor. Ivily bu ayarı değiştirmez. İsterseniz Görev Zamanlayıcı'daki \"Tüm Görevlerin Geçmişini Etkinleştir\" seçeneğiyle açabilirsiniz.";
+
+/// Geçmiş betiği çıktısını ayrıştırır.
+pub fn parse_history(json: &str) -> AppResult<TaskHistory> {
+    let t = json.trim().trim_start_matches('\u{feff}');
+    let v: Value = serde_json::from_str(if t.is_empty() { "{}" } else { t }).map_err(|e| {
+        tracing::warn!(error = %e, "görev geçmişi JSON'u ayrıştırılamadı");
+        AppError::System("görev geçmişi okunamadı (beklenmeyen çıktı)".into())
+    })?;
+    let log_enabled = v.get("enabled").and_then(Value::as_bool);
+    let error = s(&v, "error");
+    let mut events: Vec<TaskHistoryEvent> = arr(&v, "events")
+        .into_iter()
+        .filter_map(|e| {
+            let ts = e.get("t").and_then(Value::as_i64)?;
+            let id = e.get("id").and_then(Value::as_u64)? as u32;
+            Some(TaskHistoryEvent {
+                ts,
+                event_id: id,
+                label: history_label(id).to_string(),
+                result_code: e.get("rc").and_then(parse_result_code),
+            })
+        })
+        .collect();
+    events.sort_by(|a, b| b.ts.cmp(&a.ts));
+    events.truncate(30);
+    let note = if log_enabled == Some(false) {
+        NOTE_DISABLED.to_string()
+    } else if error.is_some() {
+        "Görev geçmişi okunamadı; bu günlüğe erişim izni olmayabilir.".to_string()
+    } else if events.is_empty() {
+        "Bu görev için kayıtlı geçmiş bulunamadı. Görev son zamanlarda çalışmamış veya eski kayıtlar silinmiş olabilir.".to_string()
+    } else {
+        format!("Bu görev için son {} olay gösteriliyor.", events.len())
+    };
+    Ok(TaskHistory { log_enabled, events, note })
+}
+
+/// Bir görevin Görev Zamanlayıcı geçmişini okur (salt okunur).
+pub fn history(path: &str, name: &str) -> AppResult<TaskHistory> {
+    validate_task_path(path)?;
+    validate_task_name(name)?;
+    let full = format!("{path}{name}");
+    let out = super::run_powershell(HISTORY_SCRIPT, &[("IVILY_TASK_FULL", &full)], "görev geçmişi")?;
+    parse_history(&out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn history_parsing() {
+        let h = parse_history(r#"{"enabled":false,"error":null,"events":[]}"#).unwrap();
+        assert_eq!(h.log_enabled, Some(false));
+        assert!(h.events.is_empty());
+        assert!(h.note.contains("varsayılan olarak kapalı"));
+        let h = parse_history(r#"{"enabled":true,"error":null,"events":{"t":1700000000,"id":102,"rc":"0x0"}}"#).unwrap();
+        assert_eq!(h.events.len(), 1);
+        assert_eq!(h.events[0].label, "Görev tamamlandı");
+        assert_eq!(h.events[0].result_code, Some(0));
+        let h = parse_history(r#"{"enabled":true,"events":[{"t":1,"id":100,"rc":null},{"t":5,"id":201,"rc":"2147942402"},{"t":3,"id":329}]}"#).unwrap();
+        assert_eq!(h.events.iter().map(|e| e.ts).collect::<Vec<_>>(), vec![5, 3, 1]);
+        assert_eq!(h.events[0].result_code, Some(2147942402));
+        assert_eq!(h.events[1].label, "Diğer");
+        assert_eq!(parse_history("").unwrap().log_enabled, None);
+        assert!(parse_history("<html>").is_err());
+        assert!(history("Vendor\\", "x").is_err());
+        assert!(history("\\Vendor\\", "a\"b").is_err());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn history_readonly() {
+        let h = history("\\Microsoft\\Windows\\Defrag\\", "ScheduledDefrag").unwrap();
+        println!("görev geçmişi: enabled={:?} olay={} not={}", h.log_enabled, h.events.len(), h.note);
+    }
 
     const SINGLE: &str = r#"{"TaskPath":"\\Vendor\\","TaskName":"Updater","State":"Ready","Description":"Güncellemeleri denetler","Author":"Vendor Inc.","Actions":[{"Execute":"C:\\Program Files\\Vendor\\upd.exe","Arguments":"/check"}],"Triggers":[{"Kind":"MSFT_TaskLogonTrigger","StartBoundary":null,"Enabled":true},{"Kind":"MSFT_TaskDailyTrigger","StartBoundary":"2024-01-01T10:00:00","Enabled":true}],"HasInfo":true,"LastRunTime":"2026-11-24T10:00:00.0000000+03:00","NextRunTime":null,"LastTaskResult":0}"#;
 

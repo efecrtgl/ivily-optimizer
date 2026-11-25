@@ -29,6 +29,49 @@ pub struct ServiceInfo {
     pub can_stop: bool,
     pub protected: bool,
     pub protected_reason: Option<String>,
+    /// Bu hizmetin bağımlı olduğu hizmetler (gruplar "Grup: X" biçiminde).
+    pub dependencies: Vec<String>,
+    /// Bu hizmete bağımlı olan hizmetler.
+    pub dependents: Vec<String>,
+}
+
+/// `lpDependencies` çift sıfır sonlandırmalı listesini ayrıştırır. `+` ile
+/// başlayan girdiler yükleme sırası gruplarıdır.
+pub fn parse_multi_sz(w: &[u16]) -> Vec<String> {
+    let mut out = Vec::new();
+    for part in w.split(|c| *c == 0) {
+        if part.is_empty() {
+            // Çift sıfır: liste sonu.
+            break;
+        }
+        let s = String::from_utf16_lossy(part);
+        let s = s.trim();
+        if let Some(g) = s.strip_prefix('+') {
+            if !g.is_empty() {
+                out.push(format!("Grup: {g}"));
+            }
+        } else if !s.is_empty() {
+            out.push(s.to_string());
+        }
+    }
+    out
+}
+
+/// Bağımlılıkları tersine çevirerek her hizmetin bağımlılarını doldurur.
+pub fn fill_dependents(list: &mut [ServiceInfo]) {
+    let mut map: std::collections::HashMap<String, Vec<String>> = std::collections::HashMap::new();
+    for s in list.iter() {
+        for d in &s.dependencies {
+            if !d.starts_with("Grup: ") {
+                map.entry(d.to_lowercase()).or_default().push(s.name.clone());
+            }
+        }
+    }
+    for s in list.iter_mut() {
+        let mut v = map.remove(&s.name.to_lowercase()).unwrap_or_default();
+        v.sort_by_key(|a| a.to_lowercase());
+        s.dependents = v;
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -238,6 +281,24 @@ mod imp {
         display: Option<String>,
         description: Option<String>,
         delayed: bool,
+        dependencies: Vec<String>,
+    }
+
+    /// Çift sıfır sonlandırmalı bir PWSTR listesini okur (en fazla 32K karakter).
+    unsafe fn read_multi_sz(p: windows::core::PWSTR) -> Vec<String> {
+        if p.is_null() {
+            return Vec::new();
+        }
+        let mut len = 0usize;
+        unsafe {
+            while len < 32_768 {
+                if *p.0.add(len) == 0 && (len == 0 || *p.0.add(len + 1) == 0) {
+                    break;
+                }
+                len += 1;
+            }
+            parse_multi_sz(std::slice::from_raw_parts(p.0, len + 1))
+        }
     }
 
     fn query_config(scm: &Handle, name: &str) -> Option<Config> {
@@ -258,6 +319,7 @@ mod imp {
             let account = nonempty(pwstr_to_string(cfg.lpServiceStartName));
             let display = nonempty(pwstr_to_string(cfg.lpDisplayName));
             let start_raw = cfg.dwStartType.0;
+            let dependencies = read_multi_sz(cfg.lpDependencies);
 
             // Açıklama
             let mut description = None;
@@ -286,7 +348,7 @@ mod imp {
                     delayed = d.fDelayedAutostart.as_bool();
                 }
             }
-            Some(Config { start_raw, binary, account, display, description, delayed })
+            Some(Config { start_raw, binary, account, display, description, delayed, dependencies })
         }
     }
 
@@ -308,6 +370,8 @@ mod imp {
             can_stop: sp.dwControlsAccepted & SERVICE_ACCEPT_STOP != 0,
             protected: prot.is_some(),
             protected_reason: prot.map(|s| s.to_string()),
+            dependencies: cfg.as_ref().map(|c| c.dependencies.clone()).unwrap_or_default(),
+            dependents: Vec::new(),
             name,
         }
     }
@@ -357,7 +421,44 @@ mod imp {
         }
         let mut v: Vec<ServiceInfo> = out.into_iter().map(|(n, d, sp)| make(&scm, n, d, &sp)).collect();
         v.sort_by(|a, b| a.display_name.to_lowercase().cmp(&b.display_name.to_lowercase()));
+        fill_dependents(&mut v);
         Ok(v)
+    }
+
+    /// Bu hizmete bağımlı hizmetler (EnumDependentServicesW). Erişim
+    /// reddedilirse `None`.
+    fn dependents_of(scm: &Handle, name: &str) -> Option<Vec<String>> {
+        unsafe {
+            let w = wide(name);
+            let h = OpenServiceW(scm.0, PCWSTR(w.as_ptr()), SERVICE_ENUMERATE_DEPENDENTS).ok()?;
+            let svc = Handle(h);
+            let mut needed = 0u32;
+            let mut count = 0u32;
+            if EnumDependentServicesW(svc.0, SERVICE_STATE_ALL, None, 0, &mut needed, &mut count).is_ok() {
+                return Some(Vec::new());
+            }
+            if needed == 0 {
+                return None;
+            }
+            let mut buf = aligned(needed as usize);
+            if EnumDependentServicesW(
+                svc.0,
+                SERVICE_STATE_ALL,
+                Some(buf.as_mut_ptr() as *mut ENUM_SERVICE_STATUSW),
+                needed,
+                &mut needed,
+                &mut count,
+            )
+            .is_err()
+            {
+                return None;
+            }
+            let entries = std::slice::from_raw_parts(buf.as_ptr() as *const ENUM_SERVICE_STATUSW, count as usize);
+            let mut v: Vec<String> =
+                entries.iter().map(|e| pwstr_to_string(e.lpServiceName)).filter(|s| !s.is_empty()).collect();
+            v.sort_by_key(|a| a.to_lowercase());
+            Some(v)
+        }
     }
 
     pub fn query(name: &str) -> AppResult<ServiceInfo> {
@@ -374,7 +475,17 @@ mod imp {
             QueryServiceStatusEx(svc.0, SC_STATUS_PROCESS_INFO, Some(bytes), &mut needed)
                 .map_err(|e| AppError::System(format!("hizmet durumu okunamadı ({e})")))?;
             drop(svc);
-            Ok(make(&scm, name.to_string(), String::new(), &sp))
+            let mut info = make(&scm, name.to_string(), String::new(), &sp);
+            info.dependents = match dependents_of(&scm, name) {
+                Some(v) => v,
+                // Erişim yoksa tüm listeden bağımlılıkları tersine çevir.
+                None => list()
+                    .ok()
+                    .and_then(|l| l.into_iter().find(|s| s.name.eq_ignore_ascii_case(name)))
+                    .map(|s| s.dependents)
+                    .unwrap_or_default(),
+            };
+            Ok(info)
         }
     }
 }
@@ -482,13 +593,103 @@ pub fn set_start_type(db: &Db, name: &str, start_type: &str) -> AppResult<Change
     })
 }
 
-/// Hizmeti başlatır veya durdurur (UAC onayı gerekir).
+/// Hizmeti yeniden başlatır (tek bir UAC onayıyla `Restart-Service`).
+fn restart(db: &Db, name: &str) -> AppResult<ChangeResult<ServiceInfo>> {
+    if let Some(reason) = protection(name) {
+        return Err(AppError::Protected(format!("\"{name}\" hizmeti yeniden başlatılamaz. {reason}")));
+    }
+    let before = query(name)?;
+    if before.status != "running" {
+        return Err(AppError::Conflict("hizmet şu anda çalışmıyor; yeniden başlatmak yerine başlatabilirsiniz".into()));
+    }
+    if !before.can_stop {
+        return Err(AppError::Conflict("bu hizmet şu anda durdurma isteğini kabul etmiyor; yeniden başlatılamaz".into()));
+    }
+    let detail = serde_json::json!({
+        "action": "restart",
+        "name": before.name,
+        "displayName": before.display_name,
+        "previousStatus": before.status,
+        "previousStartType": before.start_type,
+        "previousPid": before.pid,
+    });
+    let title_fail = format!("Hizmet yeniden başlatılamadı: {}", before.display_name);
+    // Ad doğrulandı (validate_service_name): tırnak veya özel karakter içeremez.
+    let script = format!("Restart-Service -Name '{}' -Force -ErrorAction Stop", before.name);
+    let args: Vec<String> = vec!["-NoProfile".into(), "-NonInteractive".into(), "-Command".into(), script];
+    let elevated = !crate::platform::is_elevated();
+    let res: AppResult<u32> = if elevated {
+        crate::platform::run_elevated("WindowsPowerShell\\v1.0\\powershell.exe", &args)
+    } else {
+        crate::platform::hidden_command(&crate::platform::system_tool("WindowsPowerShell\\v1.0\\powershell.exe"))
+            .args(&args)
+            .output()
+            .map(|o| o.status.code().unwrap_or(1) as u32)
+            .map_err(|e| AppError::io(e, "PowerShell başlatılamadı"))
+    };
+    match res {
+        Ok(0) => {}
+        Ok(code) => {
+            let e = AppError::System(format!(
+                "hizmet yeniden başlatılamadı (PowerShell çıkış kodu {code}); hizmet zamanında yanıt vermemiş veya bağımlı hizmetler engellemiş olabilir"
+            ));
+            record_failure(db, title_fail, detail, &e);
+            return Err(e);
+        }
+        Err(e) => {
+            record_failure(db, title_fail, detail, &e);
+            return Err(e);
+        }
+    }
+    let mut after = query(name)?;
+    for _ in 0..30 {
+        if after.status == "running" || !after.status.ends_with("_pending") {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(500));
+        after = query(name)?;
+    }
+    let reached = after.status == "running";
+    let oplog_id = oplog::record(
+        db,
+        "service",
+        &format!("Hizmet yeniden başlatıldı: {}", after.display_name),
+        if reached { Outcome::Success } else { Outcome::Partial },
+        false,
+        serde_json::json!({
+            "action": "restart",
+            "name": after.name,
+            "displayName": after.display_name,
+            "previousStatus": before.status,
+            "previousStartType": before.start_type,
+            "previousPid": before.pid,
+            "newStatus": after.status,
+            "newPid": after.pid,
+        }),
+    )
+    .ok();
+    let mut message = if reached {
+        "Hizmet yeniden başlatıldı.".to_string()
+    } else {
+        format!(
+            "Komut çalıştı ancak hizmet henüz çalışır duruma geçmedi (şu an: {}). Birkaç saniye sonra listeyi yenileyin.",
+            after.status_label
+        )
+    };
+    if elevated {
+        message.push_str(" Değişiklik yönetici onayıyla (UAC) uygulandı.");
+    }
+    Ok(ChangeResult { item: after, message, elevated, oplog_id })
+}
+
+/// Hizmeti başlatır, durdurur veya yeniden başlatır (UAC onayı gerekir).
 pub fn control(db: &Db, name: &str, action: &str) -> AppResult<ChangeResult<ServiceInfo>> {
     validate_service_name(name)?;
     let (verb, target, label) = match action {
         "start" => ("start", "running", "başlatıldı"),
         "stop" => ("stop", "stopped", "durduruldu"),
-        _ => return Err(AppError::InvalidInput("işlem geçersiz (start veya stop olmalı)".into())),
+        "restart" => return restart(db, name),
+        _ => return Err(AppError::InvalidInput("işlem geçersiz (start, stop veya restart olmalı)".into())),
     };
     if action == "stop" {
         if let Some(reason) = protection(name) {
@@ -618,6 +819,38 @@ mod tests {
         assert!(matches!(set_start_type(&db, "bad\"name", "manual"), Err(AppError::InvalidInput(_))));
         assert!(matches!(set_start_type(&db, "Spooler", "boot"), Err(AppError::InvalidInput(_))));
         assert!(matches!(control(&db, "Spooler", "pause"), Err(AppError::InvalidInput(_))));
+        assert!(matches!(control(&db, "WinDefend", "restart"), Err(AppError::Protected(_))));
+        assert!(matches!(control(&db, "a'b", "restart"), Err(AppError::InvalidInput(_))));
+    }
+
+    #[test]
+    fn dependency_parsing() {
+        let w: Vec<u16> = "RpcSs\0+NetworkProvider\0Tcpip\0\0".encode_utf16().collect();
+        assert_eq!(parse_multi_sz(&w), vec!["RpcSs", "Grup: NetworkProvider", "Tcpip"]);
+        assert!(parse_multi_sz(&[0, 0]).is_empty());
+        assert!(parse_multi_sz(&[]).is_empty());
+        let mk = |n: &str, deps: &[&str]| ServiceInfo {
+            name: n.into(),
+            display_name: n.into(),
+            description: None,
+            status: "running".into(),
+            status_label: String::new(),
+            start_type: "auto".into(),
+            start_type_label: String::new(),
+            binary_path: None,
+            account: None,
+            pid: None,
+            can_stop: true,
+            protected: false,
+            protected_reason: None,
+            dependencies: deps.iter().map(|s| s.to_string()).collect(),
+            dependents: vec![],
+        };
+        let mut l = vec![mk("RpcSs", &[]), mk("A", &["rpcss", "Grup: X"]), mk("B", &["RpcSs", "A"])];
+        fill_dependents(&mut l);
+        assert_eq!(l[0].dependents, vec!["A", "B"]);
+        assert_eq!(l[1].dependents, vec!["B"]);
+        assert!(l[2].dependents.is_empty());
     }
 
     #[cfg(windows)]
@@ -630,5 +863,7 @@ mod tests {
         assert_eq!(rpc.status, "running");
         let q = query("RpcSs").unwrap();
         assert_eq!(q.start_type, "auto");
+        assert!(!q.dependents.is_empty(), "RpcSs'ye bağımlı hizmetler olmalı");
+        assert!(!rpc.dependents.is_empty());
     }
 }

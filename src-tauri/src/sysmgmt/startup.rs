@@ -5,6 +5,8 @@
 //! altındaki ikili değerler. Kayıt girdisi veya kısayol hiçbir zaman silinmez;
 //! işlem tamamen geri alınabilir.
 
+use super::indicators::{Indicator, PathContext};
+use super::signature::SignatureStatus;
 use super::ChangeResult;
 use crate::db::Db;
 use crate::error::{AppError, AppResult};
@@ -101,6 +103,10 @@ pub struct StartupItem {
     pub enabled: bool,
     pub can_toggle: bool,
     pub needs_admin: bool,
+    /// Hedef dosyanın dijital imza durumu (dosya varsa).
+    pub signature: Option<SignatureStatus>,
+    /// "Dikkat gerektirebilir" göstergeleri.
+    pub indicators: Vec<Indicator>,
 }
 
 // ---------------------------------------------------------------------------
@@ -402,6 +408,15 @@ fn build_item(source: Source, name: String, command: String, resolved: Option<Pa
     let publisher = if exists { resolved.as_deref().and_then(imp::company_name) } else { None };
     let toggle = source.approved_subkey().is_some();
     let enabled = if toggle { approved_enabled(imp::approved_raw(source, &name).as_deref()) } else { true };
+    let signature = if exists { resolved.as_deref().map(super::signature::verify) } else { None };
+    let resolved_str = resolved.as_ref().map(|p| p.to_string_lossy().into_owned());
+    let indicators = super::indicators::startup_indicators(
+        &PathContext::current(),
+        &command,
+        resolved_str.as_deref(),
+        exists,
+        signature.as_ref(),
+    );
     StartupItem {
         id: format!("{}|{}", source.id(), name),
         name,
@@ -415,6 +430,8 @@ fn build_item(source: Source, name: String, command: String, resolved: Option<Pa
         enabled,
         can_toggle: toggle,
         needs_admin: toggle && source.is_machine(),
+        signature,
+        indicators,
     }
 }
 
@@ -578,9 +595,313 @@ pub fn set_enabled(_db: &Db, _id: &str, _enabled: bool) -> AppResult<ChangeResul
     Err(AppError::Unsupported("yalnızca Windows".into()))
 }
 
+// ---------------------------------------------------------------------------
+// Diğer başlangıç kaynakları: zamanlanmış görevler ve otomatik hizmetler
+// ---------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StartupTask {
+    pub path: String,
+    pub name: String,
+    pub enabled: bool,
+    pub state_label: String,
+    pub trigger_label: String,
+    pub execute: Option<String>,
+    pub protected: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StartupService {
+    pub name: String,
+    pub display_name: String,
+    pub start_type: String,
+    pub start_type_label: String,
+    pub status_label: String,
+    pub binary_path: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StartupExtras {
+    pub scheduled_tasks: Vec<StartupTask>,
+    pub auto_services: Vec<StartupService>,
+    pub note: String,
+}
+
+/// Oturum açılışında veya sistem başlangıcında tetiklenen görevler.
+pub fn startup_tasks(tasks: &[super::tasks::TaskInfo]) -> Vec<StartupTask> {
+    tasks
+        .iter()
+        .filter_map(|t| {
+            let mut labels: Vec<&str> = Vec::new();
+            for tr in &t.triggers {
+                if matches!(tr.kind.as_str(), "MSFT_TaskLogonTrigger" | "MSFT_TaskBootTrigger") && !labels.contains(&tr.label.as_str()) {
+                    labels.push(&tr.label);
+                }
+            }
+            if labels.is_empty() {
+                return None;
+            }
+            Some(StartupTask {
+                path: t.path.clone(),
+                name: t.name.clone(),
+                enabled: t.enabled,
+                state_label: t.state_label.clone(),
+                trigger_label: labels.join("; "),
+                execute: t.actions.iter().find_map(|a| a.execute.clone()),
+                protected: t.protected,
+            })
+        })
+        .collect()
+}
+
+/// Hizmet ikili yolu Windows klasöründe mi?
+pub fn service_binary_in_system_root(binary: &str, system_root: &str) -> bool {
+    let b = binary.trim();
+    let lower = b.trim_start_matches('"').to_ascii_lowercase();
+    if lower.starts_with("\\systemroot\\") || lower.starts_with("system32\\") || lower.starts_with("\\??\\") && lower[4..].starts_with(&system_root.to_ascii_lowercase()) {
+        return true;
+    }
+    match parse_command_exe(&expand_env(b)) {
+        Some(exe) => crate::paths::is_within(&exe, system_root),
+        None => false,
+    }
+}
+
+/// Windows klasörü dışından otomatik başlayan hizmetler.
+pub fn auto_services(services: &[super::services::ServiceInfo], system_root: &str) -> Vec<StartupService> {
+    services
+        .iter()
+        .filter(|s| matches!(s.start_type.as_str(), "auto" | "auto_delayed"))
+        .filter(|s| s.binary_path.as_deref().is_some_and(|b| !service_binary_in_system_root(b, system_root)))
+        .map(|s| StartupService {
+            name: s.name.clone(),
+            display_name: s.display_name.clone(),
+            start_type: s.start_type.clone(),
+            start_type_label: s.start_type_label.clone(),
+            status_label: s.status_label.clone(),
+            binary_path: s.binary_path.clone(),
+        })
+        .collect()
+}
+
+pub fn extras() -> AppResult<StartupExtras> {
+    let tasks_handle = std::thread::spawn(super::tasks::list);
+    let services = super::services::list()?;
+    let tasks = tasks_handle.join().map_err(|_| AppError::System("görev listesi alınamadı".into()))??;
+    let root = std::env::var("SystemRoot").unwrap_or_else(|_| "C:\\Windows".into());
+    Ok(StartupExtras {
+        scheduled_tasks: startup_tasks(&tasks),
+        auto_services: auto_services(&services, &root),
+        note: "Bu liste, oturum açılışında veya sistem başlangıcında çalışan zamanlanmış görevleri ve Windows klasörü dışından otomatik başlayan hizmetleri gösterir. Burada yer almaları bir sorun olduğu anlamına gelmez; bilgi amaçlıdır. Değişiklikleri Görevler ve Hizmetler sayfalarından yapabilirsiniz.".into(),
+    })
+}
+
+// ---------------------------------------------------------------------------
+// Açılış geçmişi (Diagnostics-Performance günlüğü)
+// ---------------------------------------------------------------------------
+
+/// Açılış performansı olayları. Kullanıcı girdisi içermez.
+const BOOT_SCRIPT: &str = r#"[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;
+$ErrorActionPreference='Stop';
+$status='ok'; $items=New-Object System.Collections.ArrayList;
+try {
+  $evs=@(Get-WinEvent -LogName 'Microsoft-Windows-Diagnostics-Performance/Operational' -MaxEvents 600 -ErrorAction Stop)
+  $want=@('BootTime','MainPathBootTime','BootPostBootTime','FriendlyName','Name','TotalTime','DegradationTime','FileName');
+  foreach ($e in $evs) {
+    if ($e.Id -lt 100 -or $e.Id -gt 110) { continue }
+    $x=[xml]$e.ToXml(); $d=@{};
+    foreach ($n in @($x.Event.EventData.Data)) { if ($want -contains $n.Name) { $d[$n.Name]=$n.'#text' } }
+    [void]$items.Add([pscustomobject]@{ t=([DateTimeOffset]$e.TimeCreated).ToUnixTimeSeconds(); id=$e.Id; d=$d })
+  }
+} catch {
+  $q=[string]$_.FullyQualifiedErrorId
+  if ($_.Exception -is [System.UnauthorizedAccessException] -or $q -match 'UnauthorizedAccess') { $status='denied' }
+  elseif ($q -match 'NoMatchingEventsFound') { $status='ok' }
+  elseif ($q -match 'NoMatchingLogsFound') { $status='missing' }
+  else { $status='error' }
+}
+ConvertTo-Json -InputObject ([pscustomobject]@{ status=$status; items=@($items) }) -Depth 4 -Compress"#;
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BootRecord {
+    pub ts: i64,
+    pub boot_ms: u64,
+    pub main_path_ms: Option<u64>,
+    pub post_boot_ms: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BootDegradation {
+    pub ts: i64,
+    pub name: String,
+    pub file: Option<String>,
+    pub time_ms: Option<u64>,
+    /// app, driver, service, system, policy, device, other
+    pub kind: String,
+    pub kind_label: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BootHistory {
+    pub available: bool,
+    pub note: String,
+    pub boots: Vec<BootRecord>,
+    pub degradations: Vec<BootDegradation>,
+}
+
+pub fn degradation_kind(id: u32) -> (&'static str, &'static str) {
+    match id {
+        101 => ("app", "Uygulama"),
+        102 => ("driver", "Sürücü"),
+        103 => ("service", "Hizmet"),
+        104 | 105 | 106 | 110 => ("system", "Sistem bileşeni"),
+        107 | 108 => ("policy", "Grup ilkesi"),
+        109 => ("device", "Aygıt"),
+        _ => ("other", "Diğer"),
+    }
+}
+
+fn num_field(d: Option<&serde_json::Value>, k: &str) -> Option<u64> {
+    match d?.get(k)? {
+        serde_json::Value::String(s) => s.trim().parse::<u64>().ok(),
+        serde_json::Value::Number(n) => n.as_u64(),
+        _ => None,
+    }
+}
+
+fn str_field(d: Option<&serde_json::Value>, k: &str) -> Option<String> {
+    match d?.get(k)? {
+        serde_json::Value::String(s) if !s.trim().is_empty() => Some(s.trim().to_string()),
+        _ => None,
+    }
+}
+
+pub fn parse_boot_history(json: &str) -> AppResult<BootHistory> {
+    let t = json.trim().trim_start_matches('\u{feff}');
+    let v: serde_json::Value = serde_json::from_str(if t.is_empty() { "{}" } else { t }).map_err(|e| {
+        tracing::warn!(error = %e, "açılış geçmişi JSON'u ayrıştırılamadı");
+        AppError::System("açılış geçmişi okunamadı (beklenmeyen çıktı)".into())
+    })?;
+    let status = v.get("status").and_then(|s| s.as_str()).unwrap_or("error");
+    let empty = |note: &str| BootHistory { available: false, note: note.to_string(), boots: vec![], degradations: vec![] };
+    match status {
+        "ok" => {}
+        "denied" => {
+            return Ok(empty(
+                "Açılış performansı kayıtlarını okumak için yönetici izni gerekiyor. Ivily'yi yönetici olarak çalıştırırsanız bu bilgiler gösterilebilir. Kayıtlara erişilemediği için hiçbir tahmin yapılmadı.",
+            ))
+        }
+        "missing" => return Ok(empty("Bu sistemde açılış performansı günlüğü bulunamadı; hiçbir tahmin yapılmadı.")),
+        _ => return Ok(empty("Açılış performansı kayıtları okunamadı; hiçbir tahmin yapılmadı.")),
+    }
+    let items: Vec<serde_json::Value> = match v.get("items") {
+        Some(serde_json::Value::Array(a)) => a.clone(),
+        Some(serde_json::Value::Null) | None => vec![],
+        Some(o) => vec![o.clone()],
+    };
+    let mut boots = Vec::new();
+    let mut degradations = Vec::new();
+    for it in &items {
+        let (Some(ts), Some(id)) = (it.get("t").and_then(|x| x.as_i64()), it.get("id").and_then(|x| x.as_u64())) else {
+            continue;
+        };
+        let d = it.get("d");
+        if id == 100 {
+            if let Some(boot_ms) = num_field(d, "BootTime") {
+                boots.push(BootRecord {
+                    ts,
+                    boot_ms,
+                    main_path_ms: num_field(d, "MainPathBootTime"),
+                    post_boot_ms: num_field(d, "BootPostBootTime"),
+                });
+            }
+        } else if (101..=110).contains(&id) {
+            let file = str_field(d, "FileName").or_else(|| str_field(d, "Name"));
+            let name = str_field(d, "FriendlyName").or_else(|| file.clone()).unwrap_or_else(|| "Bilinmeyen bileşen".into());
+            let (kind, label) = degradation_kind(id as u32);
+            degradations.push(BootDegradation {
+                ts,
+                name,
+                file,
+                time_ms: num_field(d, "DegradationTime").or_else(|| num_field(d, "TotalTime")),
+                kind: kind.into(),
+                kind_label: label.into(),
+            });
+        }
+    }
+    boots.sort_by(|a, b| b.ts.cmp(&a.ts));
+    boots.truncate(15);
+    degradations.sort_by(|a, b| b.ts.cmp(&a.ts));
+    degradations.truncate(30);
+    let note = if boots.is_empty() && degradations.is_empty() {
+        "Windows henüz açılış performansı kaydı tutmamış.".to_string()
+    } else {
+        "Süreler Windows'un kendi açılış performansı kayıtlarından alınmıştır. Yavaşlama kayıtları, Windows'un o açılışta bu bileşeni gecikmeye katkıda bulunmuş olarak işaretlediğini gösterir.".to_string()
+    };
+    Ok(BootHistory { available: true, note, boots, degradations })
+}
+
+pub fn boot_history() -> AppResult<BootHistory> {
+    let out = super::run_powershell(BOOT_SCRIPT, &[], "açılış geçmişi")?;
+    parse_boot_history(&out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn boot_history_parsing() {
+        let h = parse_boot_history(r#"{"status":"denied","items":[]}"#).unwrap();
+        assert!(!h.available);
+        assert!(h.note.contains("yönetici"));
+        let json = r#"{"status":"ok","items":[
+            {"t":100,"id":100,"d":{"BootTime":"45000","MainPathBootTime":"20000","BootPostBootTime":"25000"}},
+            {"t":200,"id":101,"d":{"FriendlyName":"Örnek Uygulama","Name":"C:\\x\\a.exe","TotalTime":"9000","DegradationTime":"4000"}},
+            {"t":150,"id":102,"d":{"FileName":"drv.sys","TotalTime":"300"}},
+            {"t":300,"id":100,"d":{"BootTime":"30000"}}
+        ]}"#;
+        let h = parse_boot_history(json).unwrap();
+        assert!(h.available);
+        assert_eq!(h.boots.len(), 2);
+        assert_eq!(h.boots[0].ts, 300);
+        assert_eq!(h.boots[1].main_path_ms, Some(20000));
+        assert_eq!(h.degradations.len(), 2);
+        assert_eq!(h.degradations[0].name, "Örnek Uygulama");
+        assert_eq!(h.degradations[0].time_ms, Some(4000));
+        assert_eq!(h.degradations[0].kind, "app");
+        assert_eq!(h.degradations[1].name, "drv.sys");
+        assert_eq!(h.degradations[1].time_ms, Some(300));
+        let single = parse_boot_history(r#"{"status":"ok","items":{"t":1,"id":100,"d":{"BootTime":"1"}}}"#).unwrap();
+        assert_eq!(single.boots.len(), 1);
+        assert!(parse_boot_history("{bozuk").is_err());
+    }
+
+    #[test]
+    fn service_binaries() {
+        let r = "C:\\Windows";
+        assert!(service_binary_in_system_root("C:\\WINDOWS\\system32\\svchost.exe -k netsvcs -p", r));
+        assert!(service_binary_in_system_root("\\SystemRoot\\System32\\drivers\\x.sys", r));
+        assert!(service_binary_in_system_root("system32\\DriverStore\\x.exe", r));
+        assert!(service_binary_in_system_root("\"C:\\Windows\\System32\\x.exe\"", r));
+        assert!(!service_binary_in_system_root("\"C:\\Program Files\\Vendor\\svc.exe\" /run", r));
+        assert!(!service_binary_in_system_root("C:\\Program Files (x86)\\Vendor App\\svc.exe", r));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn extras_and_boot_readonly() {
+        let e = extras().unwrap();
+        println!("başlangıç görevleri: {}, otomatik hizmetler: {}", e.scheduled_tasks.len(), e.auto_services.len());
+        let b = boot_history().unwrap();
+        println!("açılış geçmişi: available={} boots={} not={}", b.available, b.boots.len(), b.note);
+    }
 
     #[test]
     fn approved_interpretation() {

@@ -130,6 +130,8 @@ pub fn kind_label(kind: &str) -> &'static str {
         "cold" => "eski dosya analizi",
         "quarantine" => "karantina işlemi",
         "update" => "güncelleme",
+        "hash" => "özet hesaplama",
+        "compare" => "klasör karşılaştırma",
         _ => "işlem",
     }
 }

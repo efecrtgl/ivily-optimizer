@@ -3,7 +3,7 @@
 use crate::cleanup::{self, CleanupReport, CleanupScanSummary, DeleteRemover, QuarantineRemover};
 use crate::error::{AppError, AppResult};
 use crate::jobs;
-use crate::oplog::{self, OpEntry, Outcome};
+use crate::oplog::{self, Outcome};
 use crate::quarantine::QuarantineItem;
 use crate::snapshots::{self, Comparison, GrowthReport, SnapshotInfo};
 use crate::state::AppState;
@@ -57,6 +57,18 @@ pub async fn cleanup_scan_result(st: St<'_>) -> AppResult<Option<CleanupScanSumm
     Ok(st.cleanup_scan.lock().as_ref().map(|s| s.summary()))
 }
 
+/// Bir temizlik kategorisinin aday dosyaları (en büyükler önce).
+#[tauri::command]
+pub async fn cleanup_item_files(st: St<'_>, id: String, limit: Option<usize>) -> AppResult<cleanup::CleanupItemFiles> {
+    let scan = st
+        .cleanup_scan
+        .lock()
+        .clone()
+        .ok_or_else(|| AppError::NotFound("önce bir temizlik taraması yapın".into()))?;
+    scan.item_files(&id, limit.unwrap_or(300).clamp(1, 20_000))
+        .ok_or_else(|| AppError::NotFound("bu kategori son taramada bulunamadı".into()))
+}
+
 #[tauri::command]
 pub async fn cleanup_last_summary(st: St<'_>) -> AppResult<Option<serde_json::Value>> {
     Ok(st.db.kv_get("cleanup_last")?.and_then(|s| serde_json::from_str(&s).ok()))
@@ -94,9 +106,12 @@ pub async fn cleanup_run(app: AppHandle, st: St<'_>, ids: Vec<String>) -> AppRes
                 }
             }
         };
+        let mut quarantine_ids: Vec<String> = Vec::new();
         let mut report: CleanupReport = if s.cleanup_use_quarantine {
-            let rem = QuarantineRemover { q: st.quarantine(), retention_days: s.quarantine_retention_days };
-            cleanup::execute(&scan, &ids, &rem, &ctl.cancel, &on_progress)
+            let rem = QuarantineRemover::new(st.quarantine(), s.quarantine_retention_days);
+            let r = cleanup::execute(&scan, &ids, &rem, &ctl.cancel, &on_progress);
+            quarantine_ids = rem.ids.into_inner();
+            r
         } else {
             cleanup::execute(&scan, &ids, &DeleteRemover, &ctl.cancel, &on_progress)
         };
@@ -117,13 +132,21 @@ pub async fn cleanup_run(app: AppHandle, st: St<'_>, ids: Vec<String>) -> AppRes
         } else {
             Outcome::Success
         };
+        let mut detail = serde_json::to_value(&report).unwrap_or_default();
+        if report.used_quarantine {
+            if let Some(obj) = detail.as_object_mut() {
+                obj.insert("quarantineIdsTruncated".into(), (quarantine_ids.len() > 5000).into());
+                quarantine_ids.truncate(5000);
+                obj.insert("quarantineIds".into(), serde_json::json!(quarantine_ids));
+            }
+        }
         let _ = oplog::record(
             &st.db,
             "cleanup",
             &format!("Temizlik: {} öğe", report.items.len()),
             outcome,
             report.used_quarantine,
-            serde_json::to_value(&report).unwrap_or_default(),
+            detail,
         );
         let status = if report.cancelled { "cancelled" } else { "complete" };
         jobs::emit_done(&app, &ctl, status, None, serde_json::to_value(&report).unwrap_or_default());
@@ -158,8 +181,16 @@ pub async fn quarantine_list(st: St<'_>, history: bool) -> AppResult<QuarantineO
     })
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct QuarantineRestoreResult {
+    pub path: String,
+    pub verified: bool,
+    pub message: String,
+}
+
 #[tauri::command]
-pub async fn quarantine_restore(st: St<'_>, id: String, rename_on_conflict: bool) -> AppResult<String> {
+pub async fn quarantine_restore(st: St<'_>, id: String, rename_on_conflict: bool) -> AppResult<QuarantineRestoreResult> {
     let q = st.quarantine();
     let item = q.get(&id)?;
     let res = q.restore(&id, rename_on_conflict);
@@ -172,12 +203,19 @@ pub async fn quarantine_restore(st: St<'_>, id: String, rename_on_conflict: bool
             false,
             serde_json::json!({
                 "original": item.original_path,
-                "restoredTo": res.as_ref().ok(),
+                "restoredTo": res.as_ref().ok().map(|r| r.path.clone()),
+                "verified": res.as_ref().ok().map(|r| r.verified),
                 "error": res.as_ref().err().map(|e| e.to_string()),
             }),
         )?;
     }
-    res
+    let out = res?;
+    let message = if out.verified {
+        "Dosya geri yüklendi ve hedefte doğrulandı.".to_string()
+    } else {
+        "Dosya geri yüklendi ancak hedefteki boyutu kayıtlı boyutla eşleşmiyor; dosyayı kontrol edin.".to_string()
+    };
+    Ok(QuarantineRestoreResult { path: out.path, verified: out.verified, message })
 }
 
 #[tauri::command]
@@ -209,11 +247,6 @@ fn file_name(p: &str) -> String {
 // ---------------------------------------------------------------------------
 // Geçmiş ve anlık görüntüler
 // ---------------------------------------------------------------------------
-
-#[tauri::command]
-pub async fn oplog_list(st: St<'_>, kind: Option<String>, limit: Option<i64>) -> AppResult<Vec<OpEntry>> {
-    oplog::list(&st.db, kind.as_deref(), limit.unwrap_or(200).clamp(1, 5000))
-}
 
 #[tauri::command]
 pub async fn snapshots_list(st: St<'_>, root: Option<String>) -> AppResult<Vec<SnapshotInfo>> {

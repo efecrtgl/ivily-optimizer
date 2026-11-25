@@ -270,6 +270,8 @@ impl Monitor {
         );
         let ncpu = self.sys.cpus().len().max(1) as f32;
         let self_pid = std::process::id();
+        let conns = crate::sysmgmt::procinfo::connection_counts();
+        let ctx = crate::sysmgmt::indicators::PathContext::current();
         self.sys
             .processes()
             .values()
@@ -278,6 +280,9 @@ impl Monitor {
                 let exe = p.exe().map(|e| e.to_string_lossy().into_owned());
                 let du = p.disk_usage();
                 let protection = protection_of(&name, exe.as_deref(), p.pid().as_u32(), self_pid);
+                let indicators = crate::sysmgmt::indicators::process_indicators(&ctx, &name, exe.as_deref(), |e| {
+                    std::path::Path::new(e).exists()
+                });
                 ProcessInfo {
                     pid: p.pid().as_u32(),
                     parent: p.parent().map(|x| x.as_u32()),
@@ -295,6 +300,8 @@ impl Monitor {
                     protection: protection.0.to_string(),
                     protection_reason: protection.1.map(str::to_string),
                     is_self: p.pid().as_u32() == self_pid,
+                    connections: conns.get(&p.pid().as_u32()).copied().unwrap_or(0),
+                    indicators,
                 }
             })
             .collect()
@@ -356,6 +363,10 @@ pub struct ProcessInfo {
     pub protection: String,
     pub protection_reason: Option<String>,
     pub is_self: bool,
+    /// Bu sürece ait TCP + UDP uç noktası sayısı.
+    pub connections: u32,
+    /// Ucuz, yol tabanlı "dikkat gerektirebilir" göstergeleri.
+    pub indicators: Vec<crate::sysmgmt::indicators::Indicator>,
 }
 
 /// Sonlandırılması sistemi çökertebilecek veya oturumu kapatabilecek süreçler.

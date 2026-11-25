@@ -6,6 +6,7 @@ pub mod cleanup;
 pub mod commands;
 pub mod db;
 pub mod error;
+pub mod files;
 pub mod jobs;
 pub mod monitor;
 pub mod oplog;
@@ -133,7 +134,6 @@ pub fn run() {
             commands::maintenance::quarantine_list,
             commands::maintenance::quarantine_restore,
             commands::maintenance::quarantine_purge,
-            commands::maintenance::oplog_list,
             commands::maintenance::snapshots_list,
             commands::maintenance::snapshot_delete,
             commands::maintenance::snapshot_compare,
@@ -162,9 +162,33 @@ pub fn run() {
             commands::sysmgmt::dns_cache_flush,
             commands::sysmgmt::update_check,
             commands::sysmgmt::update_last_check,
+            commands::intel::signature_check,
+            commands::intel::startup_extras,
+            commands::intel::startup_boot_history,
+            commands::intel::process_details,
+            commands::intel::process_restart,
+            commands::intel::task_history,
+            commands::intel::events_query,
+            commands::intel::events_context,
+            commands::intel::events_export,
             commands::update::update_install,
             commands::update::update_cancel,
             commands::maintenance::cleanup_categories,
+            commands::maintenance::cleanup_item_files,
+            commands::history::oplog_list,
+            commands::history::oplog_restore,
+            commands::history::oplog_export,
+            commands::files::fs_list,
+            commands::files::fs_roots,
+            commands::files::fs_metadata,
+            commands::files::scan_empty_folders,
+            commands::files::empty_folders_remove,
+            commands::files::file_hash_start,
+            commands::files::file_hash_result,
+            commands::files::folder_compare_start,
+            commands::files::folder_compare_result,
+            commands::files::inventory_export,
+            commands::files::scan_insights,
         ])
         .run(tauri::generate_context!())
         .expect("Ivily Optimizer başlatılamadı");
