@@ -1,0 +1,55 @@
+# Sürüm yayımlama
+
+## Sürümleme
+
+[Anlamsal sürümleme](https://semver.org/lang/tr/) kullanılır: `MAJOR.MINOR.PATCH` (ön sürümler için ör. `0.2.0-beta.1`).
+
+Sürüm **iki yerde** tutulur ve aynı olmalıdır:
+
+- `package.json` → `version` (`tauri.conf.json` sürümü buradan okur)
+- `src-tauri/Cargo.toml` → `version`
+
+`scripts/check-version.ps1` bu tutarlılığı ve etiketin sürümle eşleştiğini denetler; CI ve sürüm iş akışı bu betiği çalıştırır.
+
+## Tek seferlik kurulum: imzalama anahtarı
+
+Güncelleme paketleri bir minisign anahtarıyla imzalanır. Genel anahtar `src-tauri/tauri.conf.json` içindedir. Özel anahtar **asla depoya eklenmez**.
+
+1. GitHub deposunda **Settings > Secrets and variables > Actions** bölümüne gidin.
+2. Şu gizli değişkenleri ekleyin:
+   - `TAURI_SIGNING_PRIVATE_KEY` — özel anahtar dosyasının içeriği
+   - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` — anahtarın parolası
+3. Özel anahtarı ve parolayı güvenli bir yerde yedekleyin. **Anahtar kaybolursa** mevcut kurulumlar yeni sürümleri otomatik olarak kuramaz; yeni bir anahtar oluşturup genel anahtarı güncelleyen bir sürümün elle kurulması gerekir.
+
+Yeni bir anahtar oluşturmak için:
+
+```powershell
+npx tauri signer generate -w "$env:USERPROFILE\.tauri\ivily-optimizer.key"
+```
+
+Ardından `.key.pub` dosyasının içeriğini `tauri.conf.json` > `plugins.updater.pubkey` alanına yazın.
+
+## Sürüm adımları
+
+1. `CHANGELOG.md` dosyasını güncelleyin.
+2. `package.json` ve `src-tauri/Cargo.toml` sürümlerini artırın; `src-tauri` içinde `cargo check` çalıştırarak `Cargo.lock`'u güncelleyin.
+3. Yerelde doğrulayın: `npm run check`, `npm run build`, `cd src-tauri; cargo test`.
+4. Commit atın ve etiketleyin:
+   ```powershell
+   git commit -am "chore: 0.2.0 sürümünü hazırla"
+   git tag v0.2.0
+   git push origin main --tags
+   ```
+5. **Sürüm** iş akışı (`.github/workflows/release.yml`) Windows'ta derler, testleri çalıştırır, yükleyiciyi ve güncelleme paketini imzalar, `latest.json` ve `SHA256SUMS.txt` dosyalarını ekleyerek **taslak** bir GitHub sürümü oluşturur. Etikette `-` varsa (ör. `v0.2.0-beta.1`) ön sürüm olarak işaretlenir.
+6. Taslak sürümü indirip temiz bir sistemde kurulumu, kaldırmayı ve önceki sürümden güncellemeyi test edin.
+7. Sürüm notlarını düzenleyin ve taslağı **elle yayımlayın**. Uygulamalar yalnızca yayımlanmış sürümleri görür.
+
+## Yayın öncesi denetim listesi
+
+- [ ] Derleme ve tüm testler başarılı, uyarı yok
+- [ ] Sürüm numaraları ve etiket tutarlı
+- [ ] Yükleyici temiz bir Windows'ta kuruluyor, Başlat menüsü kısayolu oluşuyor
+- [ ] Kaldırma uygulamayı ve kısayolları kaldırıyor (kullanıcı verileri `%LOCALAPPDATA%\IvilyOptimizer` içinde kalır)
+- [ ] Önceki sürümden uygulama içi güncelleme çalışıyor
+- [ ] Arayüz metinleri Türkçe ve tutarlı
+- [ ] Belgeler güncel; uygulanmamış özellikler "planlanan" olarak işaretli

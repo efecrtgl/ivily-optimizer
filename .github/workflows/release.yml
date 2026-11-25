@@ -1,0 +1,67 @@
+name: Sürüm
+
+# vX.Y.Z biçimindeki bir etiket gönderildiğinde Windows yükleyicisini derler,
+# güncelleme paketini imzalar ve GitHub'da TASLAK bir sürüm oluşturur.
+# Taslak, gözden geçirildikten sonra elle yayımlanmalıdır.
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Etiket ve uygulama sürümü eşleşmeli
+        shell: pwsh
+        run: ./scripts/check-version.ps1 -Tag "${{ github.ref_name }}"
+
+      - run: npm ci
+      - run: npm run check
+      - name: Rust testleri
+        working-directory: src-tauri
+        run: cargo test --locked
+
+      - name: İmzalama anahtarı tanımlı olmalı
+        shell: pwsh
+        env:
+          KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+        run: |
+          if (-not $env:KEY) { Write-Error "TAURI_SIGNING_PRIVATE_KEY gizli değişkeni tanımlı değil. Bkz. docs/SURUM-YAYINLAMA.md"; exit 1 }
+
+      - name: Derle, imzala ve taslak sürüm oluştur
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "Ivily Optimizer ${{ github.ref_name }}"
+          releaseBody: "Değişiklikler için CHANGELOG.md dosyasına bakın. Yükleyici ve güncelleme paketi imzalıdır; SHA256SUMS.txt dosyası bütünlük denetimi içindir."
+          releaseDraft: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          includeUpdaterJson: true
+          updaterJsonPreferNsis: true
+
+      - name: SHA-256 özetlerini ekle
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $files = Get-ChildItem src-tauri/target/release/bundle/nsis -File
+          $lines = $files | ForEach-Object { "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name }
+          $lines | Set-Content -Encoding utf8 SHA256SUMS.txt
+          gh release upload "${{ github.ref_name }}" SHA256SUMS.txt --clobber
