@@ -48,7 +48,7 @@ export const api = {
   // Karantina
   quarantineList: (history: boolean) => call<T.QuarantineOverview>("quarantine_list", { history }),
   quarantineRestore: (id: string, renameOnConflict: boolean) =>
-    call<string>("quarantine_restore", { id, renameOnConflict }),
+    call<{ path: string; verified: boolean; message: string }>("quarantine_restore", { id, renameOnConflict }),
   quarantinePurge: (ids: string[]) => call<number>("quarantine_purge", { ids }),
 
   // Geçmiş
@@ -77,7 +77,7 @@ export const sys = {
   servicesList: () => call<T.ServiceInfo[]>("services_list"),
   serviceSetStartType: (name: string, startType: string) =>
     call<T.ChangeResult<T.ServiceInfo>>("service_set_start_type", { name, startType }),
-  serviceControl: (name: string, action: "start" | "stop") => call<T.ChangeResult<T.ServiceInfo>>("service_control", { name, action }),
+  serviceControl: (name: string, action: "start" | "stop" | "restart") => call<T.ChangeResult<T.ServiceInfo>>("service_control", { name, action }),
   tasksList: () => call<T.TaskInfo[]>("tasks_list"),
   taskSetEnabled: (path: string, name: string, enabled: boolean) =>
     call<T.ChangeResult<T.TaskInfo>>("task_set_enabled", { path, name, enabled }),
@@ -88,4 +88,40 @@ export const sys = {
   dnsLookup: (host: string) => call<T.DnsCheck>("network_dns_lookup", { host }),
   dnsCache: () => call<T.DnsCacheList>("dns_cache_list"),
   dnsFlush: () => call<string>("dns_cache_flush"),
+};
+
+// 0.2: olay günlüğü, imza, süreç ayrıntıları, başlangıç ekleri.
+export const intel = {
+  events: (days: number, levels: number[], logs: string[], max: number) =>
+    call<T.EventsReport>("events_query", { days, levels, logs, max }),
+  eventsContext: (ts: number, windowMinutes: number) => call<T.EventsContext>("events_context", { ts, windowMinutes }),
+  eventsExport: (days: number, levels: number[], logs: string[], max: number, format: "csv" | "txt" | "json") =>
+    call<string>("events_export", { days, levels, logs, max, format }),
+  signatures: (paths: string[]) => call<{ path: string; status: T.SignatureStatus }[]>("signature_check", { paths }),
+  processDetails: (pid: number) => call<T.ProcessDetails>("process_details", { pid }),
+  processRestart: (pid: number, name: string) => call<{ oldPid: number; newPid: number; message: string }>("process_restart", { pid, name }),
+  startupExtras: () => call<T.StartupExtras>("startup_extras"),
+  bootHistory: () => call<T.BootHistory>("startup_boot_history"),
+  taskHistory: (path: string, name: string) => call<T.TaskHistory>("task_history", { path, name }),
+};
+
+// 0.2: dosya tarayıcı, özet, karşılaştırma, envanter, içgörüler, geçmiş.
+export const fx = {
+  roots: () => call<{ path: string; label: string }[]>("fs_roots"),
+  list: (path: string, showHidden: boolean) => call<T.DirListing>("fs_list", { path, showHidden }),
+  metadata: (path: string) => call<T.FsMetadata>("fs_metadata", { path }),
+  hashStart: (path: string) => call<string>("file_hash_start", { path }),
+  hashResult: () => call<T.HashResult | null>("file_hash_result"),
+  compareStart: (a: string, b: string, content: boolean) => call<string>("folder_compare_start", { a, b, content }),
+  compareResult: () => call<T.CompareReport | null>("folder_compare_result"),
+  inventory: (path: string, recursive: boolean) => call<{ path: string; rows: number; truncated: boolean }>("inventory_export", { path, recursive }),
+  emptyFolders: () => call<T.EmptyFolders>("scan_empty_folders"),
+  emptyRemove: (paths: string[]) => call<{ removed: string[]; failed: [string, string][] }>("empty_folders_remove", { paths }),
+  insights: () => call<T.StorageInsights>("scan_insights"),
+  cleanupFiles: (id: string, limit?: number) =>
+    call<{ id: string; files: { path: string; size: number; modified: number }[]; total: number; totalBytes: number }>("cleanup_item_files", { id, limit }),
+  oplog: (q: { kind?: string; query?: string; outcome?: string; limit?: number; offset?: number }) =>
+    call<{ items: T.OpEntryV2[]; total: number }>("oplog_list", q),
+  oplogRestore: (id: number) => call<{ ok: boolean; message: string; restoreOpId: number | null; details: string[] }>("oplog_restore", { id }),
+  oplogExport: (format: "csv" | "json") => call<string>("oplog_export", { format }),
 };

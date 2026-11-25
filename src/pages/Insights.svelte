@@ -7,12 +7,15 @@
   import AreaChart from "../lib/components/AreaChart.svelte";
   import Dialog from "../lib/components/Dialog.svelte";
   import BarList from "../lib/components/BarList.svelte";
-  import { api } from "../lib/api";
+  import { api, fx } from "../lib/api";
+  import { intelState, refreshIntelligence } from "../lib/intelligence.svelte";
   import { go, app, toast } from "../lib/state.svelte";
   import { bytes, num, pct, ago, date, dateTime, errMsg, signedBytes } from "../lib/format";
-  import type { SmallFileHotspot, ScanSummary, GrowthReport, SnapshotInfo } from "../lib/types";
+  import type { SmallFileHotspot, ScanSummary, GrowthReport, SnapshotInfo, StorageInsights } from "../lib/types";
+  import { nav } from "../lib/state.svelte";
 
-  let tab = $state<"small" | "growth">("small");
+  let tab = $state<"recs" | "storage" | "small" | "growth">((["recs", "storage", "small", "growth"].includes(nav.params.tab) ? nav.params.tab : "recs") as any);
+  let insights = $state<StorageInsights | null>(null);
   let summary = $state<ScanSummary | null>(null);
   let hotspots = $state<SmallFileHotspot[]>([]);
   let roots = $state<string[]>([]);
@@ -27,6 +30,8 @@
 
   onMount(async () => {
     try {
+      if (!intelState.updatedAt) refreshIntelligence();
+      fx.insights().then((r) => (insights = r)).catch(() => (insights = null));
       summary = await api.scanSummary();
       if (summary) hotspots = await api.smallFiles();
       const snaps: SnapshotInfo[] = await api.snapshots();
@@ -64,11 +69,104 @@
 />
 
 <div class="tabs" role="tablist">
+  <button role="tab" aria-selected={tab === "recs"} onclick={() => (tab = "recs")}>Öneriler ({intelState.items.length})</button>
+  <button role="tab" aria-selected={tab === "storage"} onclick={() => (tab = "storage")}>Depolama içgörüleri</button>
   <button role="tab" aria-selected={tab === "small"} onclick={() => (tab = "small")}>Küçük dosya yoğunluğu</button>
   <button role="tab" aria-selected={tab === "growth"} onclick={() => (tab = "growth")}>Hızlı büyüyen klasörler</button>
 </div>
 
-{#if tab === "small"}
+{#if tab === "recs"}
+  <div class="row">
+    <p class="small muted">Diskler, son tarama, temizlik, başlangıç öğeleri, karantina, güncellemeler ve son 7 günün olay günlüğünden üretilir. Her öneride ölçülen veri ve Ivily yorumu ayrı gösterilir.</p>
+    <span class="spacer"></span>
+    <button class="btn sm" onclick={() => refreshIntelligence()} disabled={intelState.loading}><Icon name="refresh" size={12} /> {intelState.loading ? "Analiz ediliyor…" : "Yenile"}</button>
+  </div>
+  {#if intelState.loading && !intelState.items.length}
+    <div class="card"><div class="bar indeterminate" role="progressbar" aria-label="Analiz ediliyor"><span></span></div></div>
+  {:else if intelState.items.length}
+    <div class="recs">
+      {#each intelState.items as r (r.id)}
+        <article class="card rec">
+          <span class="lvl {r.level === 'bad' ? 'bad' : r.level === 'warn' ? 'warn' : 'info'}"><Icon name={r.level === "bad" ? "alertCircle" : r.level === "warn" ? "alert" : "info"} size={13} /></span>
+          <div class="rb">
+            <div class="row wrap"><strong>{r.title}</strong><span class="badge info">{r.source}</span><span class="tiny faint">{r.level === "bad" ? "Önemli" : r.level === "warn" ? "Dikkat" : "Bilgi"}</span></div>
+            <p class="small"><span class="faint">Ölçülen:</span> {r.evidence}</p>
+            {#if r.interpretation}<p class="small interp">{r.interpretation}</p>{/if}
+          </div>
+          {#if r.action}<button class="btn sm" onclick={() => go(r.action!.route, r.action!.params)}>{r.action.label}</button>{/if}
+        </article>
+      {/each}
+    </div>
+  {:else}
+    <div class="card"><EmptyState mood="happy" title="Öneri yok" body="Ölçülen verilerde dikkat gerektiren bir durum bulunmadı." /></div>
+  {/if}
+{:else if tab === "storage"}
+  {#if !insights}
+    <div class="card">
+      <EmptyState title="Önce bir disk taraması gerekli" body="Depolama içgörüleri, bu oturumdaki son disk taramasından hesaplanır.">
+        <button class="btn primary" onclick={() => go("disk")}>Disk Analizi'ne git</button>
+      </EmptyState>
+    </div>
+  {:else}
+    <p class="small muted">Kaynak: {insights.root} taraması. {insights.coverage}</p>
+    {#if insights.bottlenecks.length}
+      <div class="recs">
+        {#each insights.bottlenecks as b}
+          <article class="card rec">
+            <span class="lvl {b.level === 'warn' ? 'warn' : 'info'}"><Icon name={b.level === "warn" ? "alert" : "info"} size={13} /></span>
+            <div class="rb"><strong>{b.title}</strong><p class="small"><span class="faint">Ölçülen:</span> {b.evidence}</p><p class="small interp">{b.text}</p></div>
+          </article>
+        {/each}
+      </div>
+    {/if}
+    <div class="grid cols-2">
+      <section class="card">
+        <div class="card-head"><Icon name="folder" /><h2>Kullanıcı klasörleri</h2></div>
+        <ul class="kv">
+          {#each insights.userFolders as f}
+            <li>
+              <span>{f.label}</span>
+              <span class="spacer"></span>
+              {#if f.found}<span class="num">{bytes(f.size)}</span><span class="tiny faint num">{num(f.files)} dosya</span>{:else}<span class="tiny faint">taranan konumun dışında</span>{/if}
+              {#if f.found}<PathActions path={f.path} />{/if}
+            </li>
+          {/each}
+        </ul>
+      </section>
+      <section class="card">
+        <div class="card-head"><Icon name="trash" /><h2>Geçici dosya, önbellek ve günlük klasörleri</h2></div>
+        {#if insights.tempLike.length}
+          <ul class="kv">
+            {#each insights.tempLike as t}
+              <li><span class="badge info">{t.kind === "temp" ? "Geçici" : t.kind === "cache" ? "Önbellek" : "Günlük"}</span><span class="path ellipsis" title={t.path}>{t.path}</span><span class="spacer"></span><span class="num">{bytes(t.size)}</span></li>
+            {/each}
+          </ul>
+          <p class="tiny faint">Adı geçici/önbellek/günlük olan klasörler (100 MB üzeri). Silinip silinemeyecekleri uygulamaya bağlıdır; bilinen güvenli konumlar Temizlik sayfasında ayrıca sınıflandırılır.</p>
+        {:else}
+          <p class="small muted">100 MB'tan büyük geçici, önbellek veya günlük klasörü bulunmadı.</p>
+        {/if}
+      </section>
+    </div>
+    <section class="card">
+      <div class="card-head"><Icon name="package" /><h2>Uygulama depolaması</h2><span class="sub">Program Files, AppData ve ProgramData altındaki en büyük klasörler</span></div>
+      {#if insights.appStorage.length}
+        <div class="table-wrap">
+          <table class="data">
+            <thead><tr><th>Uygulama / klasör</th><th>Konum</th><th class="r">Boyut</th><th class="r">Dosya</th><th class="shrink"></th></tr></thead>
+            <tbody>
+              {#each insights.appStorage as a}
+                <tr><td>{a.name}</td><td class="small muted">{a.location}</td><td class="r num">{bytes(a.size)}</td><td class="r num small">{num(a.files)}</td><td class="shrink"><PathActions path={a.path} /></td></tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+        <p class="tiny faint">Klasör adı uygulamayı gösterir; aynı uygulamanın birden fazla konumda verisi olabilir. Uygulama verilerini elle silmek yerine uygulamanın kendi ayarlarını veya Windows "Yüklü uygulamalar" bölümünü kullanın.</p>
+      {:else}
+        <p class="small muted">Taranan konum uygulama klasörlerini içermiyor.</p>
+      {/if}
+    </section>
+  {/if}
+{:else if tab === "small"}
   <div class="callout info">
     <Icon name="info" size={18} />
     <p class="small">
@@ -212,6 +310,45 @@
 {/if}
 
 <style>
+  .recs {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .rec {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .rb {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .rb p {
+    color: var(--text-2);
+  }
+  .kv {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+  }
+  .kv li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .sub {
+    color: var(--text-3);
+    font-size: 12px;
+  }
   .hs {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));

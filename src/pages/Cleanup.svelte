@@ -7,7 +7,7 @@
   import RiskBadge from "../lib/components/RiskBadge.svelte";
   import Dialog from "../lib/components/Dialog.svelte";
   import CatScene from "../lib/components/CatScene.svelte";
-  import { api } from "../lib/api";
+  import { api, fx } from "../lib/api";
   import { jobs, registerJob, onJobDone, toast, app, go } from "../lib/state.svelte";
   import { bytes, num, ago, errMsg } from "../lib/format";
   import type { CleanupScanSummary, CleanupItem, CleanupReport } from "../lib/types";
@@ -18,6 +18,17 @@
   let previewOpen = $state(false);
   let ack = $state(false);
   let report = $state<CleanupReport | null>(null);
+  let previews = $state<Record<string, { files: { path: string; size: number; modified: number }[]; total: number; totalBytes: number } | "loading">>({});
+
+  async function previewFiles(id: string) {
+    previews[id] = "loading";
+    try {
+      previews[id] = await fx.cleanupFiles(id, 200);
+    } catch (e) {
+      delete previews[id];
+      toast("error", "Dosya listesi alınamadı", errMsg(e));
+    }
+  }
 
   const scanJob = $derived(jobs["cleanup-scan"]);
   const runJob = $derived(jobs["cleanup-run"]);
@@ -217,6 +228,21 @@
                     {#each it.locations as l}<code class="path">{l}</code>{/each}
                   </div>
                 {/if}
+                {#if it.files > 0 && it.id !== "recycle-bin"}
+                  {@const pv = previews[it.id]}
+                  {#if !pv}
+                    <div><button class="btn sm" onclick={() => previewFiles(it.id)}><Icon name="eye" size={12} /> Silinecek dosyaları önizle</button></div>
+                  {:else if pv === "loading"}
+                    <p class="tiny faint">Yükleniyor…</p>
+                  {:else}
+                    <div class="pvfiles">
+                      <p class="tiny faint">En büyük {num(pv.files.length)} / {num(pv.total)} dosya · toplam {bytes(pv.totalBytes)}</p>
+                      <ul>
+                        {#each pv.files as f}<li><span class="path ellipsis" title={f.path}>{f.path}</span><span class="num tiny">{bytes(f.size)}</span></li>{/each}
+                      </ul>
+                    </div>
+                  {/if}
+                {/if}
               </div>
             {/if}
           </div>
@@ -338,6 +364,22 @@
     flex-direction: column;
     gap: 6px;
     color: var(--text-2);
+  }
+  .pvfiles ul {
+    list-style: none;
+    margin: 4px 0 0;
+    padding: 0;
+    max-height: 220px;
+    overflow: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+  }
+  .pvfiles li {
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+    padding: 3px 8px;
+    border-bottom: 1px solid var(--border);
   }
   .locs {
     display: flex;

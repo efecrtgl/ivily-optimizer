@@ -1,4 +1,5 @@
 <script lang="ts">
+  let { embedded = false }: { embedded?: boolean } = $props();
   import { onMount } from "svelte";
   import PageHeader from "../lib/components/PageHeader.svelte";
   import Icon from "../lib/components/Icon.svelte";
@@ -86,8 +87,17 @@
     }
   }
 
-  async function control(action: "start" | "stop") {
+  async function control(action: "start" | "stop" | "restart") {
     if (!sel) return;
+    if (action === "restart") {
+      const ok = await confirm({
+        title: `"${sel.displayName}" yeniden başlatılsın mı?`,
+        body: "Servis durdurulup yeniden başlatılır. Bu servise bağlı uygulamalar ve servisler kısa süre etkilenebilir." + (sel.dependents?.length ? `\n\nBu servise bağlı olanlar: ${sel.dependents.join(", ")}` : "") + "\n\nWindows yönetici onayı (UAC) bir kez istenir.",
+        confirmLabel: "Yeniden başlat",
+        danger: true,
+      });
+      if (!ok) return;
+    }
     if (action === "stop") {
       const ok = await confirm({
         title: `"${sel.displayName}" durdurulsun mu?`,
@@ -103,7 +113,7 @@
       replace(r.item);
       toast("success", r.message);
     } catch (e) {
-      handleErr(e, action === "start" ? "Servis başlatılamadı" : "Servis durdurulamadı");
+      handleErr(e, action === "start" ? "Servis başlatılamadı" : action === "restart" ? "Servis yeniden başlatılamadı" : "Servis durdurulamadı");
     } finally {
       busy = false;
     }
@@ -123,6 +133,7 @@
   const running = $derived(list.filter((s) => s.status === "running").length);
 </script>
 
+{#if !embedded}
 <PageHeader
   title="Servisler"
   subtitle="Windows servislerini inceleyin ve gerektiğinde tek tek yönetin. Ivily hiçbir servisi 'gereksiz' olarak etiketlemez ve toplu kapatma sunmaz."
@@ -131,6 +142,7 @@
     <button class="btn" onclick={load}><Icon name="refresh" size={14} /> Yenile</button>
   {/snippet}
 </PageHeader>
+{/if}
 
 <div class="callout warn">
   <Icon name="alert" size={16} />
@@ -153,6 +165,7 @@
   </select>
   <span class="spacer"></span>
   <span class="small muted">{num(list.length)} servis · {num(running)} çalışıyor</span>
+  {#if embedded}<button class="btn sm" onclick={load} disabled={loading}><Icon name="refresh" size={12} /> Yenile</button>{/if}
 </div>
 
 <div class="table-wrap tall">
@@ -197,6 +210,8 @@
       <dt>Hesap</dt><dd>{sel.account || "—"}</dd>
       <dt>Yürütülebilir dosya</dt><dd class="path">{sel.binaryPath || "—"}</dd>
       <dt>Açıklama</dt><dd class="small">{sel.description ?? "Açıklama yok."}</dd>
+      <dt>Bağımlı olduğu</dt><dd class="small">{sel.dependencies?.length ? sel.dependencies.join(", ") : "Yok"}</dd>
+      <dt>Buna bağlı olanlar</dt><dd class="small">{sel.dependents?.length ? sel.dependents.join(", ") : "Yok"}</dd>
     </dl>
     {#if !sel.protected}
       <div class="divider"></div>
@@ -217,6 +232,7 @@
       {/if}
       {#if sel && sel.status === "running" && sel.canStop && !sel.protected}
         <button class="btn" disabled={busy} onclick={() => control("stop")}><Icon name="stop" size={12} /> Durdur</button>
+        <button class="btn" disabled={busy} onclick={() => control("restart")}><Icon name="refresh" size={12} /> Yeniden başlat</button>
       {/if}
       <span class="spacer"></span>
       <button class="btn" onclick={() => (selOpen = false)}>Kapat</button>

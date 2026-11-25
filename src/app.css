@@ -1,97 +1,167 @@
-/* Ivily Optimizer tasarım sistemi
- * Grafit nötr tonlar + amber "kedi gözü" vurgusu. Durumlar asla yalnızca
- * renkle anlatılmaz: her rozet bir simge ve metin içerir. */
+/* Ivily Optimizer tasarım sistemi — tek renkli cam (monochrome glass)
+ *
+ * Kurallar:
+ * - Palet yalnızca siyah, beyaz ve gri tonlarından oluşur; renkli vurgu yoktur.
+ * - Durumlar renkle değil; simge + metin + kenar biçimi (düz / kesikli) +
+ *   ters çevrilmiş yüzey + desen (çizgili dolgu) ile ayırt edilir.
+ * - Cam yüzeyler saydamlık + hafif bulanıklık kullanır; okunabilirlik her
+ *   zaman önce gelir. Bulanıklık desteklenmiyorsa veya kullanıcı kapattıysa
+ *   düz yüzeylere geri dönülür.
+ *
+ * Eski bileşenlerle uyum için --accent, --good, --warn, --bad, --info ve
+ * --chart-* adları korunmuş, tek renkli değerlere eşlenmiştir. */
 
 :root {
+  /* Tipografi */
   --font: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif;
   --font-display: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
   --mono: "Cascadia Mono", "Cascadia Code", Consolas, monospace;
+  --fs-xs: 11.5px;
+  --fs-sm: 12.5px;
+  --fs: 14px;
+  --fs-lg: 16px;
+  --fs-xl: 22px;
+  --fs-kpi: 28px;
 
+  /* Köşe yarıçapı */
   --r-sm: 6px;
-  --r: 8px;
-  --r-lg: 12px;
+  --r: 9px;
+  --r-lg: 14px;
+  --r-xl: 20px;
 
+  /* Boşluk */
   --s1: 4px;
   --s2: 8px;
   --s3: 12px;
   --s4: 16px;
   --s5: 24px;
   --s6: 32px;
+  --s7: 48px;
 
+  /* Hareket */
   --t-fast: 120ms;
-  --t: 180ms;
+  --t: 200ms;
+  --t-slow: 360ms;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  /* Cam */
+  --blur: 18px;
+  --blur-strong: 28px;
+  --saturate: 115%;
 
   /* Koyu tema (varsayılan) */
-  --bg: #121418;
-  --bg-sunken: #0e1013;
-  --surface: #191c21;
-  --surface-2: #20242a;
-  --surface-3: #282d34;
-  --border: #2a2f37;
-  --border-strong: #3a414b;
-  --text: #e8e6e3;
-  --text-2: #a9adb4;
-  --text-3: #7c828b;
-  --accent: #e9a23b;
-  --accent-strong: #f2b357;
-  --accent-soft: rgba(233, 162, 59, 0.14);
-  --on-accent: #1a1408;
-  --good: #3fb68b;
-  --good-soft: rgba(63, 182, 139, 0.14);
-  --warn: #e0b341;
-  --warn-soft: rgba(224, 179, 65, 0.14);
-  --bad: #ef6a5e;
-  --bad-soft: rgba(239, 106, 94, 0.14);
-  --info: #6aa7ef;
-  --info-soft: rgba(106, 167, 239, 0.14);
-  --chart-1: #e9a23b;
-  --chart-2: #6aa7ef;
-  --chart-3: #3fb68b;
-  --chart-4: #b48cf0;
-  --chart-5: #ef6a5e;
-  --chart-6: #4fc1c9;
-  --chart-7: #d987b9;
-  --chart-8: #9aa27a;
-  --chart-9: #6c727b;
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
-  --focus: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent);
+  --bg: #08080a;
+  --bg-sunken: #050506;
+  --ambient-1: rgba(255, 255, 255, 0.07);
+  --ambient-2: rgba(255, 255, 255, 0.04);
+  --glass: rgba(255, 255, 255, 0.045);
+  --glass-strong: rgba(20, 20, 23, 0.74);
+  --glass-hover: rgba(255, 255, 255, 0.075);
+  --glass-border: rgba(255, 255, 255, 0.09);
+  --glass-highlight: rgba(255, 255, 255, 0.07);
+  --surface: #121214;
+  --surface-2: rgba(255, 255, 255, 0.05);
+  --surface-3: rgba(255, 255, 255, 0.09);
+  --solid-1: #131315;
+  --solid-2: #1a1a1d;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.17);
+  --text: #f2f2f3;
+  --text-2: #a8a8ad;
+  --text-3: #707076;
+  --fill: #ececee;
+  --fill-muted: #7a7a80;
+
+  --accent: #f2f2f3;
+  --accent-strong: #ffffff;
+  --accent-soft: rgba(255, 255, 255, 0.08);
+  --on-accent: #0a0a0b;
+  --good: #ececee;
+  --good-soft: rgba(255, 255, 255, 0.06);
+  --warn: #c9c9cd;
+  --warn-soft: rgba(255, 255, 255, 0.06);
+  --bad: #ffffff;
+  --bad-soft: rgba(255, 255, 255, 0.1);
+  --info: #a8a8ad;
+  --info-soft: rgba(255, 255, 255, 0.05);
+
+  --chart-1: #f2f2f3;
+  --chart-2: #a9a9ae;
+  --chart-3: #d4d4d8;
+  --chart-4: #7c7c82;
+  --chart-5: #bdbdc2;
+  --chart-6: #5e5e64;
+  --chart-7: #e2e2e5;
+  --chart-8: #8f8f95;
+  --chart-9: #4a4a4f;
+
+  --shadow: 0 1px 1px rgba(0, 0, 0, 0.4), 0 12px 32px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.6);
+  --focus: 0 0 0 2px var(--bg), 0 0 0 4px #ffffff;
+  --stripe: repeating-linear-gradient(135deg, var(--fill) 0 3px, transparent 3px 6px);
   color-scheme: dark;
 }
 
 :root[data-theme="light"] {
-  --bg: #f4f3f0;
-  --bg-sunken: #ebe9e5;
+  --bg: #f2f2f3;
+  --bg-sunken: #e8e8ea;
+  --ambient-1: rgba(0, 0, 0, 0.05);
+  --ambient-2: rgba(0, 0, 0, 0.03);
+  --glass: rgba(255, 255, 255, 0.62);
+  --glass-strong: rgba(250, 250, 251, 0.82);
+  --glass-hover: rgba(255, 255, 255, 0.86);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --glass-highlight: rgba(255, 255, 255, 0.9);
   --surface: #ffffff;
-  --surface-2: #f7f6f3;
-  --surface-3: #eeece8;
-  --border: #e2dfd9;
-  --border-strong: #cdc9c1;
-  --text: #1b1d22;
-  --text-2: #50555e;
-  --text-3: #767b84;
-  --accent: #b87412;
-  --accent-strong: #9a600c;
-  --accent-soft: rgba(184, 116, 18, 0.12);
+  --surface-2: rgba(0, 0, 0, 0.035);
+  --surface-3: rgba(0, 0, 0, 0.07);
+  --solid-1: #ffffff;
+  --solid-2: #f5f5f6;
+  --border: rgba(0, 0, 0, 0.09);
+  --border-strong: rgba(0, 0, 0, 0.18);
+  --text: #0c0c0d;
+  --text-2: #55555b;
+  --text-3: #85858b;
+  --fill: #18181a;
+  --fill-muted: #9a9aa0;
+
+  --accent: #0c0c0d;
+  --accent-strong: #000000;
+  --accent-soft: rgba(0, 0, 0, 0.06);
   --on-accent: #ffffff;
-  --good: #1f8a63;
-  --good-soft: rgba(31, 138, 99, 0.12);
-  --warn: #9a7400;
-  --warn-soft: rgba(154, 116, 0, 0.12);
-  --bad: #c63d31;
-  --bad-soft: rgba(198, 61, 49, 0.1);
-  --info: #2f6fc0;
-  --info-soft: rgba(47, 111, 192, 0.1);
-  --chart-1: #c98419;
-  --chart-2: #3f7fd0;
-  --chart-3: #23986e;
-  --chart-4: #8a62d6;
-  --chart-5: #d24b3f;
-  --chart-6: #1f9aa3;
-  --chart-7: #c0629c;
-  --chart-8: #7d8556;
-  --chart-9: #9097a0;
-  --shadow: 0 1px 2px rgba(20, 20, 20, 0.06), 0 8px 24px rgba(20, 20, 20, 0.08);
+  --good: #18181a;
+  --good-soft: rgba(0, 0, 0, 0.04);
+  --warn: #3a3a3e;
+  --warn-soft: rgba(0, 0, 0, 0.05);
+  --bad: #000000;
+  --bad-soft: rgba(0, 0, 0, 0.08);
+  --info: #55555b;
+  --info-soft: rgba(0, 0, 0, 0.04);
+
+  --chart-1: #111113;
+  --chart-2: #6a6a70;
+  --chart-3: #3a3a3e;
+  --chart-4: #9a9aa0;
+  --chart-5: #505055;
+  --chart-6: #b8b8bd;
+  --chart-7: #26262a;
+  --chart-8: #828288;
+  --chart-9: #cfcfd3;
+
+  --shadow: 0 1px 1px rgba(0, 0, 0, 0.04), 0 10px 30px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.16);
+  --focus: 0 0 0 2px var(--bg), 0 0 0 4px #000000;
   color-scheme: light;
+}
+
+/* Cam efektleri kapalıyken (ayar): düz yüzeyler, bulanıklık yok */
+:root[data-glass="off"] {
+  --glass: var(--solid-1);
+  --glass-strong: var(--solid-1);
+  --glass-hover: var(--solid-2);
+  --glass-highlight: transparent;
+  --blur: 0px;
+  --blur-strong: 0px;
 }
 
 * {
@@ -102,7 +172,11 @@ html,
 body {
   margin: 0;
   height: 100%;
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(1200px 700px at 12% -10%, var(--ambient-1), transparent 60%),
+    radial-gradient(900px 600px at 100% 110%, var(--ambient-2), transparent 60%);
+  background-attachment: fixed;
   color: var(--text);
   font-family: var(--font);
   font-size: 14px;
@@ -278,14 +352,30 @@ a {
 
 /* ---------- Kartlar ---------- */
 .card {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  position: relative;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
   border-radius: var(--r-lg);
   padding: var(--s4);
   min-width: 0;
+  box-shadow: inset 0 1px 0 var(--glass-highlight);
 }
 .card.flat {
   background: var(--surface-2);
+  box-shadow: none;
+}
+/* Yüzen katmanlar (kenar çubuğu, pencere, yapışkan çubuklar) gerçek bulanıklık kullanır. */
+.glass-float {
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-border);
+  box-shadow: inset 0 1px 0 var(--glass-highlight), var(--shadow);
+  -webkit-backdrop-filter: blur(var(--blur-strong)) saturate(var(--saturate));
+  backdrop-filter: blur(var(--blur-strong)) saturate(var(--saturate));
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-float {
+    background: var(--solid-1);
+  }
 }
 .card.pad-0 {
   padding: 0;
@@ -348,21 +438,24 @@ a {
   cursor: not-allowed;
 }
 .btn.primary {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--fill);
+  border-color: var(--fill);
   color: var(--on-accent);
 }
 .btn.primary:hover:not(:disabled) {
   background: var(--accent-strong);
   border-color: var(--accent-strong);
 }
+/* Yıkıcı işlem: ters çevrilmiş yüzey + kesikli dış çizgi ile birincil düğmeden ayrılır. */
 .btn.danger {
-  background: var(--bad);
-  border-color: var(--bad);
-  color: #fff;
+  background: var(--fill);
+  border-color: var(--fill);
+  color: var(--on-accent);
+  outline: 1.5px dashed var(--fill);
+  outline-offset: 2px;
 }
 .btn.danger:hover:not(:disabled) {
-  filter: brightness(1.08);
+  background: var(--accent-strong);
 }
 .btn.ghost {
   background: transparent;
@@ -393,7 +486,7 @@ a {
   padding: 0 10px;
   border-radius: var(--r);
   border: 1px solid var(--border-strong);
-  background: var(--bg-sunken);
+  background: var(--surface-2);
   color: var(--text);
   font: inherit;
   font-size: 13px;
@@ -402,8 +495,12 @@ a {
 .input:focus,
 .select:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--text);
   box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.select option {
+  background: var(--solid-1);
+  color: var(--text);
 }
 .input::placeholder {
   color: var(--text-3);
@@ -458,8 +555,8 @@ label.field {
   transition: transform var(--t), background var(--t);
 }
 .switch:checked {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--fill);
+  border-color: var(--fill);
 }
 .switch:checked::after {
   transform: translateX(16px);
@@ -484,33 +581,43 @@ label.field {
   color: var(--text-2);
   white-space: nowrap;
 }
+/* Tek renkli durum dili:
+   good   → ince düz kenar (sakin, olumlu)
+   warn   → kesikli kenar (dikkat)
+   bad    → ters çevrilmiş dolgu (yüksek önem)
+   info   → kenarsız soluk yüzey (bilgi)
+   accent → kalın düz kenar (vurgu / etkin) */
 .badge.good {
-  background: var(--good-soft);
-  color: var(--good);
+  background: transparent;
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
 }
 .badge.warn {
-  background: var(--warn-soft);
-  color: var(--warn);
+  background: transparent;
+  color: var(--text);
+  border: 1px dashed var(--text-2);
 }
 .badge.bad {
-  background: var(--bad-soft);
-  color: var(--bad);
+  background: var(--fill);
+  color: var(--on-accent);
 }
 .badge.info {
-  background: var(--info-soft);
-  color: var(--info);
+  background: var(--surface-2);
+  color: var(--text-2);
 }
 .badge.accent {
-  background: var(--accent-soft);
-  color: var(--accent);
+  background: transparent;
+  color: var(--text);
+  box-shadow: inset 0 0 0 1.5px var(--text);
 }
 
 /* ---------- Tablolar ---------- */
 .table-wrap {
   overflow: auto;
-  border: 1px solid var(--border);
+  border: 1px solid var(--glass-border);
   border-radius: var(--r-lg);
-  background: var(--surface);
+  background: var(--glass);
+  box-shadow: inset 0 1px 0 var(--glass-highlight);
 }
 table.data {
   width: 100%;
@@ -521,7 +628,7 @@ table.data th {
   position: sticky;
   top: 0;
   z-index: 1;
-  background: var(--surface-2);
+  background: var(--solid-2);
   color: var(--text-2);
   font-weight: 600;
   font-size: 12px;
@@ -554,6 +661,7 @@ table.data tbody tr:hover {
 }
 table.data tr.selected {
   background: var(--accent-soft);
+  box-shadow: inset 2px 0 0 var(--text);
 }
 table.data td.r,
 table.data th.r {
@@ -577,17 +685,23 @@ table.data th.shrink {
   position: absolute;
   inset: 0 auto 0 0;
   border-radius: inherit;
-  background: var(--accent);
-  transition: width var(--t);
+  background: var(--fill);
+  transition: width var(--t) var(--ease);
 }
 .bar.good > span {
-  background: var(--good);
+  background: var(--fill-muted);
 }
+/* Dikkat: çizgili dolgu */
 .bar.warn > span {
-  background: var(--warn);
+  background: var(--stripe);
+  box-shadow: inset 0 0 0 1px var(--fill);
 }
+/* Kritik: dolu çubuk + dış halka */
 .bar.bad > span {
-  background: var(--bad);
+  background: var(--fill);
+}
+.bar.bad {
+  box-shadow: 0 0 0 1px var(--fill);
 }
 .bar.indeterminate > span {
   width: 30% !important;
@@ -614,20 +728,21 @@ table.data th.shrink {
   font-size: 13px;
 }
 .callout.info {
-  border-color: color-mix(in srgb, var(--info) 35%, transparent);
-  background: var(--info-soft);
+  background: var(--surface-2);
 }
 .callout.warn {
-  border-color: color-mix(in srgb, var(--warn) 35%, transparent);
-  background: var(--warn-soft);
+  border-style: dashed;
+  border-color: var(--text-2);
+  background: var(--surface-2);
 }
 .callout.bad {
-  border-color: color-mix(in srgb, var(--bad) 35%, transparent);
-  background: var(--bad-soft);
+  border: 1px solid var(--text);
+  box-shadow: inset 3px 0 0 var(--text);
+  background: var(--surface-3);
 }
 .callout.good {
-  border-color: color-mix(in srgb, var(--good) 35%, transparent);
-  background: var(--good-soft);
+  border-color: var(--border-strong);
+  background: transparent;
 }
 
 /* ---------- Sekmeler ---------- */
@@ -651,7 +766,8 @@ table.data th.shrink {
 }
 .tabs button[aria-selected="true"] {
   color: var(--text);
-  border-bottom-color: var(--accent);
+  border-bottom-color: var(--text);
+  font-weight: 600;
 }
 .tabs button:focus-visible {
   box-shadow: var(--focus);
@@ -695,4 +811,79 @@ kbd {
   border-radius: 4px;
   border: 1px solid var(--border-strong);
   background: var(--surface-2);
+}
+
+/* ---------- Giriş animasyonları ---------- */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.page > * {
+  animation: rise var(--t-slow) var(--ease) both;
+}
+.page > *:nth-child(2) {
+  animation-delay: 30ms;
+}
+.page > *:nth-child(3) {
+  animation-delay: 60ms;
+}
+.page > *:nth-child(n + 4) {
+  animation-delay: 90ms;
+}
+
+/* Onay kutuları ve seçimler her yerde tek renkli */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--fill);
+}
+
+.kpi {
+  font-size: var(--fs-kpi);
+}
+
+/* Bölüm başlıkları */
+.section-title {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+/* Ivily yorumu: gerçek veriden ayırmak için kesikli kenar + etiket */
+.interp {
+  border-left: 2px dashed var(--text-3);
+  padding: 2px 0 2px 10px;
+  color: var(--text-2);
+}
+.interp::before {
+  content: "Ivily yorumu · ";
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Durum simgesi kapsülleri (renk yerine şekil) */
+.lvl {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 7px;
+  flex: none;
+}
+.lvl.good {
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+.lvl.warn {
+  border: 1px dashed var(--text-2);
+}
+.lvl.bad {
+  background: var(--fill);
+  color: var(--on-accent);
+}
+.lvl.info {
+  background: var(--surface-2);
+  color: var(--text-2);
 }

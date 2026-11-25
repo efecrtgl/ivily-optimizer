@@ -66,7 +66,7 @@
 {#if open}
   <div class="backdrop" role="presentation" onmousedown={(e) => e.target === e.currentTarget && close()}>
     <div
-      class="panel"
+      class="panel glass-float"
       bind:this={panel}
       role="dialog"
       aria-modal="true"
@@ -89,17 +89,17 @@
     position: fixed;
     inset: 0;
     z-index: 90;
-    background: rgba(5, 6, 8, 0.55);
+    background: rgba(0, 0, 0, 0.5);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
     display: grid;
     place-items: center;
     padding: 16px;
     animation: fade var(--t) ease-out;
   }
   .panel {
-    background: var(--surface);
-    border: 1px solid var(--border-strong);
-    border-radius: var(--r-lg);
-    box-shadow: var(--shadow);
+    border-radius: var(--r-xl);
+    box-shadow: var(--shadow-lg);
     max-height: calc(100vh - 48px);
     display: flex;
     flex-direction: column;

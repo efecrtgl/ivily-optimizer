@@ -1,4 +1,5 @@
 <script lang="ts">
+  let { embedded = false }: { embedded?: boolean } = $props();
   import { onMount } from "svelte";
   import PageHeader from "../lib/components/PageHeader.svelte";
   import Icon from "../lib/components/Icon.svelte";
@@ -8,7 +9,21 @@
   import { toast, confirm } from "../lib/state.svelte";
   import { errMsg, errCode, num } from "../lib/format";
   import { sortBy, matches } from "../lib/util";
-  import type { TaskInfo } from "../lib/types";
+  import type { TaskInfo, TaskHistory } from "../lib/types";
+  import { intel } from "../lib/api";
+  let hist = $state<TaskHistory | null>(null);
+  let histLoading = $state(false);
+  async function loadHistory(t: TaskInfo) {
+    histLoading = true;
+    hist = null;
+    try {
+      hist = await intel.taskHistory(t.path, t.name);
+    } catch (e) {
+      toast("error", "Görev geçmişi okunamadı", errMsg(e));
+    } finally {
+      histLoading = false;
+    }
+  }
 
   let list = $state<TaskInfo[]>([]);
   let loading = $state(true);
@@ -80,6 +95,7 @@
   const userCount = $derived(list.filter((t) => !t.protected).length);
 </script>
 
+{#if !embedded}
 <PageHeader
   title="Zamanlanmış Görevler"
   subtitle="Windows Görev Zamanlayıcısı'ndaki görevler. Uygulamaların eklediği görevleri inceleyebilir ve devre dışı bırakabilirsiniz; Windows bakım görevleri yalnızca görüntülenir."
@@ -88,6 +104,7 @@
     <button class="btn" onclick={load} disabled={loading}><Icon name="refresh" size={14} /> Yenile</button>
   {/snippet}
 </PageHeader>
+{/if}
 
 <div class="row wrap">
   <input class="input" placeholder="Ad, yol, yazar veya komut ara…" bind:value={q} style="width:300px" aria-label="Görev ara" />
@@ -100,6 +117,7 @@
   <label class="check small"><input type="checkbox" bind:checked={showMs} /> Windows görevlerini de göster (salt okunur)</label>
   <span class="spacer"></span>
   <span class="small muted">{num(userCount)} uygulama görevi · {num(list.length - userCount)} Windows görevi</span>
+  {#if embedded}<button class="btn sm" onclick={load} disabled={loading}><Icon name="refresh" size={12} /> Yenile</button>{/if}
 </div>
 
 {#if error}
@@ -122,7 +140,7 @@
       {#each rows as t (t.id)}
         <tr>
           <td>
-            <button class="namebtn" onclick={() => { sel = t; selOpen = true; }}>{t.name}</button>
+            <button class="namebtn" onclick={() => { sel = t; hist = null; selOpen = true; }}>{t.name}</button>
             <div class="row"><span class="tiny faint mono ellipsis" style="max-width:260px">{t.path}</span>{#if t.protected}<span class="badge"><Icon name="lock" size={10} /> Windows</span>{/if}</div>
           </td>
           <td><span class="badge {t.state === 'running' ? 'info' : t.state === 'disabled' ? '' : 'good'}">{t.stateLabel}</span></td>
@@ -157,6 +175,13 @@
     <ul class="ul small">
       {#each sel.triggers as tr}<li>{tr.label}{tr.startBoundary ? ` · başlangıç ${fmt(tr.startBoundary)}` : ""}{tr.enabled ? "" : " (devre dışı)"}</li>{:else}<li class="muted">Tetikleyici yok</li>{/each}
     </ul>
+    <div class="row"><h3 class="h">Çalışma geçmişi</h3><span class="spacer"></span>{#if !hist}<button class="btn sm" disabled={histLoading} onclick={() => loadHistory(sel!)}>{histLoading ? "Okunuyor…" : "Geçmişi göster"}</button>{/if}</div>
+    {#if hist}
+      {#if hist.logEnabled === false || !hist.events.length}<p class="small muted">{hist.note}</p>{/if}
+      {#if hist.events.length}
+        <ul class="ul small">{#each hist.events as ev}<li>{new Date(ev.ts * 1000).toLocaleString("tr-TR")} · {ev.label}{ev.resultCode != null ? ` (kod ${ev.resultCode})` : ""}</li>{/each}</ul>
+      {/if}
+    {/if}
     <h3 class="h">Eylemler</h3>
     <ul class="ul">
       {#each sel.actions as a}<li class="path">{a.execute} {a.arguments ?? ""}</li>{:else}<li class="muted small">Program çalıştırma eylemi yok (COM veya e-posta eylemi olabilir).</li>{/each}

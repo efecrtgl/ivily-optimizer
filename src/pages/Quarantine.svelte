@@ -47,8 +47,10 @@
   async function restore(item: QuarantineItem, rename = false) {
     busy = true;
     try {
-      const to = await api.quarantineRestore(item.id, rename);
-      toast("success", "Geri yüklendi", to);
+      const r = await api.quarantineRestore(item.id, rename);
+      if (r.verified) toast("success", "Geri yüklendi ve doğrulandı", r.path);
+      else toast("warning", "Geri yüklendi, ancak doğrulanamadı", `${r.path}
+${r.message}`);
       await load();
     } catch (e) {
       if (errCode(e) === "conflict") {
@@ -110,7 +112,7 @@
 
 <PageHeader
   title="Karantina"
-  subtitle="Silmek yerine karantinaya taşınan dosyalar burada saklanır. Dosyaları özgün konumlarına geri yükleyebilir veya kalıcı olarak silebilirsiniz."
+  subtitle="Karantina, dosyaları silmek yerine Ivily'nin veri klasörüne taşır; özgün konumları kaydedilir ve saklama süresi boyunca geri yüklenebilir. Geri yüklemede mevcut bir dosyanın üzerine asla yazılmaz ve dosyanın hedefe eksiksiz ulaştığı boyut karşılaştırmasıyla doğrulanır. Karantinadaki dosyalar silinene kadar disk alanı kazanılmaz."
 >
   {#snippet actions()}
     {#if data}<PathActions path={data.folder} />{/if}

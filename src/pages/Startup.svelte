@@ -5,11 +5,12 @@
   import Dialog from "../lib/components/Dialog.svelte";
   import PathActions from "../lib/components/PathActions.svelte";
   import SortTh from "../lib/components/SortTh.svelte";
-  import { sys } from "../lib/api";
+  import { sys, intel } from "../lib/api";
+  import BarList from "../lib/components/BarList.svelte";
   import { toast, confirm, go } from "../lib/state.svelte";
-  import { errMsg, errCode, num } from "../lib/format";
+  import { errMsg, errCode, num, dateTime } from "../lib/format";
   import { sortBy, matches } from "../lib/util";
-  import type { StartupItem } from "../lib/types";
+  import type { StartupItem, StartupExtras, BootHistory } from "../lib/types";
 
   let items = $state<StartupItem[]>([]);
   let loading = $state(true);
@@ -19,6 +20,28 @@
   let sort = $state<{ key: string; dir: 1 | -1 }>({ key: "name", dir: 1 });
   let busy = $state<string | null>(null);
   let sel = $state<StartupItem | null>(null);
+  let tab = $state<"items" | "tasks" | "services" | "boot">("items");
+  let extras = $state<StartupExtras | null>(null);
+  let boot = $state<BootHistory | null>(null);
+  let onlyFlagged = $state(false);
+
+  async function loadExtras() {
+    if (extras) return;
+    try {
+      extras = await intel.startupExtras();
+    } catch (e) {
+      toast("error", "Ek başlangıç kaynakları okunamadı", errMsg(e));
+    }
+  }
+  async function loadBoot() {
+    if (boot) return;
+    try {
+      boot = await intel.bootHistory();
+    } catch (e) {
+      toast("error", "Açılış geçmişi okunamadı", errMsg(e));
+    }
+  }
+  const sigCls = (st?: string) => (st === "signed" ? "good" : st === "invalid" ? "bad" : st === "unsigned" ? "warn" : "info");
   let selOpen = $state(false);
 
   onMount(load);
@@ -65,7 +88,8 @@
         (i) =>
           (matches(i.name, q) || matches(i.command, q) || matches(i.publisher, q)) &&
           (filter === "all" || (filter === "enabled" ? i.enabled : !i.enabled)) &&
-          (!scope || i.scope === scope),
+          (!scope || i.scope === scope) &&
+          (!onlyFlagged || (i.indicators?.length ?? 0) > 0),
       ),
       sort,
     ),
@@ -100,6 +124,93 @@
   </p>
 </div>
 
+<div class="tabs" role="tablist">
+  <button role="tab" aria-selected={tab === "items"} onclick={() => (tab = "items")}>Başlangıç öğeleri ({num(items.length)})</button>
+  <button role="tab" aria-selected={tab === "tasks"} onclick={() => { tab = "tasks"; loadExtras(); }}>Zamanlanmış görevler</button>
+  <button role="tab" aria-selected={tab === "services"} onclick={() => { tab = "services"; loadExtras(); }}>Otomatik servisler</button>
+  <button role="tab" aria-selected={tab === "boot"} onclick={() => { tab = "boot"; loadBoot(); }}>Açılış performansı</button>
+</div>
+
+{#if tab === "tasks"}
+  {#if !extras}
+    <div class="card"><div class="bar indeterminate" role="progressbar" aria-label="Yükleniyor"><span></span></div></div>
+  {:else}
+    <p class="small muted">Oturum açılışında veya sistem başlangıcında tetiklenen zamanlanmış görevler. Uygulama görevlerini Servisler ve Görevler sayfasından devre dışı bırakabilirsiniz; Windows görevleri salt okunurdur.</p>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Görev</th><th>Tetikleyici</th><th>Durum</th><th>Komut</th></tr></thead>
+        <tbody>
+          {#each extras.scheduledTasks as t}
+            <tr>
+              <td><strong class="small">{t.name}</strong><div class="row"><span class="tiny faint mono">{t.path}</span>{#if t.protected}<span class="badge"><Icon name="lock" size={10} /> Windows</span>{/if}</div></td>
+              <td class="small">{t.triggerLabel}</td>
+              <td><span class="badge {t.enabled ? 'good' : ''}">{t.stateLabel}</span></td>
+              <td class="path ellipsis" style="max-width:320px" title={t.execute ?? ""}>{t.execute ?? "—"}</td>
+            </tr>
+          {:else}
+            <tr><td colspan="4" class="muted small">Başlangıçta tetiklenen görev yok.</td></tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
+    <button class="btn sm" onclick={() => go("services", { tab: "tasks" })}>Görevleri yönet</button>
+  {/if}
+{:else if tab === "services"}
+  {#if !extras}
+    <div class="card"><div class="bar indeterminate" role="progressbar" aria-label="Yükleniyor"><span></span></div></div>
+  {:else}
+    <p class="small muted">Windows klasörü dışındaki programlara ait, otomatik başlayan servisler. Bunlar genellikle sürücü yardımcıları, güncelleyiciler ve güvenlik yazılımlarıdır. {extras.note}</p>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Servis</th><th>Başlangıç</th><th>Durum</th><th>Yürütülebilir dosya</th></tr></thead>
+        <tbody>
+          {#each extras.autoServices as s}
+            <tr>
+              <td><strong class="small">{s.displayName}</strong><div class="tiny faint mono">{s.name}</div></td>
+              <td class="small">{s.startTypeLabel}</td>
+              <td class="small">{s.statusLabel}</td>
+              <td class="path ellipsis" style="max-width:360px" title={s.binaryPath}>{s.binaryPath}</td>
+            </tr>
+          {:else}
+            <tr><td colspan="4" class="muted small">Üçüncü taraf otomatik servis bulunamadı.</td></tr>
+          {/each}
+        </tbody>
+      </table>
+    </div>
+    <button class="btn sm" onclick={() => go("services")}>Servisleri yönet</button>
+  {/if}
+{:else if tab === "boot"}
+  {#if !boot}
+    <div class="card"><div class="bar indeterminate" role="progressbar" aria-label="Yükleniyor"><span></span></div></div>
+  {:else if !boot.available}
+    <div class="callout info"><Icon name="lock" size={16} /><p class="small">{boot.note}</p></div>
+  {:else}
+    <p class="small muted">{boot.note}</p>
+    <div class="grid cols-2">
+      <section class="card">
+        <div class="card-head"><Icon name="clock" /><h2>Son açılışlar</h2></div>
+        {#if boot.boots.length}
+          <BarList items={boot.boots.map((b) => ({ label: dateTime(b.ts), value: b.bootMs, hint: `Ana yol ${b.mainPathMs ?? "?"} ms · açılış sonrası ${b.postBootMs ?? "?"} ms` }))} format={(v) => `${(v / 1000).toFixed(1)} sn`} />
+        {:else}
+          <p class="small muted">Kayıt yok.</p>
+        {/if}
+      </section>
+      <section class="card">
+        <div class="card-head"><Icon name="alert" /><h2>Açılışı yavaşlattığı kaydedilenler</h2></div>
+        {#if boot.degradations.length}
+          <ul class="deg small">
+            {#each boot.degradations as d}
+              <li><strong>{d.name}</strong><span class="badge info">{d.kind}</span><span class="spacer"></span><span class="num">{d.timeMs != null ? `${(d.timeMs / 1000).toFixed(1)} sn` : "—"}</span><span class="tiny faint">{dateTime(d.ts)}</span></li>
+            {/each}
+          </ul>
+          <p class="tiny faint">Bu kayıtlar Windows'un kendi açılış performansı ölçümlerinden (Diagnostics-Performance) gelir; Ivily tahmin yapmaz.</p>
+        {:else}
+          <p class="small muted">Windows açılışı yavaşlatan bir bileşen kaydetmemiş.</p>
+        {/if}
+      </section>
+    </div>
+  {/if}
+{:else}
 <div class="row wrap">
   <input class="input" placeholder="Ad, komut veya yayıncı ara…" bind:value={q} style="width:280px" aria-label="Ara" />
   <div class="segmented" role="group" aria-label="Durum filtresi">
@@ -112,6 +223,7 @@
     <option value="user">Yalnızca bu kullanıcı</option>
     <option value="machine">Tüm kullanıcılar</option>
   </select>
+  <label class="check small"><input type="checkbox" bind:checked={onlyFlagged} /> Yalnızca inceleme notu olanlar</label>
 </div>
 
 <div class="table-wrap">
@@ -121,6 +233,7 @@
         <th class="shrink">Durum</th>
         <SortTh label="Ad" key="name" bind:sort />
         <SortTh label="Yayıncı" key="publisher" bind:sort />
+        <th>Doğrulama</th>
         <SortTh label="Kaynak" key="source" bind:sort />
         <th>Komut</th>
         <th class="shrink"></th>
@@ -153,18 +266,26 @@
               {#if !it.exists && it.resolvedPath}<span class="badge warn" title="Hedef dosya bulunamadı">Dosya yok</span>{/if}
             </div>
           </td>
-          <td class="small muted">{it.publisher ?? "Bilinmiyor"}</td>
+          <td class="small muted">{it.signature?.signer ?? it.publisher ?? "Bilinmiyor"}</td>
+          <td>
+            <div class="row wrap tight">
+              {#if it.signature}<span class="badge {sigCls(it.signature.state)}" title={it.signature.signer ?? ""}>{it.signature.stateLabel}</span>{/if}
+              {#each it.indicators ?? [] as ind}{#if ind.code !== "unsigned"}<span class="badge warn" title={ind.text}>{ind.code === "missing_file" ? "Dosya yok" : ind.code === "user_writable_location" ? "Olağan dışı konum" : ind.code === "script_host" ? "Betik" : ind.code === "invalid_signature" ? "İmza geçersiz" : "Not"}</span>{/if}{/each}
+            </div>
+          </td>
           <td class="small muted">{it.source}</td>
           <td class="path ellipsis" style="max-width:340px" title={it.command}>{it.command}</td>
           <td class="shrink">{#if it.resolvedPath && it.exists}<PathActions path={it.resolvedPath} />{/if}</td>
         </tr>
       {:else}
-        <tr><td colspan="6" class="muted small">{loading ? "Yükleniyor…" : "Eşleşen öğe yok."}</td></tr>
+        <tr><td colspan="7" class="muted small">{loading ? "Yükleniyor…" : "Eşleşen öğe yok."}</td></tr>
       {/each}
     </tbody>
   </table>
 </div>
-<p class="tiny faint">Yayıncı bilgisi dosyanın sürüm bilgisinden okunur ve dijital imza ile doğrulanmamıştır. Zamanlanmış görevlerle başlayan uygulamalar Zamanlanmış Görevler sayfasında, Windows servisleri Servisler sayfasında listelenir.</p>
+<p class="tiny faint">Doğrulama sütunu dosyanın Authenticode dijital imzasını (çevrimdışı) gösterir. İmzasız veya olağan dışı konumdaki bir dosya mutlaka zararlı değildir; yalnızca incelemeye değer olabilir. İmzalayan bilinmiyorsa yayıncı, dosyanın sürüm bilgisinden okunur. Zamanlanmış görevlerle başlayan uygulamalar Zamanlanmış Görevler sayfasında, Windows servisleri Servisler sayfasında listelenir.</p>
+
+{/if}
 
 {#if sel}
   <Dialog bind:open={selOpen} title={sel.name} width={620}>
@@ -173,9 +294,15 @@
       <dt>Kaynak</dt><dd>{sel.source}</dd>
       <dt>Kapsam</dt><dd>{sel.scope === "user" ? "Yalnızca bu kullanıcı" : "Bu bilgisayardaki tüm kullanıcılar"}</dd>
       <dt>Yayıncı</dt><dd>{sel.publisher ?? "Bilinmiyor"}</dd>
+      <dt>Dijital imza</dt><dd>{#if sel.signature}<span class="badge {sigCls(sel.signature.state)}">{sel.signature.stateLabel}</span>{#if sel.signature.signer} · {sel.signature.signer}{/if}{:else}—{/if}</dd>
       <dt>Komut</dt><dd class="path">{sel.command}</dd>
       <dt>Çalıştırılan dosya</dt><dd class="path">{sel.resolvedPath ?? "Çözümlenemedi"}{sel.resolvedPath && !sel.exists ? " (bulunamadı)" : ""}</dd>
     </dl>
+    {#if sel.indicators?.length}
+      <h3 class="h3">İnceleme notları</h3>
+      <ul class="inds">{#each sel.indicators as ind}<li class="small"><Icon name="alert" size={12} /> {ind.text}</li>{/each}</ul>
+      <p class="tiny faint">Bu notlar yalnızca gözleme dayanır; dosyanın zararlı olduğu anlamına gelmez.</p>
+    {/if}
     {#if !sel.canToggle}<p class="small muted" style="margin-top:10px">RunOnce girişleri Windows tarafından yalnızca bir sonraki açılışta bir kez çalıştırılır ve ardından silinir; bu nedenle değiştirilemez.</p>{/if}
     {#snippet footer()}
       {#if sel?.resolvedPath && sel.exists}<PathActions path={sel.resolvedPath} />{/if}
@@ -189,6 +316,34 @@
 {/if}
 
 <style>
+  .tight {
+    gap: 4px;
+  }
+  .h3 {
+    font-size: 13px;
+    margin: 14px 0 6px;
+  }
+  .inds {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .deg {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .deg li {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
   .namebtn {
     all: unset;
     cursor: pointer;

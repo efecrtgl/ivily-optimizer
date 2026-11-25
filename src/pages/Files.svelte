@@ -8,13 +8,17 @@
   import PathActions from "../lib/components/PathActions.svelte";
   import SortTh from "../lib/components/SortTh.svelte";
   import { api } from "../lib/api";
-  import { jobs, registerJob, onJobDone, toast, confirm, go, app } from "../lib/state.svelte";
+  import { jobs, registerJob, onJobDone, toast, confirm, go, app, nav } from "../lib/state.svelte";
+  import FileBrowser from "../lib/files/FileBrowser.svelte";
+  import FolderCompare from "../lib/files/FolderCompare.svelte";
+  import EmptyFoldersView from "../lib/files/EmptyFolders.svelte";
   import { bytes, num, dateTime, date, errMsg, categoryLabel, fileName, parentDir, CATEGORY_LABELS } from "../lib/format";
   import { sortBy } from "../lib/util";
   import type { LargeFile, ColdReport, DupReport } from "../lib/types";
 
-  type Tab = "large" | "cold" | "dupes";
-  let tab = $state<Tab>("large");
+  type Tab = "browse" | "large" | "cold" | "dupes" | "empty" | "compare";
+  const TABS: Tab[] = ["browse", "large", "cold", "dupes", "empty", "compare"];
+  let tab = $state<Tab>(TABS.includes(nav.params.tab as Tab) ? (nav.params.tab as Tab) : "browse");
 
   // --- Büyük dosyalar ---
   let hasScan = $state(false);
@@ -181,16 +185,19 @@
 
 <PageHeader
   title="Dosya Yönetimi"
-  subtitle="Büyük, uzun süredir değiştirilmemiş ve yinelenen dosyaları bulun. Hiçbir dosya otomatik silinmez; seçtikleriniz karantinaya veya Geri Dönüşüm Kutusu'na taşınır."
+  subtitle="Klasörlerde gezinin; büyük, eski, yinelenen dosyaları ve boş klasörleri bulun, klasörleri karşılaştırın, özet hesaplayın ve envanter çıkarın. Hiçbir dosya otomatik silinmez; seçtikleriniz karantinaya veya Geri Dönüşüm Kutusu'na taşınır."
 />
 
 <div class="tabs" role="tablist">
+  <button role="tab" aria-selected={tab === "browse"} onclick={() => switchTab("browse")}>Gezgin</button>
   <button role="tab" aria-selected={tab === "large"} onclick={() => switchTab("large")}>Büyük dosyalar</button>
   <button role="tab" aria-selected={tab === "cold"} onclick={() => switchTab("cold")}>Eski dosyalar</button>
   <button role="tab" aria-selected={tab === "dupes"} onclick={() => switchTab("dupes")}>Yinelenen dosyalar</button>
+  <button role="tab" aria-selected={tab === "empty"} onclick={() => switchTab("empty")}>Boş klasörler</button>
+  <button role="tab" aria-selected={tab === "compare"} onclick={() => switchTab("compare")}>Klasör karşılaştırma</button>
 </div>
 
-{#if selected.size > 0}
+{#if selected.size > 0 && (tab === "large" || tab === "cold" || tab === "dupes")}
   <div class="selbar card">
     <strong>{num(selected.size)} dosya seçildi</strong>
     <span class="muted num">{bytes(selectedBytes)}</span>
@@ -201,7 +208,13 @@
   </div>
 {/if}
 
-{#if tab === "large"}
+{#if tab === "browse"}
+  <FileBrowser />
+{:else if tab === "empty"}
+  <EmptyFoldersView />
+{:else if tab === "compare"}
+  <FolderCompare />
+{:else if tab === "large"}
   {#if !hasScan}
     <div class="card">
       <EmptyState title="Önce bir disk taraması gerekli" body="Büyük dosya listesi, son disk taramasında bulunan en büyük 1.000 dosyadan oluşturulur.">

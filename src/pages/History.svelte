@@ -5,24 +5,31 @@
   import EmptyState from "../lib/components/EmptyState.svelte";
   import Dialog from "../lib/components/Dialog.svelte";
   import AreaChart from "../lib/components/AreaChart.svelte";
-  import { api, sys } from "../lib/api";
-  import { toast, confirm, go } from "../lib/state.svelte";
+  import { api, fx } from "../lib/api";
+  import { toast, confirm, go, nav } from "../lib/state.svelte";
   import { bytes, num, dateTime, ago, errMsg, signedBytes, duration, pct } from "../lib/format";
-  import type { OpEntry, SnapshotInfo, Comparison } from "../lib/types";
+  import type { OpEntryV2, SnapshotInfo, Comparison } from "../lib/types";
 
-  let tab = $state<"ops" | "snaps">("ops");
-  let ops = $state<OpEntry[]>([]);
+  let tab = $state<"ops" | "snaps">(nav.params.tab === "snaps" ? "snaps" : "ops");
+  let ops = $state<OpEntryV2[]>([]);
+  let total = $state(0);
   let kind = $state("");
+  let outcome = $state("");
+  let query = $state("");
+  let page = $state(0);
+  const PAGE = 50;
   let snaps = $state<SnapshotInfo[]>([]);
   let rootFilter = $state("");
   let pick = $state<number[]>([]);
   let cmp = $state<Comparison | null>(null);
-  let detail = $state<OpEntry | null>(null);
+  let detail = $state<OpEntryV2 | null>(null);
   let detailOpen = $state(false);
+  let restoring = $state<number | null>(null);
 
   const KIND: Record<string, string> = {
     cleanup: "Temizlik",
     files: "Dosya işlemi",
+    folders: "Boş klasör",
     quarantine: "Karantina",
     startup: "Başlangıç",
     service: "Servis",
@@ -38,6 +45,12 @@
     failed: ["Başarısız", "bad"],
     cancelled: ["İptal edildi", ""],
   };
+  const RESTORE: Record<string, [string, string]> = {
+    none: ["Geri alınamaz", ""],
+    available: ["Geri alınabilir", "accent"],
+    restored: ["Geri alındı", "good"],
+    failed: ["Geri alma başarısız", "bad"],
+  };
   const SNAP: Record<string, [string, string]> = {
     complete: ["Tam tarama", "good"],
     cancelled: ["Kısmi — iptal edildi", "warn"],
@@ -49,9 +62,20 @@
     loadSnaps();
   });
 
+  let searchTimer: ReturnType<typeof setTimeout>;
+  function onSearch() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      page = 0;
+      loadOps();
+    }, 250);
+  }
+
   async function loadOps() {
     try {
-      ops = await api.oplog(kind || undefined, 500);
+      const r = await fx.oplog({ kind: kind || undefined, outcome: outcome || undefined, query: query.trim() || undefined, limit: PAGE, offset: page * PAGE });
+      ops = r.items;
+      total = r.total;
     } catch (e) {
       toast("error", "Geçmiş yüklenemedi", errMsg(e));
     }
@@ -61,6 +85,16 @@
       snaps = await api.snapshots();
     } catch (e) {
       toast("error", "Anlık görüntüler yüklenemedi", errMsg(e));
+    }
+  }
+
+  async function exportOps(format: "csv" | "json") {
+    try {
+      const p = await fx.oplogExport(format);
+      toast("success", "Geçmiş dışa aktarıldı", p);
+      api.reveal(p);
+    } catch (e) {
+      toast("error", "Dışa aktarılamadı", errMsg(e));
     }
   }
 
@@ -93,43 +127,37 @@
 
   const roots = $derived([...new Set(snaps.map((s) => s.root))]);
   const shownSnaps = $derived(rootFilter ? snaps.filter((s) => s.root === rootFilter) : snaps);
-  const timeline = $derived(
-    rootFilter ? [...shownSnaps].filter((s) => s.status === "complete").reverse().map((s) => s.totalSize) : [],
-  );
+  const timeline = $derived(rootFilter ? [...shownSnaps].filter((s) => s.status === "complete").reverse().map((s) => s.totalSize) : []);
 
-  // Sistem değişikliklerini önceki duruma döndürme.
-  function canUndo(e: OpEntry): boolean {
-    const d = e.detail ?? {};
-    if (!e.reversible || e.outcome !== "success") return false;
-    if (e.kind === "startup") return typeof d.previousEnabled === "boolean" && !!d.id;
-    if (e.kind === "task") return typeof d.previousEnabled === "boolean" && !!d.path;
-    if (e.kind === "power") return !!d.previousGuid;
-    if (e.kind === "service") return d.action === "start_type" && ["auto", "auto_delayed", "manual", "disabled"].includes(d.previousStartType);
-    return false;
-  }
-
-  async function undo(e: OpEntry) {
-    const d = e.detail;
+  async function restore(e: OpEntryV2) {
     const ok = await confirm({
-      title: "Bu değişiklik geri alınsın mı?",
-      body: `"${e.title}" işlemi önceki duruma döndürülecek. Gerekirse Windows yönetici onayı istenir.`,
+      title: "Bu işlem geri alınsın mı?",
+      body: `"${e.title}" önceki durumuna döndürülecek. Geri alma işlemi de geçmişe kaydedilir. Gerekirse Windows yönetici onayı istenir; karantinadan geri yüklemede mevcut dosyaların üzerine yazılmaz.`,
       confirmLabel: "Geri al",
     });
     if (!ok) return;
+    restoring = e.id;
     try {
-      let msg = "";
-      if (e.kind === "startup") msg = (await sys.startupSetEnabled(d.id, d.previousEnabled)).message;
-      else if (e.kind === "task") msg = (await sys.taskSetEnabled(d.path, d.name, d.previousEnabled)).message;
-      else if (e.kind === "power") msg = (await sys.powerSetActive(d.previousGuid)).message;
-      else if (e.kind === "service") msg = (await sys.serviceSetStartType(d.name, d.previousStartType)).message;
-      toast("success", "Geri alındı", msg);
+      const r = await fx.oplogRestore(e.id);
+      toast(r.ok ? "success" : "warning", r.ok ? "Geri alındı" : "Geri alma tamamlanamadı", [r.message, ...r.details.slice(0, 3)].filter(Boolean).join("\n"));
       await loadOps();
+      if (detail?.id === e.id) detail = ops.find((o) => o.id === e.id) ?? detail;
     } catch (err) {
       toast("error", "Geri alınamadı", errMsg(err));
+    } finally {
+      restoring = null;
     }
   }
 
-  function detailLines(e: OpEntry): [string, string][] {
+  function stateText(v: any): string {
+    if (v == null) return "—";
+    if (typeof v !== "object") return String(v);
+    return Object.entries(v)
+      .map(([k, x]) => `${k}: ${typeof x === "object" ? JSON.stringify(x) : x}`)
+      .join(" · ");
+  }
+
+  function detailLines(e: OpEntryV2): [string, string][] {
     const d = e.detail ?? {};
     const out: [string, string][] = [];
     if (e.kind === "cleanup") {
@@ -140,6 +168,8 @@
       out.push(["Yöntem", d.mode === "quarantine" ? "Karantina" : "Geri Dönüşüm Kutusu"], ["Boyut", bytes(d.bytes)], ["Dosya", num(d.count)]);
       for (const p of (d.items ?? []).slice(0, 20)) out.push(["", p]);
       for (const [p, err] of (d.failed ?? []).slice(0, 10)) out.push(["Başarısız", `${p}: ${err}`]);
+    } else if (e.kind === "folders") {
+      for (const p of (d.paths ?? []).slice(0, 30)) out.push(["", p]);
     } else {
       for (const [k, v] of Object.entries(d)) if (v != null && typeof v !== "object") out.push([k, String(v)]);
     }
@@ -147,35 +177,46 @@
   }
 </script>
 
-<PageHeader title="Geçmiş" subtitle="Ivily ile yapılan tüm işlemler ve disk taramalarının anlık görüntüleri. Veriler yalnızca bu bilgisayarda saklanır." />
+<PageHeader title="İşlem Geçmişi" subtitle="Ivily ile yapılan tüm işlemler ve disk taramalarının anlık görüntüleri. Bir işlem yalnızca önceki durumu gerçekten geri getirilebiliyorsa 'geri alınabilir' olarak gösterilir. Veriler yalnızca bu bilgisayarda saklanır.">
+  {#snippet actions()}
+    <button class="btn" onclick={() => exportOps("csv")}><Icon name="download" size={13} /> CSV</button>
+    <button class="btn" onclick={() => exportOps("json")}>JSON</button>
+  {/snippet}
+</PageHeader>
 
 <div class="tabs" role="tablist">
-  <button role="tab" aria-selected={tab === "ops"} onclick={() => (tab = "ops")}>İşlemler</button>
+  <button role="tab" aria-selected={tab === "ops"} onclick={() => (tab = "ops")}>İşlemler ({num(total)})</button>
   <button role="tab" aria-selected={tab === "snaps"} onclick={() => (tab = "snaps")}>Anlık görüntüler ({num(snaps.length)})</button>
 </div>
 
 {#if tab === "ops"}
-  <div class="row">
-    <select class="select" bind:value={kind} onchange={loadOps} aria-label="İşlem türü">
-      <option value="">Tüm işlemler</option>
+  <div class="row wrap">
+    <input class="input" placeholder="İşlem veya hedef ara…" bind:value={query} oninput={onSearch} style="width:260px" aria-label="Geçmişte ara" />
+    <select class="select" bind:value={kind} onchange={() => { page = 0; loadOps(); }} aria-label="İşlem türü">
+      <option value="">Tüm türler</option>
       {#each Object.entries(KIND) as [k, v]}<option value={k}>{v}</option>{/each}
+    </select>
+    <select class="select" bind:value={outcome} onchange={() => { page = 0; loadOps(); }} aria-label="Sonuç">
+      <option value="">Tüm sonuçlar</option>
+      {#each Object.entries(OUT) as [k, v]}<option value={k}>{v[0]}</option>{/each}
     </select>
   </div>
   {#if ops.length}
     <div class="table-wrap">
       <table class="data">
-        <thead><tr><th>Tarih</th><th>Tür</th><th>İşlem</th><th>Sonuç</th><th>Geri alınabilir</th><th class="shrink"></th></tr></thead>
+        <thead><tr><th>Tarih</th><th>Tür</th><th>İşlem</th><th>Hedef</th><th>Sonuç</th><th>Geri alma</th><th class="shrink"></th></tr></thead>
         <tbody>
           {#each ops as e (e.id)}
             <tr>
-              <td class="small muted" title={dateTime(e.ts)}>{dateTime(e.ts)}</td>
+              <td class="small muted nowrap" title={dateTime(e.ts)}>{dateTime(e.ts)}</td>
               <td class="small">{KIND[e.kind] ?? e.kind}</td>
-              <td>{e.title}</td>
+              <td>{e.title}{#if e.confirmed}<span class="tiny faint" title="Kullanıcı onayıyla yapıldı"> · onaylı</span>{/if}</td>
+              <td class="path ellipsis" style="max-width:260px" title={e.target ?? ""}>{e.target ?? "—"}</td>
               <td><span class="badge {OUT[e.outcome]?.[1]}">{OUT[e.outcome]?.[0] ?? e.outcome}</span></td>
-              <td class="small muted">{e.reversible ? "Evet" : "Hayır"}</td>
+              <td><span class="badge {RESTORE[e.restoreStatus]?.[1]}">{RESTORE[e.restoreStatus]?.[0] ?? e.restoreStatus}</span></td>
               <td class="shrink">
                 <div class="row">
-                  {#if canUndo(e)}<button class="btn sm" onclick={() => undo(e)}><Icon name="restore" size={12} /> Geri al</button>{/if}
+                  {#if e.restoreStatus === "available"}<button class="btn sm" disabled={restoring === e.id} onclick={() => restore(e)}><Icon name="restore" size={12} /> Geri al</button>{/if}
                   <button class="btn ghost sm" onclick={() => { detail = e; detailOpen = true; }}>Ayrıntılar</button>
                 </div>
               </td>
@@ -184,8 +225,15 @@
         </tbody>
       </table>
     </div>
+    {#if total > PAGE}
+      <div class="row">
+        <button class="btn sm" disabled={page === 0} onclick={() => { page--; loadOps(); }}><Icon name="chevronLeft" size={12} /> Önceki</button>
+        <span class="small muted">{page * PAGE + 1}–{Math.min(total, (page + 1) * PAGE)} / {num(total)}</span>
+        <button class="btn sm" disabled={(page + 1) * PAGE >= total} onclick={() => { page++; loadOps(); }}>Sonraki <Icon name="chevronRight" size={12} /></button>
+      </div>
+    {/if}
   {:else}
-    <div class="card"><EmptyState title="Henüz kayıtlı işlem yok" body="Temizlik, karantina, başlangıç, servis ve görev değişiklikleri burada listelenir." /></div>
+    <div class="card"><EmptyState title="Kayıt bulunamadı" body="Temizlik, karantina, dosya, başlangıç, servis, görev ve güncelleme işlemleri burada listelenir." /></div>
   {/if}
 {:else}
   <div class="row wrap">
@@ -279,18 +327,32 @@
 
 {#if detail}
   <Dialog bind:open={detailOpen} title={detail.title} width={620}>
-    <p class="small muted">{dateTime(detail.ts)} · {KIND[detail.kind] ?? detail.kind} · {OUT[detail.outcome]?.[0]}</p>
+    <p class="small muted">{dateTime(detail.ts)} · {KIND[detail.kind] ?? detail.kind} · {OUT[detail.outcome]?.[0]} · {RESTORE[detail.restoreStatus]?.[0]}{detail.restoredAt ? ` (${dateTime(detail.restoredAt)})` : ""}</p>
+    <dl class="dl">
+      {#if detail.target}<dt>Hedef</dt><dd class="path">{detail.target}</dd>{/if}
+      <dt>Önceki durum</dt><dd>{stateText(detail.previousState)}</dd>
+      <dt>Yeni durum</dt><dd>{stateText(detail.newState)}</dd>
+      <dt>Kullanıcı onayı</dt><dd>{detail.confirmed ? "Evet" : "Gerekmedi"}</dd>
+      {#if detail.error}<dt>Hata</dt><dd>{detail.error}</dd>{/if}
+    </dl>
     <dl class="dl">
       {#each detailLines(detail) as [k, v]}
         <dt>{k}</dt>
         <dd class:path={k === "" || v.includes("\\")}>{v}</dd>
       {/each}
     </dl>
-    {#snippet footer()}<button class="btn" onclick={() => (detailOpen = false)}>Kapat</button>{/snippet}
+    {#snippet footer()}
+      {#if detail?.restoreStatus === "available"}<button class="btn" disabled={restoring === detail.id} onclick={() => restore(detail!)}><Icon name="restore" size={12} /> Geri al</button>{/if}
+      <span class="spacer"></span>
+      <button class="btn" onclick={() => (detailOpen = false)}>Kapat</button>
+    {/snippet}
   </Dialog>
 {/if}
 
 <style>
+  .nowrap {
+    white-space: nowrap;
+  }
   .cb {
     accent-color: var(--accent);
     width: 15px;

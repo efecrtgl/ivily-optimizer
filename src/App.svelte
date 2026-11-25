@@ -4,7 +4,7 @@
   import Toasts from "./lib/components/Toasts.svelte";
   import ConfirmDialog from "./lib/components/ConfirmDialog.svelte";
   import Onboarding from "./lib/components/Onboarding.svelte";
-  import CatMark from "./lib/components/CatMark.svelte";
+  import Splash from "./lib/components/Splash.svelte";
   import { app, nav, loadSettings, initJobs, loadSystemInfo } from "./lib/state.svelte";
   import { startupUpdateCheck } from "./lib/updater.svelte";
 
@@ -16,8 +16,9 @@
   import Quarantine from "./pages/Quarantine.svelte";
   import Startup from "./pages/Startup.svelte";
   import Processes from "./pages/Processes.svelte";
-  import Services from "./pages/Services.svelte";
-  import Tasks from "./pages/Tasks.svelte";
+  import ServicesTasks from "./pages/ServicesTasks.svelte";
+  import Events from "./pages/Events.svelte";
+  import Updates from "./pages/Updates.svelte";
   import Performance from "./pages/Performance.svelte";
   import Network from "./pages/Network.svelte";
   import History from "./pages/History.svelte";
@@ -33,8 +34,10 @@
     quarantine: Quarantine,
     startup: Startup,
     processes: Processes,
-    services: Services,
-    tasks: Tasks,
+    services: ServicesTasks,
+    tasks: ServicesTasks,
+    events: Events,
+    updates: Updates,
     performance: Performance,
     network: Network,
     history: History,
@@ -63,17 +66,9 @@
 </script>
 
 {#if failed}
-  <div class="boot">
-    <CatMark size={56} />
-    <h1>Ivily Optimizer başlatılamadı</h1>
-    <p class="muted">{failed}</p>
-    <button class="btn" onclick={() => location.reload()}>Yeniden dene</button>
-  </div>
+  <Splash error={`Ivily Optimizer başlatılamadı: ${failed}`} />
 {:else if !ready}
-  <div class="boot" aria-busy="true">
-    <CatMark size={56} blink />
-    <p class="muted">Yükleniyor…</p>
-  </div>
+  <Splash status="Ayarlar ve son bilinen sistem durumu yükleniyor…" />
 {:else}
   <a class="skip" href="#main">İçeriğe atla</a>
   <div class="shell">
@@ -113,16 +108,6 @@
     .page {
       padding: 20px 18px 36px;
     }
-  }
-  .boot {
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    text-align: center;
-    padding: 20px;
   }
   .skip {
     position: absolute;

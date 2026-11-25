@@ -41,7 +41,12 @@ pub struct Settings {
     pub theme: String,
     pub reduce_motion: bool,
     pub compact_mode: bool,
+    /// Cam (saydamlık + bulanıklık) efektleri. Kapalıyken düz yüzeyler kullanılır.
+    pub glass_effects: bool,
+    /// Panodaki bileşenlerin görünürlüğü ve sırası.
     pub dashboard_widgets: Vec<String>,
+    /// Geniş (iki sütun) gösterilen bileşenler.
+    pub dashboard_wide: Vec<String>,
     pub onboarding_done: bool,
     // Genel
     pub launch_at_startup: bool,
@@ -71,7 +76,13 @@ pub struct Settings {
 }
 
 pub const ALL_WIDGETS: &[&str] = &[
-    "health", "cpu", "memory", "disk", "network", "cleanup", "largest", "growth", "startup", "recent", "update",
+    "welcome", "quick", "recommend", "health", "hardware", "cpu", "memory", "disk", "storage", "network", "cleanup",
+    "largest", "growth", "startup", "events", "notifications", "recent", "update", "shortcuts",
+];
+
+/// Varsayılan pano düzeni (sıra önemlidir).
+pub const DEFAULT_WIDGETS: &[&str] = &[
+    "welcome", "quick", "recommend", "cpu", "memory", "disk", "storage", "events", "recent", "update",
 ];
 
 impl Default for Settings {
@@ -80,7 +91,9 @@ impl Default for Settings {
             theme: "dark".into(),
             reduce_motion: false,
             compact_mode: false,
-            dashboard_widgets: ALL_WIDGETS.iter().map(|s| s.to_string()).collect(),
+            glass_effects: true,
+            dashboard_widgets: DEFAULT_WIDGETS.iter().map(|s| s.to_string()).collect(),
+            dashboard_wide: vec!["welcome".into(), "quick".into(), "recommend".into()],
             onboarding_done: false,
             launch_at_startup: false,
             notifications: true,
@@ -130,6 +143,9 @@ impl Settings {
         let mut seen = std::collections::HashSet::new();
         self.dashboard_widgets
             .retain(|w| ALL_WIDGETS.contains(&w.as_str()) && seen.insert(w.clone()));
+        let mut seen_wide = std::collections::HashSet::new();
+        self.dashboard_wide
+            .retain(|w| ALL_WIDGETS.contains(&w.as_str()) && seen_wide.insert(w.clone()));
 
         self.exclusions.extensions = self
             .exclusions
@@ -169,7 +185,14 @@ const KEY: &str = "settings";
 pub fn load(db: &Db) -> Settings {
     match db.kv_get(KEY) {
         Ok(Some(json)) => match serde_json::from_str::<Settings>(&json) {
-            Ok(s) => s.validate().unwrap_or_default(),
+            Ok(mut s) => {
+                // 0.1 → 0.2 geçişi: eski pano düzeni yeni bileşenleri içermez.
+                if !json.contains("\"dashboardWide\"") {
+                    s.dashboard_widgets = DEFAULT_WIDGETS.iter().map(|w| w.to_string()).collect();
+                    s.dashboard_wide = Settings::default().dashboard_wide;
+                }
+                s.validate().unwrap_or_default()
+            }
             Err(e) => {
                 tracing::warn!(error = %e, "ayarlar bozuk, varsayılanlar kullanılıyor");
                 Settings::default()

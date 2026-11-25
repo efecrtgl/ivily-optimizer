@@ -6,7 +6,7 @@
 
 <div class="toasts" role="region" aria-label="Bildirimler" aria-live="polite">
   {#each toasts as t (t.id)}
-    <div class="toast {t.kind}" role={t.kind === "error" ? "alert" : "status"}>
+    <div class="toast glass-float {t.kind}" role={t.kind === "error" ? "alert" : "status"}>
       <span class="ic"><Icon name={icon[t.kind]} size={18} /></span>
       <div class="body">
         <strong>{t.title}</strong>
@@ -38,25 +38,16 @@
     align-items: flex-start;
     padding: 12px 10px 12px 14px;
     border-radius: var(--r-lg);
-    background: var(--surface);
-    border: 1px solid var(--border-strong);
-    box-shadow: var(--shadow);
     animation: slide var(--t) ease-out;
   }
   .ic {
     margin-top: 1px;
   }
-  .success .ic {
-    color: var(--good);
+  .error {
+    box-shadow: inset 3px 0 0 var(--text), var(--shadow);
   }
-  .error .ic {
-    color: var(--bad);
-  }
-  .warning .ic {
-    color: var(--warn);
-  }
-  .info .ic {
-    color: var(--info);
+  .warning {
+    border-style: dashed;
   }
   .body {
     flex: 1;

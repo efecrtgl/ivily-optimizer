@@ -4,6 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import { api } from "./api";
 import type { JobDone, JobProgress, LiveStats, Settings, SystemInfo } from "./types";
 import { errMsg } from "./format";
+import { pushNotification } from "./notify.svelte";
 
 export type Route =
   | "overview"
@@ -19,6 +20,8 @@ export type Route =
   | "performance"
   | "network"
   | "history"
+  | "events"
+  | "updates"
   | "settings"
   | "about";
 
@@ -54,6 +57,7 @@ export function applyTheme() {
   document.documentElement.dataset.theme = resolved;
   document.documentElement.dataset.motion = s?.reduceMotion ? "reduce" : "normal";
   document.documentElement.dataset.density = s?.compactMode ? "compact" : "normal";
+  document.documentElement.dataset.glass = s?.glassEffects === false ? "off" : "on";
 }
 media.addEventListener("change", applyTheme);
 
@@ -89,6 +93,7 @@ export const toasts = $state<Toast[]>([]);
 let toastSeq = 0;
 
 export function toast(kind: Toast["kind"], title: string, body?: string, ms = 5000) {
+  pushNotification(kind, title, body);
   if (app.settings && !app.settings.notifications && kind !== "error") return;
   const id = ++toastSeq;
   toasts.push({ id, kind, title, body });

@@ -85,6 +85,8 @@ export interface ProcessInfo {
   protection: "critical" | "sensitive" | "normal";
   protectionReason: string | null;
   isSelf: boolean;
+  connections?: number;
+  indicators?: Indicator[];
 }
 
 export interface JobProgress {
@@ -413,7 +415,9 @@ export interface Settings {
   theme: "dark" | "light" | "system";
   reduceMotion: boolean;
   compactMode: boolean;
+  glassEffects: boolean;
   dashboardWidgets: string[];
+  dashboardWide: string[];
   onboardingDone: boolean;
   launchAtStartup: boolean;
   notifications: boolean;
@@ -458,6 +462,8 @@ export interface StartupItem {
   enabled: boolean;
   canToggle: boolean;
   needsAdmin: boolean;
+  signature?: SignatureStatus | null;
+  indicators?: Indicator[];
 }
 
 export interface ServiceInfo {
@@ -474,6 +480,8 @@ export interface ServiceInfo {
   canStop: boolean;
   protected: boolean;
   protectedReason: string | null;
+  dependencies?: string[];
+  dependents?: string[];
 }
 
 export interface TaskInfo {
@@ -555,4 +563,205 @@ export interface DnsCacheList {
   entries: { entry: string; recordName: string; recordType: string; status: string; ttlSeconds: number | null; data: string }[];
   total: number;
   truncated: boolean;
+}
+
+// --- 0.2: zekâ, olaylar, dosyalar, geçmiş ---
+
+export interface Indicator {
+  code: string;
+  text: string;
+}
+
+export interface SignatureStatus {
+  state: "signed" | "unsigned" | "invalid" | "unknown";
+  stateLabel: string;
+  signer: string | null;
+}
+
+export interface EventItem {
+  id: string;
+  ts: number;
+  log: string;
+  level: number;
+  levelLabel: string;
+  provider: string;
+  eventId: number;
+  message: string;
+  category: string;
+  categoryLabel: string;
+}
+
+export interface EventPattern {
+  provider: string;
+  eventId: number;
+  category: string;
+  categoryLabel: string;
+  level: number;
+  count: number;
+  firstTs: number;
+  lastTs: number;
+  distinctDays: number;
+  sampleMessage: string;
+  interpretation: string;
+}
+
+export interface EventsReport {
+  events: EventItem[];
+  truncated: boolean;
+  stats: {
+    byLevel: { critical: number; error: number; warning: number; info: number };
+    byCategory: { code: string; label: string; count: number }[];
+    byDay: { day: number; critical: number; error: number; warning: number }[];
+  };
+  patterns: EventPattern[];
+  notable: {
+    unexpectedShutdowns: number;
+    appCrashes: number;
+    appHangs: number;
+    driverIssues: number;
+    diskIssues: number;
+    serviceFailures: number;
+    updateFailures: number;
+    bsod: number;
+  };
+  queriedAt: number;
+  days: number;
+  note: string;
+}
+
+export interface EventsContext {
+  from: number;
+  to: number;
+  events: EventItem[];
+  note: string;
+}
+
+export interface StorageInsights {
+  root: string;
+  userFolders: { key: string; label: string; path: string; size: number | null; files: number | null; found: boolean }[];
+  appStorage: { name: string; path: string; location: string; size: number; files: number }[];
+  tempLike: { path: string; size: number; files: number; kind: "temp" | "cache" | "logs" }[];
+  bottlenecks: { level: "info" | "warn"; title: string; text: string; evidence: string }[];
+  coverage: string;
+}
+
+export interface FsEntry {
+  name: string;
+  path: string;
+  isDir: boolean;
+  size: number | null;
+  dirSize: number | null;
+  dirFiles: number | null;
+  modified: number;
+  created: number;
+  hidden: boolean;
+  system: boolean;
+  readonly: boolean;
+  reparse: boolean;
+  ext: string;
+  category: string;
+}
+
+export interface DirListing {
+  path: string;
+  parent: string | null;
+  entries: FsEntry[];
+  errors: number;
+  scanSizesAvailable: boolean;
+}
+
+export interface FsMetadata {
+  path: string;
+  name: string;
+  isDir: boolean;
+  size: number;
+  modified: number;
+  created: number;
+  accessed: number;
+  attributes: string[];
+  ext: string;
+  category: string;
+  protected: boolean;
+  versionInfo: { productName: string | null; fileVersion: string | null; companyName: string | null; fileDescription: string | null } | null;
+}
+
+export interface HashResult {
+  path: string;
+  size: number;
+  sha256: string;
+  blake3: string;
+}
+
+export interface CompareEntry {
+  rel: string;
+  size: number;
+  modified: number;
+}
+
+export interface CompareReport {
+  a: string;
+  b: string;
+  content: boolean;
+  onlyA: CompareEntry[];
+  onlyB: CompareEntry[];
+  different: { rel: string; sizeA: number; sizeB: number; modifiedA: number; modifiedB: number; reason: "size" | "content" | "modified" }[];
+  identical: number;
+  onlyABytes: number;
+  onlyBBytes: number;
+  errors: number;
+  cancelled: boolean;
+  truncated: boolean;
+}
+
+export interface EmptyFolders {
+  items: { id: number; path: string; modified: number; nestedDirs: number }[];
+  total: number;
+}
+
+export interface OpEntryV2 extends OpEntry {
+  target: string | null;
+  previousState: any;
+  newState: any;
+  confirmed: boolean;
+  restoreStatus: "none" | "available" | "restored" | "failed";
+  restoredAt: number | null;
+  restoreOp: number | null;
+  error: string | null;
+}
+
+export interface ProcessDetails {
+  pid: number;
+  name: string;
+  exe: string | null;
+  cmd: string[];
+  cwd: string | null;
+  startTime: number;
+  parentChain: { pid: number; name: string }[];
+  children: { pid: number; name: string }[];
+  signature: SignatureStatus | null;
+  connections: { proto: "TCP" | "UDP"; localAddress: string; localPort: number; remoteAddress: string | null; remotePort: number | null; state: string | null }[];
+  indicators: Indicator[];
+  protection: string;
+  protectionReason: string | null;
+  canRestart: boolean;
+  restartNote: string | null;
+}
+
+export interface BootHistory {
+  available: boolean;
+  note: string;
+  boots: { ts: number; bootMs: number; mainPathMs: number | null; postBootMs: number | null }[];
+  degradations: { ts: number; name: string; file: string | null; timeMs: number | null; kind: string }[];
+}
+
+export interface StartupExtras {
+  scheduledTasks: { path: string; name: string; enabled: boolean; stateLabel: string; triggerLabel: string; execute: string | null; protected: boolean }[];
+  autoServices: { name: string; displayName: string; startType: string; startTypeLabel: string; statusLabel: string; binaryPath: string }[];
+  note: string;
+}
+
+export interface TaskHistory {
+  logEnabled: boolean | null;
+  events: { ts: number; eventId: number; label: string; resultCode: number | null }[];
+  note: string;
 }

@@ -5,16 +5,20 @@
   import Dialog from "../lib/components/Dialog.svelte";
   import SortTh from "../lib/components/SortTh.svelte";
   import PathActions from "../lib/components/PathActions.svelte";
-  import { api } from "../lib/api";
+  import { api, intel } from "../lib/api";
   import { toast, confirm, app } from "../lib/state.svelte";
   import { bytes, num, rate, dateTime, errMsg, errCode, uptime } from "../lib/format";
   import { sortBy, matches } from "../lib/util";
-  import type { ProcessInfo } from "../lib/types";
+  import type { ProcessInfo, ProcessDetails } from "../lib/types";
 
   let procs = $state<ProcessInfo[]>([]);
   let q = $state("");
   let filter = $state<"all" | "apps" | "system">("all");
-  let grouped = $state(true);
+  let view = $state<"grouped" | "flat" | "tree">("grouped");
+  const grouped = $derived(view === "grouped");
+  let det = $state<ProcessDetails | null>(null);
+  let detLoading = $state(false);
+  let collapsedTree = $state<Set<number>>(new Set());
   let sort = $state<{ key: string; dir: 1 | -1 }>({ key: "memory", dir: -1 });
   let paused = $state(false);
   let sel = $state<ProcessInfo | null>(null);
@@ -45,6 +49,10 @@
   }
 
   interface Row {
+    depth?: number;
+    hasKids?: boolean;
+    conns: number;
+    flags: number;
     key: string;
     name: string;
     pid: number;
@@ -72,14 +80,42 @@
           r.cpu += p.cpu;
           r.memory += p.memory;
           r.io += p.ioReadPerSec + p.ioWritePerSec;
+          r.conns += p.connections ?? 0;
+          r.flags += p.indicators?.length ?? 0;
           if (p.protection === "critical") r.protection = "critical";
           else if (p.protection === "sensitive" && r.protection === "normal") r.protection = "sensitive";
         } else
-          m.set(k, { key: k, name: p.name, pid: p.pid, count: 1, cpu: p.cpu, memory: p.memory, io: p.ioReadPerSec + p.ioWritePerSec, exe: p.exe, protection: p.protection, first: p });
+          m.set(k, { key: k, name: p.name, pid: p.pid, count: 1, cpu: p.cpu, memory: p.memory, io: p.ioReadPerSec + p.ioWritePerSec, conns: p.connections ?? 0, flags: p.indicators?.length ?? 0, exe: p.exe, protection: p.protection, first: p });
       }
       out = [...m.values()];
     } else {
-      out = list.map((p) => ({ key: String(p.pid), name: p.name, pid: p.pid, count: 1, cpu: p.cpu, memory: p.memory, io: p.ioReadPerSec + p.ioWritePerSec, exe: p.exe, protection: p.protection, first: p }));
+      out = list.map((p) => ({ key: String(p.pid), name: p.name, pid: p.pid, count: 1, cpu: p.cpu, memory: p.memory, io: p.ioReadPerSec + p.ioWritePerSec, conns: p.connections ?? 0, flags: p.indicators?.length ?? 0, exe: p.exe, protection: p.protection, first: p }));
+    }
+    if (view === "tree" && !q) {
+      // Üst-alt ilişkisine göre ağaç; kardeşler seçilen ölçüte göre sıralanır.
+      const byPid = new Map(out.map((r) => [r.pid, r]));
+      const kids = new Map<number, Row[]>();
+      const roots: Row[] = [];
+      for (const r of out) {
+        const par = r.first.parent;
+        if (par != null && par !== r.pid && byPid.has(par)) {
+          if (!kids.has(par)) kids.set(par, []);
+          kids.get(par)!.push(r);
+        } else roots.push(r);
+      }
+      const res: Row[] = [];
+      const seen = new Set<number>();
+      const walk = (rs: Row[], depth: number) => {
+        for (const r of sortBy(rs, sort)) {
+          if (seen.has(r.pid)) continue;
+          seen.add(r.pid);
+          const ch = kids.get(r.pid) ?? [];
+          res.push({ ...r, depth, hasKids: ch.length > 0 });
+          if (!collapsedTree.has(r.pid)) walk(ch, depth + 1);
+        }
+      };
+      walk(roots, 0);
+      return res;
     }
     return sortBy(out, sort);
   });
@@ -89,9 +125,37 @@
     mem: procs.reduce((a, b) => a + b.memory, 0),
   });
 
-  function open(r: Row) {
-    sel = r.first;
+  async function open(r: Row | ProcessInfo) {
+    sel = "first" in r ? r.first : r;
     selOpen = true;
+    det = null;
+    detLoading = true;
+    try {
+      det = await intel.processDetails(sel.pid);
+    } catch {
+      det = null;
+    } finally {
+      detLoading = false;
+    }
+  }
+
+  async function restart(p: ProcessInfo) {
+    const ok = await confirm({
+      title: `${p.name} yeniden başlatılsın mı?`,
+      body: "Süreç kapatılır ve aynı komut satırı ve çalışma klasörüyle yeniden başlatılır. Kaydedilmemiş veriler kaybolabilir. Uygulama kendi oturum durumunu geri yüklemeyebilir.",
+      details: [`PID ${p.pid}`, p.exe ?? ""],
+      confirmLabel: "Yeniden başlat",
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      const r = await intel.processRestart(p.pid, p.name);
+      toast("success", r.message, `Yeni PID: ${r.newPid}`);
+      selOpen = false;
+      await load();
+    } catch (e) {
+      toast("error", "Yeniden başlatılamadı", errMsg(e));
+    }
   }
 
   async function kill(p: ProcessInfo) {
@@ -145,7 +209,11 @@
     <button aria-pressed={filter === "apps"} onclick={() => (filter = "apps")}>Uygulamalar</button>
     <button aria-pressed={filter === "system"} onclick={() => (filter = "system")}>Sistem</button>
   </div>
-  <label class="check small"><input type="checkbox" bind:checked={grouped} /> Aynı ada sahip süreçleri grupla</label>
+  <div class="segmented" role="group" aria-label="Görünüm">
+    <button aria-pressed={view === "grouped"} onclick={() => (view = "grouped")}>Gruplu</button>
+    <button aria-pressed={view === "flat"} onclick={() => (view = "flat")}>Tek tek</button>
+    <button aria-pressed={view === "tree"} onclick={() => (view = "tree")}>Ağaç</button>
+  </div>
   <span class="spacer"></span>
   <span class="small muted num">{num(procs.length)} süreç · CPU %{Math.round(totals.cpu)} · {bytes(totals.mem)}</span>
 </div>
@@ -161,6 +229,7 @@
         <SortTh label="CPU" key="cpu" bind:sort align="right" />
         <SortTh label="Bellek" key="memory" bind:sort align="right" />
         <SortTh label="G/Ç" key="io" bind:sort align="right" />
+        <SortTh label="Bağlantı" key="conns" bind:sort align="right" />
         <th>Konum</th>
         <th class="shrink"></th>
       </tr>
@@ -169,8 +238,15 @@
       {#each rows as r (r.key)}
         <tr>
           <td>
-            <button class="namebtn" onclick={() => open(r)}>
+            <button class="namebtn" onclick={() => open(r)} style="padding-left:{(r.depth ?? 0) * 16}px">
+              {#if view === "tree" && r.hasKids}
+                <span role="button" tabindex="0" class="twisty" aria-label={collapsedTree.has(r.pid) ? "Genişlet" : "Daralt"}
+                  onclick={(e) => { e.stopPropagation(); const c = new Set(collapsedTree); c.has(r.pid) ? c.delete(r.pid) : c.add(r.pid); collapsedTree = c; }}
+                  onkeydown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); const c = new Set(collapsedTree); c.has(r.pid) ? c.delete(r.pid) : c.add(r.pid); collapsedTree = c; } }}
+                ><Icon name={collapsedTree.has(r.pid) ? "chevronRight" : "chevronDown"} size={12} /></span>
+              {:else if view === "tree"}<span class="twisty"></span>{/if}
               <span class="ellipsis">{r.name}</span>
+              {#if r.flags > 0}<span class="badge warn" title="İnceleme notu var">Not</span>{/if}
               {#if r.count > 1}<span class="badge">{r.count}</span>{/if}
               {#if r.protection !== "normal"}<span class="badge {protLabel[r.protection][1]}">{protLabel[r.protection][0]}</span>{/if}
             </button>
@@ -179,16 +255,17 @@
           <td class="r num" class:hot={r.cpu >= 25}>%{r.cpu.toFixed(1)}</td>
           <td class="r num">{bytes(r.memory)}</td>
           <td class="r num small muted">{r.io > 0 ? rate(r.io) : "—"}</td>
+          <td class="r num small muted">{r.conns || "—"}</td>
           <td class="path ellipsis" style="max-width:360px" title={r.exe ?? ""}>{r.exe ?? "—"}</td>
           <td class="shrink"><button class="btn ghost sm" onclick={() => open(r)}>Ayrıntı</button></td>
         </tr>
       {:else}
-        <tr><td colspan="7" class="muted small">{loading ? "Yükleniyor…" : "Eşleşen süreç yok."}</td></tr>
+        <tr><td colspan="8" class="muted small">{loading ? "Yükleniyor…" : "Eşleşen süreç yok."}</td></tr>
       {/each}
     </tbody>
   </table>
 </div>
-<p class="tiny faint">G/Ç değeri, Windows'un süreç başına bildirdiği okuma/yazma miktarıdır ve yalnızca diski değil ağ ve aygıt işlemlerini de içerebilir. Yol bilgisi, yönetici hakları olmadan bazı sistem süreçleri için okunamaz.</p>
+<p class="tiny faint">Bağlantı, sürece ait açık TCP/UDP uç noktalarının sayısıdır (trafik miktarı değildir). G/Ç değeri, Windows'un süreç başına bildirdiği okuma/yazma miktarıdır ve yalnızca diski değil ağ ve aygıt işlemlerini de içerebilir. Yol bilgisi, yönetici hakları olmadan bazı sistem süreçleri için okunamaz.</p>
 
 {#if sel}
   <Dialog bind:open={selOpen} title={sel.name} width={640}>
@@ -204,6 +281,34 @@
       <dt>Durum</dt><dd>{sel.status === "Run" ? "Çalışıyor" : sel.status}</dd>
       <dt>Başlangıç</dt><dd>{dateTime(sel.startTime)} ({uptime(Math.max(0, Date.now() / 1000 - sel.startTime))} önce)</dd>
     </dl>
+    {#if detLoading}
+      <div class="bar indeterminate" role="progressbar" aria-label="Ayrıntılar yükleniyor" style="margin-top:10px"><span></span></div>
+    {:else if det}
+      <dl class="dl">
+        <dt>Komut satırı</dt><dd class="path">{det.cmd.length ? det.cmd.join(" ") : "Okunamadı"}</dd>
+        <dt>Çalışma klasörü</dt><dd class="path">{det.cwd ?? "—"}</dd>
+        <dt>Dijital imza</dt><dd>{#if det.signature}<span class="badge {det.signature.state === 'signed' ? 'good' : det.signature.state === 'invalid' ? 'bad' : det.signature.state === 'unsigned' ? 'warn' : 'info'}">{det.signature.stateLabel}</span>{#if det.signature.signer} · {det.signature.signer}{/if}{:else}—{/if}</dd>
+        <dt>Üst süreçler</dt><dd class="small">{det.parentChain.length ? det.parentChain.map((p) => `${p.name} (${p.pid})`).join(" ← ") : "—"}</dd>
+        <dt>Alt süreçler</dt><dd class="small">{det.children.length ? det.children.map((p) => `${p.name} (${p.pid})`).join(", ") : "Yok"}</dd>
+      </dl>
+      {#if det.indicators.length}
+        <div class="callout warn" style="margin-top:10px"><Icon name="alert" size={16} /><div class="small">{#each det.indicators as ind}<p>{ind.text}</p>{/each}<p class="tiny faint">Bu notlar yalnızca gözleme dayanır; sürecin zararlı olduğu anlamına gelmez.</p></div></div>
+      {/if}
+      {#if det.connections.length}
+        <h3 class="h3">Ağ bağlantıları ({det.connections.length})</h3>
+        <div class="table-wrap" style="max-height:180px">
+          <table class="data">
+            <thead><tr><th>Protokol</th><th>Yerel</th><th>Uzak</th><th>Durum</th></tr></thead>
+            <tbody>
+              {#each det.connections.slice(0, 200) as c}
+                <tr><td class="small">{c.proto}</td><td class="mono small">{c.localAddress}:{c.localPort}</td><td class="mono small">{c.remoteAddress ? `${c.remoteAddress}:${c.remotePort}` : "—"}</td><td class="small muted">{c.state ?? "—"}</td></tr>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+      {/if}
+      {#if det.restartNote}<p class="tiny faint" style="margin-top:8px">{det.restartNote}</p>{/if}
+    {/if}
     <div class="table-wrap" style="margin-top:12px; max-height:240px">
       <table class="data">
         <thead><tr><th class="r">PID</th><th class="r">Üst PID</th><th class="r">CPU</th><th class="r">Bellek</th><th class="shrink"></th></tr></thead>
@@ -227,6 +332,7 @@
     {#snippet footer()}
       {#if sel?.exe}<PathActions path={sel.exe} />{/if}
       <span class="spacer"></span>
+      {#if det?.canRestart && sel}<button class="btn" onclick={() => restart(sel!)}><Icon name="refresh" size={13} /> Yeniden başlat</button>{/if}
       <button class="btn" onclick={() => (selOpen = false)}>Kapat</button>
     {/snippet}
   </Dialog>
@@ -265,6 +371,16 @@
   .namebtn:focus-visible {
     box-shadow: var(--focus);
     border-radius: 4px;
+  }
+  .twisty {
+    display: inline-grid;
+    place-items: center;
+    width: 14px;
+    flex: none;
+  }
+  .h3 {
+    font-size: 13px;
+    margin: 14px 0 6px;
   }
   .hot {
     color: var(--warn);

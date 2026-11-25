@@ -213,6 +213,10 @@
             <div><strong>Hareketi azalt</strong><p>Animasyonları ve geçişleri kapatır. Windows'ta "Animasyon efektleri" kapalıysa otomatik uygulanır.</p></div>
             <input type="checkbox" class="switch" checked={s.reduceMotion} onchange={(e) => set("reduceMotion", e.currentTarget.checked)} aria-label="Hareketi azalt" />
           </div>
+          <div class="opt">
+            <div><strong>Cam efektleri</strong><p>Yarı saydam katmanlar ve arka plan bulanıklığı. Kapatıldığında düz yüzeyler kullanılır; eski veya düşük güçlü sistemlerde daha akıcı olabilir.</p></div>
+            <input type="checkbox" class="switch" checked={s.glassEffects} onchange={(e) => set("glassEffects", e.currentTarget.checked)} aria-label="Cam efektleri" />
+          </div>
         </section>
       {:else if section === "monitoring"}
         <section class="card">
