@@ -1,0 +1,238 @@
+//! Temizlik, karantina, geçmiş ve anlık görüntü komutları.
+
+use crate::cleanup::{self, CleanupReport, CleanupScanSummary, DeleteRemover, QuarantineRemover};
+use crate::error::{AppError, AppResult};
+use crate::jobs;
+use crate::oplog::{self, OpEntry, Outcome};
+use crate::quarantine::QuarantineItem;
+use crate::snapshots::{self, Comparison, GrowthReport, SnapshotInfo};
+use crate::state::AppState;
+use serde::Serialize;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
+use tauri::{AppHandle, Manager, State};
+
+type St<'a> = State<'a, Arc<AppState>>;
+
+// ---------------------------------------------------------------------------
+// Temizlik
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub async fn cleanup_scan_start(app: AppHandle, st: St<'_>) -> AppResult<String> {
+    let ctl = st.jobs.start("cleanup-scan")?;
+    let id = ctl.id.clone();
+    std::thread::spawn(move || {
+        let st = app.state::<Arc<AppState>>().inner().clone();
+        let stop = jobs::spawn_reporter(app.clone(), ctl.clone(), None);
+        let s = st.settings();
+        let res = cleanup::scan(
+            s.temp_min_age_hours,
+            &s.user_rules,
+            &s.exclusions.cleanup_categories,
+            &s.exclusions,
+            s.cleanup_use_quarantine,
+            &ctl.cancel,
+            &ctl.progress,
+        );
+        stop.store(true, Ordering::Relaxed);
+        st.jobs.finish(&ctl.id);
+        match res {
+            Ok(scan) => {
+                let sum = scan.summary();
+                let summary = serde_json::json!({ "total": sum.total_size, "safe": sum.safe_size, "items": sum.items.len() });
+                let _ = st.db.kv_set("cleanup_last", &summary.to_string());
+                *st.cleanup_scan.lock() = Some(Arc::new(scan));
+                jobs::emit_done(&app, &ctl, "complete", None, summary);
+            }
+            Err(AppError::Cancelled) => jobs::emit_done(&app, &ctl, "cancelled", None, serde_json::Value::Null),
+            Err(e) => jobs::emit_done(&app, &ctl, "failed", Some(e.to_string()), serde_json::Value::Null),
+        }
+    });
+    Ok(id)
+}
+
+#[tauri::command]
+pub async fn cleanup_scan_result(st: St<'_>) -> AppResult<Option<CleanupScanSummary>> {
+    Ok(st.cleanup_scan.lock().as_ref().map(|s| s.summary()))
+}
+
+#[tauri::command]
+pub async fn cleanup_last_summary(st: St<'_>) -> AppResult<Option<serde_json::Value>> {
+    Ok(st.db.kv_get("cleanup_last")?.and_then(|s| serde_json::from_str(&s).ok()))
+}
+
+#[tauri::command]
+pub async fn cleanup_run(app: AppHandle, st: St<'_>, ids: Vec<String>) -> AppResult<String> {
+    let scan = st
+        .cleanup_scan
+        .lock()
+        .clone()
+        .ok_or_else(|| AppError::NotFound("önce bir temizlik taraması yapın".into()))?;
+    if ids.is_empty() {
+        return Err(AppError::InvalidInput("temizlenecek öğe seçilmedi".into()));
+    }
+    // Tarama sonuçları 30 dakikadan eskiyse yeniden taranmasını iste.
+    if crate::db::now_ts() - scan.created_at > 30 * 60 {
+        return Err(AppError::Conflict("tarama sonuçları eskidi; lütfen yeniden tarayın".into()));
+    }
+    let ctl = st.jobs.start("cleanup-run")?;
+    let id = ctl.id.clone();
+    std::thread::spawn(move || {
+        let st = app.state::<Arc<AppState>>().inner().clone();
+        let total: u64 = scan.items.iter().filter(|i| ids.contains(&i.id)).map(|i| i.files).sum();
+        ctl.set_phase("Temizleniyor", total);
+        let stop = jobs::spawn_reporter(app.clone(), ctl.clone(), None);
+        let s = st.settings();
+        let free_before = crate::platform::system_drive_free();
+        let progress_ctl = ctl.clone();
+        let on_progress = move |name: &str, n: u64| {
+            progress_ctl.add_done(n);
+            if let Some(mut c) = progress_ctl.progress.current.try_lock() {
+                if *c != name {
+                    *c = name.to_string();
+                }
+            }
+        };
+        let mut report: CleanupReport = if s.cleanup_use_quarantine {
+            let rem = QuarantineRemover { q: st.quarantine(), retention_days: s.quarantine_retention_days };
+            cleanup::execute(&scan, &ids, &rem, &ctl.cancel, &on_progress)
+        } else {
+            cleanup::execute(&scan, &ids, &DeleteRemover, &ctl.cancel, &on_progress)
+        };
+        report.used_quarantine = s.cleanup_use_quarantine;
+        report.free_before = free_before;
+        report.free_after = crate::platform::system_drive_free();
+        stop.store(true, Ordering::Relaxed);
+        st.jobs.finish(&ctl.id);
+        // Temizlenen öğelerin listesi artık geçersiz.
+        *st.cleanup_scan.lock() = None;
+
+        let outcome = if report.cancelled {
+            Outcome::Cancelled
+        } else if report.total_files == 0 && report.total_problems > 0 {
+            Outcome::Failed
+        } else if report.total_problems > 0 {
+            Outcome::Partial
+        } else {
+            Outcome::Success
+        };
+        let _ = oplog::record(
+            &st.db,
+            "cleanup",
+            &format!("Temizlik: {} öğe", report.items.len()),
+            outcome,
+            report.used_quarantine,
+            serde_json::to_value(&report).unwrap_or_default(),
+        );
+        let status = if report.cancelled { "cancelled" } else { "complete" };
+        jobs::emit_done(&app, &ctl, status, None, serde_json::to_value(&report).unwrap_or_default());
+    });
+    Ok(id)
+}
+
+// ---------------------------------------------------------------------------
+// Karantina
+// ---------------------------------------------------------------------------
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct QuarantineOverview {
+    pub items: Vec<QuarantineItem>,
+    pub count: u64,
+    pub size: u64,
+    pub retention_days: u32,
+    pub folder: String,
+}
+
+#[tauri::command]
+pub async fn quarantine_list(st: St<'_>, history: bool) -> AppResult<QuarantineOverview> {
+    let q = st.quarantine();
+    let (count, size) = q.total_size()?;
+    Ok(QuarantineOverview {
+        items: q.list(history)?,
+        count,
+        size,
+        retention_days: st.settings.read().quarantine_retention_days,
+        folder: crate::paths::quarantine_dir().to_string_lossy().into_owned(),
+    })
+}
+
+#[tauri::command]
+pub async fn quarantine_restore(st: St<'_>, id: String, rename_on_conflict: bool) -> AppResult<String> {
+    let q = st.quarantine();
+    let item = q.get(&id)?;
+    let res = q.restore(&id, rename_on_conflict);
+    if !matches!(res, Err(AppError::Conflict(_))) {
+        oplog::record(
+            &st.db,
+            "quarantine",
+            &format!("Geri yükleme: {}", file_name(&item.original_path)),
+            if res.is_ok() { Outcome::Success } else { Outcome::Failed },
+            false,
+            serde_json::json!({
+                "original": item.original_path,
+                "restoredTo": res.as_ref().ok(),
+                "error": res.as_ref().err().map(|e| e.to_string()),
+            }),
+        )?;
+    }
+    res
+}
+
+#[tauri::command]
+pub async fn quarantine_purge(st: St<'_>, ids: Vec<String>) -> AppResult<u64> {
+    let q = st.quarantine();
+    let mut bytes = 0;
+    let mut failed = Vec::new();
+    for id in &ids {
+        match q.purge(id) {
+            Ok(b) => bytes += b,
+            Err(e) => failed.push(e.to_string()),
+        }
+    }
+    oplog::record(
+        &st.db,
+        "quarantine",
+        &format!("Karantinadan kalıcı silme: {} öğe", ids.len() - failed.len()),
+        if failed.is_empty() { Outcome::Success } else { Outcome::Partial },
+        false,
+        serde_json::json!({ "bytes": bytes, "failed": failed }),
+    )?;
+    Ok(bytes)
+}
+
+fn file_name(p: &str) -> String {
+    std::path::Path::new(p).file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| p.to_string())
+}
+
+// ---------------------------------------------------------------------------
+// Geçmiş ve anlık görüntüler
+// ---------------------------------------------------------------------------
+
+#[tauri::command]
+pub async fn oplog_list(st: St<'_>, kind: Option<String>, limit: Option<i64>) -> AppResult<Vec<OpEntry>> {
+    oplog::list(&st.db, kind.as_deref(), limit.unwrap_or(200).clamp(1, 5000))
+}
+
+#[tauri::command]
+pub async fn snapshots_list(st: St<'_>, root: Option<String>) -> AppResult<Vec<SnapshotInfo>> {
+    snapshots::list(&st.db, root.as_deref())
+}
+
+#[tauri::command]
+pub async fn snapshot_delete(st: St<'_>, id: i64) -> AppResult<()> {
+    snapshots::delete(&st.db, id)
+}
+
+#[tauri::command]
+pub async fn snapshot_compare(st: St<'_>, a: i64, b: i64) -> AppResult<Comparison> {
+    let mut c = snapshots::compare(&st.db, a, b)?;
+    c.changes.truncate(500);
+    Ok(c)
+}
+
+#[tauri::command]
+pub async fn growth_report(st: St<'_>, root: String, days: u32) -> AppResult<GrowthReport> {
+    snapshots::growth(&st.db, &root, days.clamp(1, 3650), 50)
+}

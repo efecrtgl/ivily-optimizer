@@ -1,0 +1,10 @@
+node_modules/
+dist/
+src-tauri/target/
+src-tauri/gen/schemas/
+.claude/settings.local.json
+*.key
+*.key.pub.bak
+.env
+.DS_Store
+Thumbs.db

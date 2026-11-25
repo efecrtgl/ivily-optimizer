@@ -1,0 +1,62 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Ivily Optimizer",
+  "version": "../package.json",
+  "identifier": "com.efecrtgl.ivilyoptimizer",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://127.0.0.1:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Ivily Optimizer",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 900,
+        "minHeight": 600,
+        "center": true,
+        "resizable": true,
+        "theme": "Dark",
+        "backgroundColor": "#14161B"
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src ipc: http://ipc.localhost; object-src 'none'; base-uri 'none'; frame-ancestors 'none'",
+      "freezePrototype": true
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "publisher": "efecrtgl",
+    "homepage": "https://github.com/efecrtgl/ivily-optimizer",
+    "copyright": "© 2026 efecrtgl",
+    "category": "Utility",
+    "shortDescription": "Sistem izleme, disk analizi ve bakım aracı",
+    "longDescription": "Ivily Optimizer; disk kullanımını analiz eden, güvenli temizlik yapan, başlangıç öğelerini, servisleri ve zamanlanmış görevleri yöneten, gizlilik odaklı bir Windows bakım uygulamasıdır.",
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.ico"],
+    "createUpdaterArtifacts": true,
+    "windows": {
+      "webviewInstallMode": { "type": "downloadBootstrapper", "silent": true },
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["Turkish", "English"],
+        "displayLanguageSelector": false,
+        "installerIcon": "icons/icon.ico",
+        "startMenuFolder": "Ivily Optimizer"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDBGMkUwQzBEMzYzOUZFQzgKUldUSS9qazJEUXd1RDFzOHIzUjJGRkduck5Jc3JBdnkyaFRWSUNNNWFrZkZkMmJQaUxpcFBmL0kK",
+      "endpoints": ["https://github.com/efecrtgl/ivily-optimizer/releases/latest/download/latest.json"],
+      "windows": { "installMode": "passive" }
+    }
+  }
+}
