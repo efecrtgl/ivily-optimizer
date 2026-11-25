@@ -16,6 +16,7 @@ pub mod scan;
 pub mod settings;
 pub mod snapshots;
 pub mod state;
+pub mod sysmgmt;
 
 use state::AppState;
 use std::sync::Arc;
@@ -87,6 +88,7 @@ pub fn run() {
             }
         }))
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(state.clone())
         .setup(move |app| {
@@ -144,6 +146,25 @@ pub fn run() {
             commands::settings::data_usage,
             commands::settings::logs_open,
             commands::settings::logs_export,
+            commands::sysmgmt::startup_list,
+            commands::sysmgmt::startup_set_enabled,
+            commands::sysmgmt::services_list,
+            commands::sysmgmt::service_set_start_type,
+            commands::sysmgmt::service_control,
+            commands::sysmgmt::tasks_list,
+            commands::sysmgmt::task_set_enabled,
+            commands::sysmgmt::power_list,
+            commands::sysmgmt::power_set_active,
+            commands::sysmgmt::network_adapters,
+            commands::sysmgmt::network_connectivity_check,
+            commands::sysmgmt::network_dns_lookup,
+            commands::sysmgmt::dns_cache_list,
+            commands::sysmgmt::dns_cache_flush,
+            commands::sysmgmt::update_check,
+            commands::sysmgmt::update_last_check,
+            commands::update::update_install,
+            commands::update::update_cancel,
+            commands::maintenance::cleanup_categories,
         ])
         .run(tauri::generate_context!())
         .expect("Ivily Optimizer başlatılamadı");

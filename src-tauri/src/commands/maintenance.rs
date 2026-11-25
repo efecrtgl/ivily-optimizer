@@ -236,3 +236,22 @@ pub async fn snapshot_compare(st: St<'_>, a: i64, b: i64) -> AppResult<Compariso
 pub async fn growth_report(st: St<'_>, root: String, days: u32) -> AppResult<GrowthReport> {
     snapshots::growth(&st.db, &root, days.clamp(1, 3650), 50)
 }
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CategoryInfo {
+    pub id: String,
+    pub name: String,
+    pub group: String,
+    pub risk: cleanup::rules::Risk,
+}
+
+/// Bu bilgisayarda bulunan temizlik kategorileri (ayarlarda hariç tutmak için).
+#[tauri::command]
+pub async fn cleanup_categories(st: St<'_>) -> AppResult<Vec<CategoryInfo>> {
+    let s = st.settings();
+    Ok(cleanup::rules::categories(s.temp_min_age_hours, &s.user_rules)
+        .into_iter()
+        .map(|c| CategoryInfo { id: c.id, name: c.name, group: c.group.to_string(), risk: c.risk })
+        .collect())
+}
