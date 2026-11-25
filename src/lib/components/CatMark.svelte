@@ -1,51 +1,43 @@
 <script lang="ts">
-  // Ivily logosu: geometrik kedi başı. `blink` açıkken gözler ara sıra kırpılır.
-  let { size = 28, blink = false, mono = false }: { size?: number; blink?: boolean; mono?: boolean } = $props();
+  // Ivily işareti. Renk `currentColor`'dan gelir; böylece tek renkli tema
+  // içinde her yüzeye uyum sağlar. Oyuklar maske ile gerçekten saydamdır.
+  import { MARK_HEAD, MARK_CUTOUTS, MARK_VIEWBOX } from "../brand";
+
+  let { size = 28, blink = false, class: cls = "" }: { size?: number; blink?: boolean; class?: string } = $props();
+  const id = `ivm-${Math.random().toString(36).slice(2, 9)}`;
 </script>
 
-<svg width={size} height={size} viewBox="0 0 256 256" aria-hidden="true" class:blink class:mono>
-  <path
-    class="head"
-    d="M52 40 L104 88 Q128 80 152 88 L204 40 L214 148 Q206 200 128 216 Q50 200 42 148 Z"
-    stroke-width="10"
-    stroke-linejoin="round"
-  />
-  <g class="eyes">
-    <path d="M84 138 Q100 124 116 140 Q100 150 84 138 Z" />
-    <path d="M172 138 Q156 124 140 140 Q156 150 172 138 Z" />
-  </g>
-  <path class="mouth" d="M118 170 L128 178 L138 170" fill="none" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
+<svg class="mark {cls}" class:blink width={size} height={size} viewBox={MARK_VIEWBOX} aria-hidden="true" focusable="false">
+  <defs>
+    <mask {id} maskUnits="userSpaceOnUse" x="0" y="0" width="64" height="64">
+      <rect width="64" height="64" fill="#fff" />
+      {#each MARK_CUTOUTS as c, i}
+        <g transform={c.rotate ? `rotate(${c.rotate} ${c.cx} ${c.cy})` : undefined}>
+          <rect class:eye={i < 2} x={c.x} y={c.y} width={c.w} height={c.h} rx={c.r} fill="#000" style="transform-origin: {c.cx}px {c.cy}px" />
+        </g>
+      {/each}
+    </mask>
+  </defs>
+  <path d={MARK_HEAD} fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" mask="url(#{id})" />
 </svg>
 
 <style>
-  .head {
-    fill: var(--accent);
-    stroke: var(--accent);
+  .mark {
+    flex: none;
+    display: inline-block;
+    color: var(--text);
   }
-  .mono .head {
-    fill: currentColor;
-    stroke: currentColor;
-  }
-  .eyes path {
-    fill: var(--bg);
-  }
-  .mouth {
-    stroke: var(--bg);
-  }
-  .eyes {
-    transform-origin: 128px 138px;
-  }
-  .blink .eyes {
-    animation: blink 5s infinite;
+  .blink .eye {
+    animation: blink 6s infinite;
   }
   @keyframes blink {
     0%,
-    94%,
+    95%,
     100% {
       transform: scaleY(1);
     }
-    97% {
-      transform: scaleY(0.1);
+    97.5% {
+      transform: scaleY(0.15);
     }
   }
 </style>
