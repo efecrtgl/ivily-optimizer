@@ -377,3 +377,20 @@ mod tests {
         assert_eq!(last_check(&db).unwrap().unwrap().latest_version.as_deref(), Some("9.9.9"));
     }
 }
+
+#[cfg(test)]
+mod live_release_tests {
+    /// Gerçek GitHub sürümüne karşı salt okunur denetim. Ağ gerektirdiği için
+    /// varsayılan olarak çalışmaz: `cargo test -- --ignored live_release`.
+    #[test]
+    #[ignore]
+    fn live_release_is_detected_and_signed() {
+        let db = crate::db::Db::open_in_memory().unwrap();
+        let r = super::check(&db, false).expect("sürüm denetimi");
+        println!("{r:#?}");
+        assert!(r.latest_version.is_some());
+        assert!(r.has_signature, "imza dosyası bulunmalı");
+        assert!(r.updater_manifest_url.is_some(), "latest.json bulunmalı");
+        assert!(r.installer_asset.is_some(), "yükleyici bulunmalı");
+    }
+}
