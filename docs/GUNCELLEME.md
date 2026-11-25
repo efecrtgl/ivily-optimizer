@@ -28,6 +28,14 @@ Windows'ta çalışan bir yürütülebilir dosya kendini değiştiremez. Bu nede
 
 Mevcut kurulum, yeni sürüm doğrulanıp yükleyici başlatılmadan önce silinmez. Yükleyici başarısız olursa veya kesilirse önceki sürümün dosyaları yerinde kalır; aynı sürüm GitHub'dan elle indirilerek yeniden kurulabilir (kurtarma yolu). Tam otomatik geri alma (rollback) NSIS yükleyicisinin sınırları nedeniyle sunulmamaktadır.
 
+## Taşınabilir sürüm
+
+Taşınabilir (zip) sürüm de yeni sürümleri bildirir; ancak kurulum NSIS yükleyicisiyle yapıldığından, taşınabilir klasörü yerinde güncellemez. Yeni sürümü GitHub'dan indirin.
+
+## Arayüz
+
+Güncellemeler sayfası (kenar çubuğunun altında): kullanılan ve en son sürüm, kararlı / ön sürüm kanalı, sürüm notları, aşamalı kurulum göstergesi, iptal, otomatik denetim ayarları ve uygulama içi güncelleme geçmişi.
+
 ## Arayüz durumları
 
 Güncellemeler kontrol ediliyor · Güncelleme bulunamadı · Yeni sürüm bulundu · İndirme hazırlanıyor · İndiriliyor · Dosyalar doğrulanıyor · Güncelleme hazırlanıyor · Uygulama yeniden başlatılıyor · Güncelleme başarısız · İnternet bağlantısı yok · Güncelleme iptal edildi

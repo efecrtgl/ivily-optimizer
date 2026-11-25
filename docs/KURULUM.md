@@ -1,7 +1,5 @@
 # Kurulum
 
-> Henüz yayımlanmış bir sürüm yoktur. İlk sürüm yayımlandığında aşağıdaki adımlar geçerli olacaktır. O zamana kadar uygulamayı [kaynak koddan derleyebilirsiniz](DERLEME.md).
-
 ## Gereksinimler
 
 - Windows 10 (1803+) veya Windows 11, 64 bit
@@ -24,9 +22,13 @@ Rust, Node.js veya başka bir geliştirme aracı **gerekmez**.
 
 Yükleyici şu anda bir Authenticode kod imzalama sertifikasıyla imzalanmamıştır. Bu nedenle Windows SmartScreen "Windows bilgisayarınızı korudu" uyarısı gösterebilir. Dosyayı yalnızca resmi GitHub sürüm sayfasından indirdiyseniz "Ek bilgi > Yine de çalıştır" seçeneğiyle devam edebilirsiniz. (Uygulama içi güncellemeler ise ayrıca minisign imzasıyla doğrulanır; bkz. [GUNCELLEME.md](GUNCELLEME.md).)
 
+## Taşınabilir sürüm (kurulumsuz)
+
+Sürümdeki `Ivily.Optimizer_x.y.z_x64_tasinabilir.zip` dosyasını bir klasöre açıp `Ivily Optimizer.exe` dosyasını çalıştırın. WebView2 Çalışma Zamanı gerekir. Ayarlar ve geçmiş yine `%LOCALAPPDATA%\IvilyOptimizer` içinde tutulur. Taşınabilir sürüm uygulama içinden **otomatik güncellenmez**; yeni sürümü GitHub'dan indirmeniz gerekir.
+
 ## Güncelleme
 
-Uygulama yeni sürümleri kendisi denetler (Ayarlar > Güncellemeler). Hakkında sayfasından "İndir ve kur" ile güncelleyebilirsiniz.
+Uygulama yeni sürümleri kendisi denetler (Ayarlar > Güncellemeler). Güncellemeler sayfasından "İndir, doğrula ve kur" ile güncelleyebilirsiniz.
 
 ## Kaldırma
 

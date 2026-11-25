@@ -1,40 +1,41 @@
 <p align="center">
-  <img src="assets/brand/logo-mark.svg" width="96" alt="Ivily Optimizer logosu" />
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/ivily-logo-white.svg" />
+    <img src="assets/brand/ivily-logo-black.svg" width="260" alt="Ivily Optimizer" />
+  </picture>
 </p>
 
-<h1 align="center">Ivily Optimizer</h1>
-
 <p align="center">
-  Windows için yerel, gizlilik odaklı ve dürüst bir sistem izleme, disk analizi ve bakım uygulaması.
+  Windows için yerel, gizlilik odaklı ve şeffaf bir sistem zekâsı, depolama analizi ve bakım uygulaması.
 </p>
 
 ---
 
-Ivily Optimizer; bilgisayarınızda neyin yer kapladığını, hangi klasörlerin büyüdüğünü, arka planda nelerin çalıştığını ve neyin güvenle temizlenebileceğini **gerçek verilere dayanarak** anlamanıza yardımcı olur.
+Ivily Optimizer; bilgisayarınızda neyin yer kapladığını, hangi klasörlerin büyüdüğünü, arka planda nelerin çalıştığını, Windows'un olay günlüklerinde neler kaydedildiğini ve neyin güvenle temizlenebileceğini **gerçek verilere dayanarak** anlamanıza yardımcı olur. Modüller birbirine bağlıdır: bir sorun ölçülür, Ivily Zekâsı kanıtı ve yorumu ayrı ayrı açıklar, ilgili eylem önerilir, yapılan işlem kaydedilir ve mümkünse geri alınabilir.
 
-Sıradan bir "geçici dosya temizleyici" değildir; abartılı performans vaatlerinde bulunmaz. RAM "temizleme", kayıt defteri temizliği veya rastgele servisleri kapatma gibi kanıtlanmamış yöntemler bilerek **yoktur**.
+Sıradan bir "PC temizleyici" değildir; abartılı performans vaatlerinde bulunmaz. RAM "temizleme", kayıt defteri temizliği, toplu servis kapatma veya sahte ölçümler bilerek **yoktur**.
 
-> **Durum:** İlk sürüm (0.1.0) geliştirme aşamasındadır. Henüz yayımlanmış bir kurulum dosyası yoktur. Uygulanan ve planlanan özelliklerin ayrıntılı listesi için [ROADMAP.md](ROADMAP.md) ve [ILERLEME.md](ILERLEME.md) dosyalarına bakın.
+> **Durum:** 0.2.0 sürümü. Uygulanan ve planlanan özelliklerin ayrıntılı listesi için [ROADMAP.md](ROADMAP.md) ve [ILERLEME.md](ILERLEME.md) dosyalarına bakın.
 
 ## Özellikler
 
 | Alan | Neler yapar |
 |---|---|
-| **Genel Bakış** | Bilgisayar adı, Windows sürümü, işlemci, bellek, diskler, ekran kartı, canlı CPU/RAM/ağ grafikleri, ölçülen verilere dayalı durum notları. Son bilinen veriler önbellekten anında gösterilir ve "canlı" veriden açıkça ayrılır. Bileşenler özelleştirilebilir. |
-| **Disk Analizi** | Sürücü veya klasör taraması, etkileşimli treemap, klasör gezgini, dosya türü/kategori dağılımı, dosya boyutu histogramı, erişim sorunları listesi. |
-| **Akıllı Analiz** | Küçük dosya yoğunluğu ("küçük dosya mezarlığı") analizi ve anlık görüntülere dayalı hızlı büyüyen klasörler. |
-| **Dosya Yönetimi** | Büyük dosyalar, uzun süredir değiştirilmemiş (eski) dosyalar ve aşamalı BLAKE3 doğrulamalı yinelenen dosyalar. Seçilen dosyalar karantinaya veya Geri Dönüşüm Kutusu'na taşınır. |
-| **Temizlik** | Davranışı bilinen kategoriler (Windows geçici dosyaları, hata raporları, tarayıcı/uygulama önbellekleri, gölgelendirici önbellekleri, geliştirme önbellekleri, Geri Dönüşüm Kutusu, özel kurallar). Risk sınıfları, ayrıntılı önizleme, iptal, ayrıntılı rapor. |
-| **Karantina** | Geri alınabilir taşıma, çakışma denetimli geri yükleme (asla üzerine yazmaz), saklama süresi. |
-| **Başlangıç** | Kayıt defteri ve başlangıç klasörü öğeleri; Görev Yöneticisi ile aynı geri alınabilir devre dışı bırakma yöntemi. |
-| **İşlemler** | Süreç listesi, arama, gruplama, ayrıntı, kritik süreç korumalı sonlandırma. |
-| **Servisler** | Servis bilgileri, başlangıç türü ve başlat/durdur; kritik servisler korunur, toplu kapatma yoktur. |
-| **Zamanlanmış Görevler** | Görevleri inceleme; uygulama görevlerini devre dışı bırakma. Windows bakım görevleri salt okunurdur. |
-| **Performans** | Canlı CPU (çekirdek başına), bellek, disk ve ağ geçmişi; Windows güç planları. |
-| **Ağ** | Bağdaştırıcılar, bağlantı testi, DNS sorgusu, DNS önbelleğini görüntüleme ve onaylı temizleme. |
-| **Geçmiş** | Tüm işlemlerin kaydı, sistem değişikliklerini geri alma, anlık görüntü karşılaştırma ve zaman çizelgesi. |
-| **Ayarlar** | Tema (koyu/açık/sistem), izleme sıklığı, tarama yoğunluğu, hariç tutmalar, temizlik kategorileri ve özel kurallar, saklama süreleri, güncellemeler, veri dışa aktarma ve silme. |
-| **Güncellemeler** | GitHub Releases üzerinden sürüm denetimi; yalnızca gömülü genel anahtarla doğrulanan imzalı paketler kurulur. |
+| **Genel Bakış** | Sıfırdan tasarlanmış modüler pano: karşılama, hızlı eylemler, Ivily önerileri, donanım, canlı CPU/RAM/ağ, diskler, depolama, sistem olayları, bildirim merkezi, son işlemler, güncelleme. Bileşenler sıralanabilir, genişletilebilir ve gizlenebilir. |
+| **Ivily Zekâsı** | Diskler, tarama içgörüleri, temizlik, olay günlüğü, başlangıç öğeleri, karantina ve güncellemelerden kanıta dayalı öneriler; ölçülen veri ve yorum ayrı gösterilir. |
+| **Disk Analizi** | Paralel ve iptal edilebilir tarama, treemap, klasör gezgini, dosya türü dağılımı, erişim sorunları, anlık görüntüler. |
+| **Akıllı Analiz** | Depolama içgörüleri (kullanıcı klasörleri, uygulama depolaması, geçici/önbellek klasörleri, darboğazlar), küçük dosya yoğunluğu, hızlı büyüyen klasörler. |
+| **Dosya Yönetimi** | Gelişmiş gezgin (meta veri, imza, SHA-256/BLAKE3 özet, envanter), büyük/eski/yinelenen dosyalar, boş klasörler, klasör karşılaştırma. |
+| **Temizlik** | Risk sınıflı kategoriler, dosya düzeyinde önizleme, onay, iptal, gerçek sonuç raporu, karantina modu, özel kurallar. |
+| **Karantina** | Geri alınabilir taşıma, doğrulanan ve asla üzerine yazmayan geri yükleme. |
+| **Başlangıç** | Kayıt defteri ve klasör öğeleri, Authenticode imza durumu, inceleme notları, başlangıç görevleri, otomatik servisler, açılış performansı kayıtları. |
+| **İşlemler** | Ağaç görünümü, bağlantı sayısı, ayrıntılar (komut satırı, üst/alt süreçler, imza, ağ bağlantıları), korumalı sonlandırma ve güvenli yeniden başlatma. |
+| **Servisler ve Görevler** | Servis bağımlılıkları, başlat/durdur/yeniden başlat, başlangıç türü; görev ayrıntıları ve çalışma geçmişi. Kritik bileşenler korunur. |
+| **Sistem Geçmişi** | Windows olay günlükleri: kategoriler, zaman çizelgesi, tekrarlayan sorunlar, olay bağlamı, TXT/CSV/JSON rapor. |
+| **İşlem Geçmişi** | Önceki/yeni durum, onay ve geri alma durumu; arama, dışa aktarma, arka uçta doğrulanan geri alma. |
+| **Performans ve Ağ** | Canlı geçmiş grafikleri, güç planları, bağdaştırıcılar, bağlantı testi, DNS araçları. |
+| **Güncellemeler** | GitHub Releases, kararlı/ön sürüm kanalı, imza doğrulamalı aşamalı kurulum. |
+| **Tasarım** | Tek renkli cam tasarım sistemi, koyu/açık/sistem tema, yenilenen kedi işareti. |
 
 ## Güvenlik felsefesi
 
@@ -59,7 +60,7 @@ Sıradan bir "geçici dosya temizleyici" değildir; abartılı performans vaatle
 
 ## Kurulum
 
-Sürümler yayımlandığında [GitHub Releases](https://github.com/efecrtgl/ivily-optimizer/releases) sayfasından `Ivily Optimizer_x.y.z_x64-setup.exe` dosyasını indirip çalıştırın. Kurulum yönetici hakkı gerektirmez ve yalnızca kullanıcı hesabınıza yapılır. Ayrıntılar: [docs/KURULUM.md](docs/KURULUM.md).
+[GitHub Releases](https://github.com/efecrtgl/ivily-optimizer/releases/latest) sayfasından `Ivily Optimizer_x.y.z_x64-setup.exe` dosyasını indirip çalıştırın. Kurmadan denemek için `…_tasinabilir.zip` dosyasını da kullanabilirsiniz. Kurulum yönetici hakkı gerektirmez ve yalnızca kullanıcı hesabınıza yapılır. Ayrıntılar: [docs/KURULUM.md](docs/KURULUM.md).
 
 ## Kullanım
 
@@ -92,6 +93,9 @@ Uygulama GitHub Releases'teki sürümleri denetler, sürümleri anlamsal sürüm
 | [docs/GELISTIRME.md](docs/GELISTIRME.md) | Geliştirme ortamı, testler, kod düzeni |
 | [docs/MIMARI.md](docs/MIMARI.md) | Mimari ve teknoloji kararları |
 | [docs/OZELLIKLER.md](docs/OZELLIKLER.md) | Özelliklerin ayrıntılı açıklaması |
+| [docs/SISTEM-GECMISI.md](docs/SISTEM-GECMISI.md) | Olay günlüğü analizi ve Ivily Zekâsı |
+| [docs/TASARIM-SISTEMI.md](docs/TASARIM-SISTEMI.md) | Tek renkli cam tasarım sistemi |
+| [docs/MARKA.md](docs/MARKA.md) | Marka kimliği ve varlıkları |
 | [docs/TEMIZLIK-GUVENLIGI.md](docs/TEMIZLIK-GUVENLIGI.md) | Temizlik kategorileri ve güvenlik sınırları |
 | [docs/TARAMA-MOTORU.md](docs/TARAMA-MOTORU.md) | Tarama motoru |
 | [docs/ANLIK-GORUNTULER.md](docs/ANLIK-GORUNTULER.md) | Anlık görüntüler ve büyüme analizi |

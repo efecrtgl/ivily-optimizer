@@ -1,8 +1,13 @@
 name: Sürüm
 
-# vX.Y.Z biçimindeki bir etiket gönderildiğinde Windows yükleyicisini derler,
-# güncelleme paketini imzalar ve GitHub'da TASLAK bir sürüm oluşturur.
-# Taslak, gözden geçirildikten sonra elle yayımlanmalıdır.
+# vX.Y.Z biçimindeki bir etiket gönderildiğinde:
+#   1. kaynak ve sürüm tutarlılığını doğrular,
+#   2. arayüz tür denetimini ve Rust testlerini çalıştırır,
+#   3. Windows yükleyicisini derler ve güncelleme paketini imzalar,
+#   4. yapıtları doğrular (yükleyici, imza, latest.json, taşınabilir paket),
+#   5. SHA-256 özetleriyle birlikte TASLAK bir GitHub sürümü oluşturur.
+# Taslak, gözden geçirildikten sonra yayımlanır. Doğrulama veya paketleme
+# başarısız olursa hiçbir yapıt yayımlanmaz.
 on:
   push:
     tags: ["v*.*.*"]
@@ -50,18 +55,51 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           releaseName: "Ivily Optimizer ${{ github.ref_name }}"
-          releaseBody: "Değişiklikler için CHANGELOG.md dosyasına bakın. Yükleyici ve güncelleme paketi imzalıdır; SHA256SUMS.txt dosyası bütünlük denetimi içindir."
+          releaseBody: "Sürüm notları hazırlanıyor. Değişiklikler için CHANGELOG.md dosyasına bakın."
           releaseDraft: true
           prerelease: ${{ contains(github.ref_name, '-') }}
           includeUpdaterJson: true
           updaterJsonPreferNsis: true
 
-      - name: SHA-256 özetlerini ekle
+      - name: Yapıtları doğrula
+        shell: pwsh
+        run: |
+          $v = "${{ github.ref_name }}".TrimStart('v')
+          $dir = "src-tauri/target/release/bundle/nsis"
+          $exe = Join-Path $dir "Ivily Optimizer_${v}_x64-setup.exe"
+          if (-not (Test-Path $exe)) { Write-Error "Yükleyici bulunamadı: $exe"; exit 1 }
+          if (-not (Test-Path "$exe.sig")) { Write-Error "Güncelleme imzası bulunamadı"; exit 1 }
+          if ((Get-Item $exe).Length -lt 1MB) { Write-Error "Yükleyici beklenenden küçük"; exit 1 }
+          $info = (Get-Item $exe).VersionInfo
+          Write-Host "Yükleyici: $exe ($([math]::Round((Get-Item $exe).Length/1MB,2)) MB)"
+          $app = "src-tauri/target/release/ivily-optimizer.exe"
+          $appVer = (Get-Item $app).VersionInfo.ProductVersion
+          if (-not $appVer.StartsWith($v.Split('-')[0])) { Write-Error "Uygulama sürümü ($appVer) etiketle ($v) eşleşmiyor"; exit 1 }
+          Write-Host "Uygulama sürümü: $appVer"
+
+      - name: Taşınabilir paket ve SHA-256 özetleri
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          $files = Get-ChildItem src-tauri/target/release/bundle/nsis -File
+          $v = "${{ github.ref_name }}".TrimStart('v')
+          $out = "dist-release"
+          New-Item -ItemType Directory -Force $out | Out-Null
+          $stage = Join-Path $out "Ivily Optimizer"
+          New-Item -ItemType Directory -Force $stage | Out-Null
+          Copy-Item src-tauri/target/release/ivily-optimizer.exe (Join-Path $stage "Ivily Optimizer.exe")
+          @"
+          Ivily Optimizer $v — taşınabilir sürüm
+
+          Kurulum gerektirmez: "Ivily Optimizer.exe" dosyasını çalıştırın.
+          Gereksinim: Microsoft Edge WebView2 Çalışma Zamanı (Windows 11'de hazır gelir).
+          Ayarlar ve geçmiş %LOCALAPPDATA%\IvilyOptimizer klasöründe tutulur.
+          Taşınabilir sürüm uygulama içinden otomatik güncellenmez; yeni sürümü
+          GitHub Releases sayfasından indirin.
+          "@ | Set-Content -Encoding utf8 (Join-Path $stage "BENIOKU.txt")
+          $zip = Join-Path $out "Ivily.Optimizer_${v}_x64_tasinabilir.zip"
+          Compress-Archive -Path $stage -DestinationPath $zip -Force
+          $files = @(Get-ChildItem src-tauri/target/release/bundle/nsis -File) + @(Get-Item $zip)
           $lines = $files | ForEach-Object { "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.Name }
-          $lines | Set-Content -Encoding utf8 SHA256SUMS.txt
-          gh release upload "${{ github.ref_name }}" SHA256SUMS.txt --clobber
+          $lines | Set-Content -Encoding utf8 "$out/SHA256SUMS.txt"
+          gh release upload "${{ github.ref_name }}" "$zip" "$out/SHA256SUMS.txt" --clobber

@@ -14,20 +14,25 @@ Svelte 5, derleme zamanında çalışma zamanı kodunu en aza indirdiği için s
 ## Katmanlar
 
 ```
-┌──────────────────────────── Svelte arayüzü (src/) ────────────────────────────┐
-│ pages/*  ·  lib/components/*  ·  lib/state.svelte.ts (runes)  ·  lib/api.ts   │
-└──────────────────────────────── invoke / olaylar ─────────────────────────────┘
-┌──────────────────────────── Rust çekirdeği (src-tauri/src) ────────────────────┐
-│ commands/*        Tauri komutları (ince katman; doğrulama + iş başlatma)       │
-│ scan/             tarama motoru: walker, tree (disk analizi), dupes, classify  │
-│ cleanup/          temizlik kuralları, korunan yollar, tarama ve yürütme        │
-│ quarantine.rs     karantina ve geri yükleme                                    │
-│ snapshots.rs      anlık görüntüler, karşılaştırma, büyüme                      │
-│ monitor.rs        sistem bilgisi, canlı izleme, süreçler                       │
-│ sysmgmt/          başlangıç, servisler, görevler, güç, ağ, sürüm denetimi      │
-│ jobs.rs           arka plan işleri, iptal, ilerleme olayları                   │
-│ db.rs · settings.rs · oplog.rs · platform.rs · paths.rs · error.rs             │
-└────────────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────── Svelte arayüzü (src/) ─────────────────────────────┐
+│ pages/*  ·  lib/components/*  ·  lib/files/*                                   │
+│ lib/state.svelte.ts (gezinme, ayarlar, işler, canlı izleme)                    │
+│ lib/intelligence.svelte.ts (Ivily Zekâsı)  ·  lib/notify.svelte.ts (bildirimler)│
+│ lib/updater.svelte.ts  ·  lib/brand.ts (marka geometrisi)  ·  lib/api.ts       │
+└──────────────────────────────── invoke / olaylar ──────────────────────────────┘
+┌──────────────────────────── Rust çekirdeği (src-tauri/src) ─────────────────────┐
+│ commands/   system · disk · maintenance · settings · sysmgmt · intel ·          │
+│             files · history · update  (ince katman: doğrulama + iş başlatma)    │
+│ scan/       walker (gezgin) · tree (disk analizi) · dupes · classify            │
+│ files.rs    gezgin, meta veri, özet, karşılaştırma, envanter, boş klasörler,    │
+│             depolama içgörüleri                                                 │
+│ cleanup/    kategoriler, korunan yollar, tarama, yürütme                        │
+│ quarantine.rs · snapshots.rs · oplog.rs (işlem geçmişi v2, geri alma)           │
+│ sysmgmt/    startup · services · tasks · power · network · update ·             │
+│             events (olay günlüğü) · signature (Authenticode) ·                  │
+│             procinfo (süreç ayrıntıları, bağlantılar) · indicators              │
+│ monitor.rs · jobs.rs · db.rs · settings.rs · platform.rs · paths.rs · error.rs  │
+└─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### İlkeler
@@ -44,17 +49,28 @@ Svelte 5, derleme zamanında çalışma zamanı kodunu en aza indirdiği için s
 
 | Yol | İçerik |
 |---|---|
-| `ivily.db` | SQLite (WAL): ayarlar (`kv`), işlem geçmişi (`oplog`), anlık görüntüler (`snapshots`, `snapshot_dirs`), karantina kayıtları (`quarantine`) |
+| `ivily.db` | SQLite (WAL, şema 2): ayarlar (`kv`), işlem geçmişi (`oplog` — hedef, önceki/yeni durum, onay, geri alma durumu, hata), anlık görüntüler (`snapshots`, `snapshot_dirs`), karantina kayıtları (`quarantine`) |
 | `quarantine\<kimlik>\` | Karantinadaki dosyalar |
 | `logs\ivily.log.YYYY-MM-DD` | Günlük olarak dönen yapılandırılmış günlükler (14 gün saklanır) |
 
-Şema sürümü `PRAGMA user_version` ile izlenir. Veritabanı açılamazsa bozuk dosya yedeklenir ve yenisi oluşturulur; uygulama yine açılır.
+Şema sürümü `PRAGMA user_version` ile izlenir; 1 → 2 geçişi eski kayıtların türetilmiş alanlarını otomatik doldurur. Veritabanı açılamazsa bozuk dosya yedeklenir ve yenisi oluşturulur; uygulama yine açılır.
 
 ## Önbellek ve tazelik
 
 - Son sistem bilgisi veritabanında saklanır; uygulama açılışta bunu anında gösterir ve "Son bilinen veri · X önce" rozetiyle canlı veriden ayırır.
 - Son disk taramasının tam ağacı bellekte tutulur; özetleri anlık görüntü olarak kalıcıdır.
 - Artımlı tarama şu sürümde **yoktur**: NTFS değişiklik günlüğü (USN) okumak yönetici hakkı gerektirdiğinden ve güvenilir bir artımlı model ayrı bir çalışma olduğundan, her tarama tam yapılır. Bu durum belgelerde ve yol haritasında açıkça belirtilmiştir.
+
+## Modüller arası akış
+
+```
+Ölçüm (tarama, olay günlüğü, canlı izleme, başlangıç)
+   → Ivily Zekâsı: kanıt + ayrı işaretli yorum + önerilen eylem
+   → Kullanıcı onayı (önizleme / onay penceresi)
+   → İşlem (arka uçta yeniden doğrulama, korunan konum denetimi)
+   → İşlem Geçmişi (önceki/yeni durum, geri alma durumu)
+   → Pano ve öneriler güncel ölçümle yenilenir
+```
 
 ## Güvenlik yapılandırması
 

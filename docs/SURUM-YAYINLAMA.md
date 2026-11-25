@@ -40,9 +40,9 @@ Ardından `.key.pub` dosyasının içeriğini `tauri.conf.json` > `plugins.updat
    git tag v0.2.0
    git push origin main --tags
    ```
-5. **Sürüm** iş akışı (`.github/workflows/release.yml`) Windows'ta derler, testleri çalıştırır, yükleyiciyi ve güncelleme paketini imzalar, `latest.json` ve `SHA256SUMS.txt` dosyalarını ekleyerek **taslak** bir GitHub sürümü oluşturur. Etikette `-` varsa (ör. `v0.2.0-beta.1`) ön sürüm olarak işaretlenir.
+5. **Sürüm** iş akışı (`.github/workflows/release.yml`) Windows'ta derler, testleri çalıştırır, yükleyiciyi ve güncelleme paketini imzalar, yapıtları doğrular (yükleyici, `.sig` imzası, yükleyici boyutu, uygulama sürümü = etiket) ve `latest.json`, taşınabilir `…_tasinabilir.zip` ile `SHA256SUMS.txt` dosyalarını ekleyerek **taslak** bir GitHub sürümü oluşturur. Etikette `-` varsa (ör. `v0.3.0-beta.1`) ön sürüm olarak işaretlenir. Herhangi bir adım başarısız olursa yapıt yüklenmez.
 6. Taslak sürümü indirip temiz bir sistemde kurulumu, kaldırmayı ve önceki sürümden güncellemeyi test edin.
-7. Sürüm notlarını düzenleyin ve taslağı **elle yayımlayın**. Uygulamalar yalnızca yayımlanmış sürümleri görür.
+7. Sürüm notlarını Türkçe olarak `CHANGELOG.md`'deki ilgili bölümden (eklenenler, değişenler, düzeltmeler, bilinen sorunlar) ve SHA-256 özetlerinden hazırlayın; taslağı **yayımlayın**. Uygulamalar yalnızca yayımlanmış sürümleri görür.
 
 ## Yayın öncesi denetim listesi
 
