@@ -1,13 +1,12 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Ana pencere için en az yetki ilkesine uygun izinler.",
-  "windows": ["main"],
+  "description": "Ana pencere için en az yetki ilkesine uygun izinler. Güncelleme indirme ve kurulumu Rust tarafında yapılır; arayüze güncelleyici veya süreç izni verilmez.",
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:default",
-    "core:window:allow-set-title",
-    "updater:default",
-    "process:allow-restart",
     "dialog:allow-open"
   ]
 }
