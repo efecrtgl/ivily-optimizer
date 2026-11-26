@@ -61,3 +61,24 @@ Sistem durumunu değiştiren yollar (başlangıç öğesini değiştirme, servis
 
 - Sistem değiştiren işlemler (servis, görev, başlangıç, güç planı, süreç yeniden başlatma) ve geri alınmaları gerçek sistemde elle test edilmeli.
 - Yükleyicinin temiz bir sistemde kurulumu/kaldırılması ve önceki sürümden uygulama içi güncelleme henüz denenmedi.
+
+## Oturum 3 — 0.3.0 döngüsü (DURAKLATILDI, 26 Kasım 2026)
+
+Geliştirme, kullanıcının isteğiyle geçici olarak duraklatıldı. Açık bir talimat gelmeden devam edilmeyecek.
+
+### Tamamlananlar
+
+- **Faz 1 (tamam):** depo ve kod tabanı denetimi, 0.3.0 yol haritası — `docs/DENETIM.md`, `ROADMAP.md` (commit `6750bd9`).
+- **Faz 2 (kısmen):** davranış kuralları, sorun/PR şablonları, Dependabot (`8829ca9`); kaynak ölçüm betiği `scripts/measure-perf.ps1` (`36121c5`).
+- Karar: arayüz Svelte 5 olarak kalır, TypeScript'ten düz JavaScript'e dönüştürülecek (React'e yeniden yazım yok).
+
+### Yarım kalanlar
+
+- Faz 2'nin kalanı: CI'a clippy, `cargo audit`, `npm audit` eklenmesi; 27 clippy uyarısının giderilmesi; `rustfmt.toml` (`max_width = 120`, `use_small_heuristics = "Max"`) ile tek seferlik biçimlendirme; `rust-version` 1.80 → 1.85 (`ErrorKind::CrossesDevices` 1.85 gerektiriyor).
+- `.github/pull_request_template.md`, henüz var olmayan denetimlere (`npm test`, clippy, İngilizce dil dosyaları) atıf yapıyor; Faz 2–7 tamamlanınca geçerli olacak, aksi halde düzeltilmeli.
+- 0.2.0 performans temel ölçümü yarıda kesildi; sonuç kaydedilmedi. Devam edildiğinde `scripts/measure-perf.ps1` 0.2.0 ikilisiyle yeniden çalıştırılmalı.
+- Faz 3–10 başlamadı (bkz. `docs/DENETIM.md` §11).
+
+### Durum
+
+- Kaynak kodda değişiklik yok; 0.2.0 davranışı aynen korunuyor. `cargo test`: 129 başarılı; `npm run check` ve `npm run build`: başarılı (denetim sırasında).
