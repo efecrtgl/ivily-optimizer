@@ -1,4 +1,4 @@
-<script lang="ts">
+<script>
   import { onMount } from "svelte";
   import PageHeader from "../lib/components/PageHeader.svelte";
   import Icon from "../lib/components/Icon.svelte";
@@ -7,23 +7,23 @@
   import AreaChart from "../lib/components/AreaChart.svelte";
   import Dialog from "../lib/components/Dialog.svelte";
   import BarList from "../lib/components/BarList.svelte";
-  import { api, fx } from "../lib/api";
-  import { intelState, refreshIntelligence } from "../lib/intelligence.svelte";
-  import { go, app, toast } from "../lib/state.svelte";
-  import { bytes, num, pct, ago, date, dateTime, errMsg, signedBytes } from "../lib/format";
-  import type { SmallFileHotspot, ScanSummary, GrowthReport, SnapshotInfo, StorageInsights } from "../lib/types";
-  import { nav } from "../lib/state.svelte";
+  import { api, fx } from "../lib/api.js";
+  import { intelState, refreshIntelligence } from "../lib/intelligence.svelte.js";
+  import { go, app, toast } from "../lib/state.svelte.js";
+  import { bytes, num, pct, ago, date, dateTime, errMsg, signedBytes } from "../lib/format.js";
 
-  let tab = $state<"recs" | "storage" | "small" | "growth">((["recs", "storage", "small", "growth"].includes(nav.params.tab) ? nav.params.tab : "recs") as any);
-  let insights = $state<StorageInsights | null>(null);
-  let summary = $state<ScanSummary | null>(null);
-  let hotspots = $state<SmallFileHotspot[]>([]);
-  let roots = $state<string[]>([]);
+  import { nav } from "../lib/state.svelte.js";
+
+  let tab = $state((["recs", "storage", "small", "growth"].includes(nav.params.tab) ? nav.params.tab : "recs") );
+  let insights = $state(null);
+  let summary = $state(null);
+  let hotspots = $state([]);
+  let roots = $state([]);
   let growthRoot = $state("");
   let days = $state(30);
-  let growth = $state<GrowthReport | null>(null);
+  let growth = $state(null);
   let loadingGrowth = $state(false);
-  let selected = $state<SmallFileHotspot | null>(null);
+  let selected = $state(null);
   let detailOpen = $state(false);
 
   const HIST = ["< 1 KB", "1–4 KB", "4–16 KB", "16–64 KB", "64–256 KB", "256 KB–1 MB", "1–16 MB", "> 16 MB"];
@@ -34,7 +34,7 @@
       fx.insights().then((r) => (insights = r)).catch(() => (insights = null));
       summary = await api.scanSummary();
       if (summary) hotspots = await api.smallFiles();
-      const snaps: SnapshotInfo[] = await api.snapshots();
+      const snaps = await api.snapshots();
       roots = [...new Set(snaps.map((s) => s.root))];
       growthRoot = summary?.root ?? roots[0] ?? "";
       if (growthRoot) loadGrowth();
@@ -55,12 +55,12 @@
     }
   }
 
-  function inspect(h: SmallFileHotspot) {
+  function inspect(h) {
     selected = h;
     detailOpen = true;
   }
 
-  const impactCls = { Yüksek: "bad", Orta: "warn", Düşük: "info" } as const;
+  const impactCls = { Yüksek: "bad", Orta: "warn", Düşük: "info" } ;
 </script>
 
 <PageHeader
@@ -93,7 +93,7 @@
             <p class="small"><span class="faint">Ölçülen:</span> {r.evidence}</p>
             {#if r.interpretation}<p class="small interp">{r.interpretation}</p>{/if}
           </div>
-          {#if r.action}<button class="btn sm" onclick={() => go(r.action!.route, r.action!.params)}>{r.action.label}</button>{/if}
+          {#if r.action}<button class="btn sm" onclick={() => go(r.action.route, r.action.params)}>{r.action.label}</button>{/if}
         </article>
       {/each}
     </div>
@@ -293,7 +293,7 @@
       <div><span class="faint tiny">Ortalama boyut</span><strong class="num">{bytes(selected.avgSize)}</strong></div>
     </div>
     <h3 style="margin: 14px 0 8px">Dosya boyutu dağılımı</h3>
-    <BarList items={HIST.map((l, i) => ({ label: l, value: selected!.hist[i] ?? 0, color: "var(--chart-2)" }))} format={(v) => num(v)} />
+    <BarList items={HIST.map((l, i) => ({ label: l, value: selected.hist[i] ?? 0, color: "var(--chart-2)" }))} format={(v) => num(v)} />
     <div class="callout" style="margin-top:14px">
       <Icon name="info" size={16} />
       <div class="small">
@@ -302,7 +302,7 @@
       </div>
     </div>
     {#snippet footer()}
-      <PathActions path={selected!.path} exclude />
+      <PathActions path={selected.path} exclude />
       <span class="spacer"></span>
       <button class="btn" onclick={() => (detailOpen = false)}>Kapat</button>
     {/snippet}

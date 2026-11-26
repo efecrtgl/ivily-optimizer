@@ -1,2 +1,2 @@
-import { vitePreprocess } from "@sveltejs/vite-plugin-svelte";
-export default { preprocess: vitePreprocess() };
+// Svelte derleyici ayarları. Arayüz düz JavaScript ile yazılır; ön işlemci gerekmez.
+export default {};

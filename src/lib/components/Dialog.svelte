@@ -1,6 +1,5 @@
-<script lang="ts">
-  // Erişilebilir modal pencere: odak tuzağı, Esc ile kapatma, odağı geri verme.
-  import type { Snippet } from "svelte";
+<script>
+
   import { tick } from "svelte";
 
   let {
@@ -10,24 +9,19 @@
     children,
     footer,
     onclose,
-  }: {
-    open?: boolean;
-    title: string;
-    width?: number;
-    children: Snippet;
-    footer?: Snippet;
-    onclose?: () => void;
-  } = $props();
+  }
 
-  let panel: HTMLDivElement | undefined = $state();
-  let previouslyFocused: Element | null = null;
+ = $props();
+
+  let panel = $state();
+  let previouslyFocused = null;
   const titleId = `dlg-${Math.random().toString(36).slice(2)}`;
 
   $effect(() => {
     if (open) {
       previouslyFocused = document.activeElement;
       tick().then(() => {
-        const first = panel?.querySelector<HTMLElement>("[data-autofocus], button, input, select, textarea, [tabindex]:not([tabindex='-1'])");
+        const first = panel?.querySelector("[data-autofocus], button, input, select, textarea, [tabindex]:not([tabindex='-1'])");
         first?.focus();
       });
     } else if (previouslyFocused instanceof HTMLElement) {
@@ -41,13 +35,13 @@
     onclose?.();
   }
 
-  function onkey(e: KeyboardEvent) {
+  function onkey(e) {
     if (e.key === "Escape") {
       e.stopPropagation();
       close();
     } else if (e.key === "Tab" && panel) {
       const items = Array.from(
-        panel.querySelectorAll<HTMLElement>("button:not(:disabled), input:not(:disabled), select, textarea, a[href], [tabindex]:not([tabindex='-1'])"),
+        panel.querySelectorAll("button:not(:disabled), input:not(:disabled), select, textarea, a[href], [tabindex]:not([tabindex='-1'])"),
       );
       if (!items.length) return;
       const first = items[0];

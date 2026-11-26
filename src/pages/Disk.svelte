@@ -1,4 +1,4 @@
-<script lang="ts">
+<script>
   import { onMount } from "svelte";
   import PageHeader from "../lib/components/PageHeader.svelte";
   import Icon from "../lib/components/Icon.svelte";
@@ -10,19 +10,18 @@
   import FolderPicker from "../lib/components/FolderPicker.svelte";
   import PathActions from "../lib/components/PathActions.svelte";
   import SortTh from "../lib/components/SortTh.svelte";
-  import { api } from "../lib/api";
-  import { jobs, registerJob, onJobDone, toast, app, nav } from "../lib/state.svelte";
-  import { bytes, num, pct, ago, dateTime, duration, errMsg, categoryLabel, CATEGORY_COLORS } from "../lib/format";
-  import { sortBy } from "../lib/util";
-  import type { ScanSummary, NodeDetail, DirFile } from "../lib/types";
+  import { api } from "../lib/api.js";
+  import { jobs, registerJob, onJobDone, toast, app, nav } from "../lib/state.svelte.js";
+  import { bytes, num, pct, ago, dateTime, duration, errMsg, categoryLabel, CATEGORY_COLORS } from "../lib/format.js";
+  import { sortBy } from "../lib/util.js";
 
   let root = $state(nav.params.root ?? "C:\\");
-  let summary = $state<ScanSummary | null>(null);
-  let detail = $state<NodeDetail | null>(null);
-  let files = $state<DirFile[]>([]);
-  let filesError = $state<string | null>(null);
-  let tab = $state<"folders" | "types" | "errors">("folders");
-  let sort = $state<{ key: string; dir: 1 | -1 }>({ key: "size", dir: -1 });
+  let summary = $state(null);
+  let detail = $state(null);
+  let files = $state([]);
+  let filesError = $state(null);
+  let tab = $state("folders");
+  let sort = $state({ key: "size", dir: -1 });
   let showFiles = $state(false);
 
   const job = $derived(jobs["disk-scan"]);
@@ -58,7 +57,7 @@
     }
   }
 
-  async function openNode(id: number) {
+  async function openNode(id) {
     try {
       detail = await api.scanNode(id);
       showFiles = false;
@@ -81,7 +80,7 @@
 
   const children = $derived(detail ? sortBy(detail.children, sort) : []);
   const parentSize = $derived(detail?.node.size ?? 0);
-  const statusLabel = { complete: "Tamamlandı", cancelled: "Kısmi (iptal edildi)", failed: "Başarısız" } as const;
+  const statusLabel = { complete: "Tamamlandı", cancelled: "Kısmi (iptal edildi)", failed: "Başarısız" } ;
 </script>
 
 <PageHeader
@@ -170,7 +169,7 @@
       </section>
       <section class="card">
         <div class="card-head"><h3>Dosya boyutu dağılımı</h3></div>
-        <BarList items={summary.histLabels.map((l, i) => ({ label: l, value: detail!.hist[i] ?? 0, color: "var(--chart-2)" }))} format={(v) => num(v) + " dosya"} />
+        <BarList items={summary.histLabels.map((l, i) => ({ label: l, value: detail.hist[i] ?? 0, color: "var(--chart-2)" }))} format={(v) => num(v) + " dosya"} />
       </section>
     </div>
 
@@ -255,7 +254,7 @@
             items={summary.categories.map((c) => ({ label: categoryLabel(c.category), value: c.size, color: CATEGORY_COLORS[c.category] }))}
             size={170}
           >
-            {#snippet center()}<strong class="num">{bytes(summary!.totalSize)}</strong><span class="tiny faint">toplam</span>{/snippet}
+            {#snippet center()}<strong class="num">{bytes(summary.totalSize)}</strong><span class="tiny faint">toplam</span>{/snippet}
           </Donut>
           <ul class="legend">
             {#each summary.categories as c}

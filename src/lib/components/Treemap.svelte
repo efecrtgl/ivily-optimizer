@@ -1,30 +1,32 @@
-<script lang="ts">
+<script>
   // Kare odaklı (squarified) treemap. Bir dikdörtgene tıklamak o klasöre girer.
-  import { bytes } from "../format";
+  import { bytes } from "../format.js";
 
-  interface Item {
-    id: number;
-    name: string;
-    size: number;
-    hasChildren: boolean;
-  }
-  let { items, onselect, height = 340 }: { items: Item[]; onselect?: (id: number) => void; height?: number } = $props();
+  /**
+   * @typedef {Object} Item
+   * @property {number} id
+   * @property {string} name
+   * @property {number} size
+   * @property {boolean} hasChildren
+   */
+  let { items, onselect, height = 340 } = $props();
 
   let width = $state(800);
-  let hover = $state<number | null>(null);
+  let hover = $state(null);
 
-  interface Rect {
-    x: number;
-    y: number;
-    w: number;
-    h: number;
-    item: Item;
-    color: string;
-  }
+  /**
+   * @typedef {Object} Rect
+   * @property {number} x
+   * @property {number} y
+   * @property {number} w
+   * @property {number} h
+   * @property {Item} item
+   * @property {string} color
+   */
 
   const palette = ["--chart-1", "--chart-2", "--chart-3", "--chart-4", "--chart-6", "--chart-7", "--chart-8", "--chart-5"];
 
-  function worst(row: number[], w: number) {
+  function worst(row, w) {
     const s = row.reduce((a, b) => a + b, 0);
     const max = Math.max(...row);
     const min = Math.min(...row);
@@ -34,10 +36,10 @@
   const rects = $derived.by(() => {
     const visible = items.filter((i) => i.size > 0).slice(0, 60);
     const total = visible.reduce((a, b) => a + b.size, 0);
-    if (!total || width <= 0) return [] as Rect[];
+    if (!total || width <= 0) return [] ;
     const area = width * height;
     const vals = visible.map((i) => (i.size / total) * area);
-    const out: Rect[] = [];
+    const out = [];
     let x = 0,
       y = 0,
       w = width,

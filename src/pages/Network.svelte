@@ -1,22 +1,21 @@
-<script lang="ts">
+<script>
   import { onMount } from "svelte";
   import PageHeader from "../lib/components/PageHeader.svelte";
   import Icon from "../lib/components/Icon.svelte";
   import AreaChart from "../lib/components/AreaChart.svelte";
-  import { sys } from "../lib/api";
-  import { live, useLive, toast, confirm } from "../lib/state.svelte";
-  import { rate, num, errMsg, dateTime } from "../lib/format";
-  import { matches } from "../lib/util";
-  import type { NetAdapter, ConnectivityReport, DnsCheck, DnsCacheList } from "../lib/types";
+  import { sys } from "../lib/api.js";
+  import { live, useLive, toast, confirm } from "../lib/state.svelte.js";
+  import { rate, num, errMsg, dateTime } from "../lib/format.js";
+  import { matches } from "../lib/util.js";
 
-  let adapters = $state<NetAdapter[]>([]);
+  let adapters = $state([]);
   let showDown = $state(false);
-  let conn = $state<ConnectivityReport | null>(null);
+  let conn = $state(null);
   let checking = $state(false);
   let host = $state("");
-  let lookup = $state<DnsCheck | null>(null);
+  let lookup = $state(null);
   let looking = $state(false);
-  let cache = $state<DnsCacheList | null>(null);
+  let cache = $state(null);
   let cacheQ = $state("");
   let cacheLoading = $state(false);
   let revealIp = $state(false);
@@ -87,9 +86,9 @@
   }
 
   const shown = $derived(adapters.filter((a) => showDown || a.status === "up"));
-  const mask = (ip: string) => (revealIp ? ip : ip.replace(/(\d+\.\d+\.)\d+\.\d+/, "$1•.•").replace(/^([0-9a-f]+:[0-9a-f]+:).*/i, "$1…"));
-  const speed = (bps: number | null) => (bps == null ? "—" : bps >= 1e9 ? `${(bps / 1e9).toFixed(1)} Gbit/sn` : `${Math.round(bps / 1e6)} Mbit/sn`);
-  const statusCls: Record<string, string> = { ok: "good", partial: "warn", dns_failed: "bad", offline: "bad" };
+  const mask = (ip) => (revealIp ? ip : ip.replace(/(\d+\.\d+\.)\d+\.\d+/, "$1•.•").replace(/^([0-9a-f]+:[0-9a-f]+:).*/i, "$1…"));
+  const speed = (bps) => (bps == null ? "—" : bps >= 1e9 ? `${(bps / 1e9).toFixed(1)} Gbit/sn` : `${Math.round(bps / 1e6)} Mbit/sn`);
+  const statusCls = { ok: "good", partial: "warn", dns_failed: "bad", offline: "bad" };
   const cacheRows = $derived((cache?.entries ?? []).filter((e) => matches(e.entry, cacheQ) || matches(e.data, cacheQ)).slice(0, 500));
 </script>
 

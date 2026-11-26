@@ -1,11 +1,11 @@
-<script lang="ts">
+<script>
   // Servisler ve zamanlanmış görevler tek bir yönetim alanında.
   import PageHeader from "../lib/components/PageHeader.svelte";
   import Services from "./Services.svelte";
   import Tasks from "./Tasks.svelte";
-  import { nav, go } from "../lib/state.svelte";
+  import { nav, go } from "../lib/state.svelte.js";
 
-  let tab = $state<"services" | "tasks">(nav.route === "tasks" || nav.params.tab === "tasks" ? "tasks" : "services");
+  let tab = $state(nav.route === "tasks" || nav.params.tab === "tasks" ? "tasks" : "services");
 </script>
 
 <PageHeader

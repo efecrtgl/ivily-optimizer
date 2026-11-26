@@ -1,12 +1,12 @@
-<script lang="ts">
+<script>
   // Bir dosya/klasör yolu için ortak eylemler: konumu aç, yolu kopyala,
   // taramalardan hariç tut.
-  import { api } from "../api";
-  import { toast, confirm } from "../state.svelte";
-  import { errMsg } from "../format";
+  import { api } from "../api.js";
+  import { toast, confirm } from "../state.svelte.js";
+  import { errMsg } from "../format.js";
   import Icon from "./Icon.svelte";
 
-  let { path, exclude = false, onexcluded }: { path: string; exclude?: boolean; onexcluded?: () => void } = $props();
+  let { path, exclude = false, onexcluded } = $props();
 
   async function reveal() {
     try {

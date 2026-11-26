@@ -1,9 +1,9 @@
-<script lang="ts">
+<script>
   // İlk açılış rehberi: uygulamanın ne yaptığını ve güvenlik ilkelerini anlatır.
   import Dialog from "./Dialog.svelte";
   import CatMark from "./CatMark.svelte";
   import Icon from "./Icon.svelte";
-  import { saveSettings, go } from "../state.svelte";
+  import { saveSettings, go } from "../state.svelte.js";
 
   let open = $state(true);
   let step = $state(0);

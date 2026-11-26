@@ -1,19 +1,18 @@
-<script lang="ts">
+<script>
   // Son disk taramasından boş klasörler; silme geri alınabilir (yeniden oluşturma).
   import { onMount } from "svelte";
   import Icon from "../components/Icon.svelte";
   import EmptyState from "../components/EmptyState.svelte";
   import PathActions from "../components/PathActions.svelte";
-  import { fx } from "../api";
-  import { toast, confirm, go } from "../state.svelte";
-  import { num, dateTime, errMsg } from "../format";
-  import { matches } from "../util";
-  import type { EmptyFolders } from "../types";
+  import { fx } from "../api.js";
+  import { toast, confirm, go } from "../state.svelte.js";
+  import { num, dateTime, errMsg } from "../format.js";
+  import { matches } from "../util.js";
 
-  let data = $state<EmptyFolders | null>(null);
+  let data = $state(null);
   let missing = $state(false);
   let q = $state("");
-  let selected = $state<Set<string>>(new Set());
+  let selected = $state(new Set());
   let busy = $state(false);
 
   onMount(load);

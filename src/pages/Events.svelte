@@ -1,27 +1,26 @@
-<script lang="ts">
+<script>
   import { onMount } from "svelte";
   import PageHeader from "../lib/components/PageHeader.svelte";
   import Icon from "../lib/components/Icon.svelte";
   import Dialog from "../lib/components/Dialog.svelte";
   import EmptyState from "../lib/components/EmptyState.svelte";
-  import { intel, api } from "../lib/api";
-  import { nav, toast } from "../lib/state.svelte";
-  import { num, dateTime, date, errMsg, ago } from "../lib/format";
-  import { matches } from "../lib/util";
-  import type { EventsReport, EventItem, EventsContext } from "../lib/types";
+  import { intel, api } from "../lib/api.js";
+  import { nav, toast } from "../lib/state.svelte.js";
+  import { num, dateTime, date, errMsg, ago } from "../lib/format.js";
+  import { matches } from "../lib/util.js";
 
   let days = $state(7);
-  let levels = $state<Set<number>>(new Set([1, 2, 3]));
-  let logs = $state<Set<string>>(new Set(["System", "Application"]));
-  let report = $state<EventsReport | null>(null);
+  let levels = $state(new Set([1, 2, 3]));
+  let logs = $state(new Set(["System", "Application"]));
+  let report = $state(null);
   let loading = $state(false);
-  let error = $state<string | null>(null);
+  let error = $state(null);
   let q = $state("");
   let category = $state(nav.params.category ?? "");
-  let tab = $state<"timeline" | "patterns" | "list">("timeline");
-  let sel = $state<EventItem | null>(null);
+  let tab = $state("timeline");
+  let sel = $state(null);
   let selOpen = $state(false);
-  let ctx = $state<EventsContext | null>(null);
+  let ctx = $state(null);
   let ctxLoading = $state(false);
 
   onMount(load);
@@ -38,13 +37,13 @@
     }
   }
 
-  function toggleSet<T>(set: Set<T>, v: T): Set<T> {
+  function toggleSet(set, v) {
     const s = new Set(set);
     s.has(v) ? s.delete(v) : s.add(v);
     return s;
   }
 
-  async function openEvent(e: EventItem) {
+  async function openEvent(e) {
     sel = e;
     ctx = null;
     selOpen = true;
@@ -62,7 +61,7 @@
     }
   }
 
-  async function exportReport(format: "csv" | "txt" | "json") {
+  async function exportReport(format) {
     try {
       const p = await intel.eventsExport(days, [...levels], [...logs], 3000, format);
       toast("success", "Rapor dışa aktarıldı", p);
@@ -78,8 +77,8 @@
     ),
   );
   const maxDay = $derived(Math.max(1, ...(report?.stats.byDay ?? []).map((d) => d.critical + d.error + d.warning)));
-  const lvlCls = (l: number) => (l === 1 ? "bad" : l === 2 ? "warn" : "info");
-  const lvlIcon = (l: number) => (l === 1 ? "alertCircle" : l === 2 ? "xCircle" : l === 3 ? "alert" : "info");
+  const lvlCls = (l) => (l === 1 ? "bad" : l === 2 ? "warn" : "info");
+  const lvlIcon = (l) => (l === 1 ? "alertCircle" : l === 2 ? "xCircle" : l === 3 ? "alert" : "info");
   const N = $derived(report?.notable);
 </script>
 
@@ -109,7 +108,7 @@
     <legend>Düzey</legend>
     <div class="row">
       {#each [[1, "Kritik"], [2, "Hata"], [3, "Uyarı"], [4, "Bilgi"]] as [l, label]}
-        <label class="check small"><input type="checkbox" checked={levels.has(l as number)} onchange={() => (levels = toggleSet(levels, l as number))} /> {label}</label>
+        <label class="check small"><input type="checkbox" checked={levels.has(l)} onchange={() => (levels = toggleSet(levels, l))} /> {label}</label>
       {/each}
     </div>
   </fieldset>

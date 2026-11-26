@@ -1,4 +1,4 @@
-<script lang="ts">
+<script>
   // Gelişmiş dosya tarayıcı: gezinme, sıralama, filtre, arama, meta veri,
   // dijital imza, özet hesaplama, çoklu seçim ve güvenli eylemler.
   import { onMount } from "svelte";
@@ -7,29 +7,28 @@
   import SortTh from "../components/SortTh.svelte";
   import PathActions from "../components/PathActions.svelte";
   import JobPanel from "../components/JobPanel.svelte";
-  import { api, fx, intel } from "../api";
-  import { toast, confirm, jobs, registerJob, onJobDone, app } from "../state.svelte";
-  import { bytes, num, dateTime, errMsg, categoryLabel, CATEGORY_LABELS } from "../format";
-  import { sortBy, matches } from "../util";
-  import type { DirListing, FsEntry, FsMetadata, SignatureStatus, HashResult } from "../types";
+  import { api, fx, intel } from "../api.js";
+  import { toast, confirm, jobs, registerJob, onJobDone, app } from "../state.svelte.js";
+  import { bytes, num, dateTime, errMsg, categoryLabel, CATEGORY_LABELS } from "../format.js";
+  import { sortBy, matches } from "../util.js";
 
-  let roots = $state<{ path: string; label: string }[]>([]);
+  let roots = $state([]);
   let path = $state("");
   let input = $state("");
-  let listing = $state<DirListing | null>(null);
+  let listing = $state(null);
   let loading = $state(false);
-  let error = $state<string | null>(null);
+  let error = $state(null);
   let showHidden = $state(false);
   let q = $state("");
   let cat = $state("");
   let minMb = $state(0);
-  let sort = $state<{ key: string; dir: 1 | -1 }>({ key: "name", dir: 1 });
-  let selected = $state<Set<string>>(new Set());
-  let history: string[] = [];
-  let meta = $state<FsMetadata | null>(null);
-  let sig = $state<SignatureStatus | null>(null);
+  let sort = $state({ key: "name", dir: 1 });
+  let selected = $state(new Set());
+  let history = [];
+  let meta = $state(null);
+  let sig = $state(null);
   let metaOpen = $state(false);
-  let hash = $state<HashResult | null>(null);
+  let hash = $state(null);
   let busy = $state(false);
 
   const hashJob = $derived(jobs["hash"]);
@@ -49,7 +48,7 @@
     });
   });
 
-  async function open(p: string, push = true) {
+  async function open(p, push = true) {
     loading = true;
     error = null;
     try {
@@ -71,7 +70,7 @@
     if (p) open(p, false);
   }
 
-  function rowSize(e: FsEntry) {
+  function rowSize(e) {
     return e.isDir ? (e.dirSize ?? -1) : (e.size ?? 0);
   }
 
@@ -89,13 +88,13 @@
   const selFiles = $derived(rows.filter((r) => selected.has(r.path) && !r.isDir));
   const selBytes = $derived(selFiles.reduce((a, b) => a + (b.size ?? 0), 0));
 
-  function toggle(p: string, on: boolean) {
+  function toggle(p, on) {
     const s = new Set(selected);
     on ? s.add(p) : s.delete(p);
     selected = s;
   }
 
-  async function details(e: FsEntry) {
+  async function details(e) {
     meta = null;
     sig = null;
     metaOpen = true;
@@ -111,7 +110,7 @@
     }
   }
 
-  async function computeHash(p: string) {
+  async function computeHash(p) {
     try {
       registerJob("hash", await fx.hashStart(p));
       metaOpen = false;
@@ -120,7 +119,7 @@
     }
   }
 
-  async function remove(mode: "quarantine" | "recycle") {
+  async function remove(mode) {
     const paths = selFiles.map((f) => f.path);
     if (!paths.length) return;
     const ok = await confirm({
@@ -143,7 +142,7 @@
     }
   }
 
-  async function exportInventory(recursive: boolean) {
+  async function exportInventory(recursive) {
     busy = true;
     try {
       const r = await fx.inventory(path, recursive);
@@ -156,7 +155,7 @@
     }
   }
 
-  async function copyText(t: string) {
+  async function copyText(t) {
     try {
       await navigator.clipboard.writeText(t);
       toast("success", "Kopyalandı", undefined, 1500);
@@ -166,9 +165,9 @@
   }
 
   const crumbs = $derived.by(() => {
-    if (!path) return [] as { label: string; path: string }[];
+    if (!path) return [] ;
     const parts = path.replace(/\\+$/, "").split("\\");
-    const out: { label: string; path: string }[] = [];
+    const out = [];
     let acc = "";
     for (const p of parts) {
       acc = acc ? `${acc}\\${p}` : p;
@@ -220,8 +219,8 @@
     {#if hash && !hashJob}
       <div class="card hash">
         <div class="row"><Icon name="checkCircle" size={14} /><strong class="small">Son özet</strong><span class="path ellipsis">{hash.path}</span><span class="spacer"></span><span class="tiny faint">{bytes(hash.size)}</span></div>
-        <div class="hrow"><span class="tiny faint">SHA-256</span><code class="mono">{hash.sha256}</code><button class="btn ghost sm icon" onclick={() => copyText(hash!.sha256)} aria-label="SHA-256 kopyala"><Icon name="copy" size={12} /></button></div>
-        <div class="hrow"><span class="tiny faint">BLAKE3</span><code class="mono">{hash.blake3}</code><button class="btn ghost sm icon" onclick={() => copyText(hash!.blake3)} aria-label="BLAKE3 kopyala"><Icon name="copy" size={12} /></button></div>
+        <div class="hrow"><span class="tiny faint">SHA-256</span><code class="mono">{hash.sha256}</code><button class="btn ghost sm icon" onclick={() => copyText(hash.sha256)} aria-label="SHA-256 kopyala"><Icon name="copy" size={12} /></button></div>
+        <div class="hrow"><span class="tiny faint">BLAKE3</span><code class="mono">{hash.blake3}</code><button class="btn ghost sm icon" onclick={() => copyText(hash.blake3)} aria-label="BLAKE3 kopyala"><Icon name="copy" size={12} /></button></div>
       </div>
     {/if}
 
@@ -320,7 +319,7 @@
   {#snippet footer()}
     {#if meta}<PathActions path={meta.path} />{/if}
     <span class="spacer"></span>
-    {#if meta && !meta.isDir}<button class="btn" onclick={() => computeHash(meta!.path)} disabled={!!hashJob}><Icon name="terminal" size={13} /> Özet hesapla (SHA-256, BLAKE3)</button>{/if}
+    {#if meta && !meta.isDir}<button class="btn" onclick={() => computeHash(meta.path)} disabled={!!hashJob}><Icon name="terminal" size={13} /> Özet hesapla (SHA-256, BLAKE3)</button>{/if}
     <button class="btn" onclick={() => (metaOpen = false)}>Kapat</button>
   {/snippet}
 </Dialog>

@@ -1,9 +1,9 @@
-<script lang="ts">
+<script>
   // Boş durumlar ve tarama ekranları için çizgisel kedi illüstrasyonu.
   //  - "sleep": kıvrılmış uyuyan kedi (boş durum)
   //  - "watch": oturan, kuyruğu sallanan kedi (tarama sürüyor)
   //  - "happy": oturan kedi + onay (başarılı)
-  let { mood = "sleep", size = 120 }: { mood?: "sleep" | "watch" | "happy"; size?: number } = $props();
+  let { mood = "sleep", size = 120 } = $props();
 </script>
 
 <svg width={size} height={size * 0.75} viewBox="0 0 160 120" aria-hidden="true" class="scene {mood}">

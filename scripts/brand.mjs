@@ -1,19 +1,15 @@
-// Marka varlıklarını src/lib/brand.ts geometrisinden üretir.
+// Marka varlıklarını src/lib/brand.js geometrisinden üretir.
 // Kullanım: node scripts/brand.mjs  (ardından: npx tauri icon assets/brand/app-icon.svg -o src-tauri/icons)
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { writeFileSync, mkdirSync } from "node:fs";
 
-const src = readFileSync(new URL("../src/lib/brand.ts", import.meta.url), "utf8").replace(/\r\n/g, "\n");
-const pick = (name) => {
-  const m = src.match(new RegExp(`export const ${name}[^=]*=\\s*([\\s\\S]*?);\\n`));
-  if (!m) throw new Error(`${name} bulunamadı`);
-  return Function(`return (${m[1]})`)();
-};
-const HEAD = pick("MARK_HEAD");
-const CUTS = pick("MARK_CUTOUTS");
-const LINES = pick("WORDMARK_LINES");
-const DOTS = pick("WORDMARK_DOTS");
-const DOT_R = pick("WORDMARK_DOT_R");
-const STROKE = pick("WORDMARK_STROKE");
+import {
+  MARK_HEAD as HEAD,
+  MARK_CUTOUTS as CUTS,
+  WORDMARK_LINES as LINES,
+  WORDMARK_DOTS as DOTS,
+  WORDMARK_DOT_R as DOT_R,
+  WORDMARK_STROKE as STROKE,
+} from "../src/lib/brand.js";
 
 const cutRects = (fill) =>
   CUTS.map((c) => `<rect x="${c.x}" y="${c.y}" width="${c.w}" height="${c.h}" rx="${c.r}" fill="${fill}"${c.rotate ? ` transform="rotate(${c.rotate} ${c.cx} ${c.cy})"` : ""}/>`).join("");

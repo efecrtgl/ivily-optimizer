@@ -5,7 +5,7 @@ const nf1 = new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 1, minimumFr
 const pf = new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 1, minimumFractionDigits: 0 });
 
 /** Bayt değerini 1024 tabanında okunabilir hale getirir (Windows ile tutarlı). */
-export function bytes(n: number | null | undefined, digits = 1): string {
+export function bytes(n, digits = 1) {
   if (n == null || !isFinite(n)) return "—";
   const neg = n < 0;
   let v = Math.abs(n);
@@ -22,26 +22,26 @@ export function bytes(n: number | null | undefined, digits = 1): string {
   return `${neg ? "−" : ""}${s} ${units[i]}`;
 }
 
-export function signedBytes(n: number): string {
+export function signedBytes(n) {
   if (n === 0) return "0 B";
   return (n > 0 ? "+" : "") + bytes(n);
 }
 
-export function rate(n: number | null | undefined): string {
+export function rate(n) {
   if (n == null) return "—";
   return `${bytes(n)}/sn`;
 }
 
-export function num(n: number | null | undefined): string {
+export function num(n) {
   if (n == null || !isFinite(n)) return "—";
   return nf.format(n);
 }
 
-export function num1(n: number): string {
+export function num1(n) {
   return nf1.format(n);
 }
 
-export function pct(n: number | null | undefined): string {
+export function pct(n) {
   if (n == null || !isFinite(n)) return "—";
   return `%${pf.format(n)}`;
 }
@@ -50,12 +50,12 @@ const dtf = new Intl.DateTimeFormat("tr-TR", { dateStyle: "medium", timeStyle: "
 const df = new Intl.DateTimeFormat("tr-TR", { dateStyle: "medium" });
 
 /** Unix saniyesi → tarih + saat. */
-export function dateTime(sec: number | null | undefined): string {
+export function dateTime(sec) {
   if (!sec || sec <= 0) return "—";
   return dtf.format(new Date(sec * 1000));
 }
 
-export function date(sec: number | null | undefined): string {
+export function date(sec) {
   if (!sec || sec <= 0) return "—";
   return df.format(new Date(sec * 1000));
 }
@@ -63,7 +63,7 @@ export function date(sec: number | null | undefined): string {
 const rtf = new Intl.RelativeTimeFormat("tr-TR", { numeric: "auto" });
 
 /** "3 dakika önce" biçiminde göreli zaman. */
-export function ago(sec: number | null | undefined): string {
+export function ago(sec) {
   if (!sec || sec <= 0) return "—";
   const diff = sec - Date.now() / 1000;
   const abs = Math.abs(diff);
@@ -75,7 +75,7 @@ export function ago(sec: number | null | undefined): string {
   return rtf.format(Math.round(diff / (86400 * 365)), "year");
 }
 
-export function duration(ms: number): string {
+export function duration(ms) {
   const s = Math.round(ms / 1000);
   if (s < 60) return `${s} sn`;
   const m = Math.floor(s / 60);
@@ -84,7 +84,7 @@ export function duration(ms: number): string {
   return `${h} sa ${m % 60} dk`;
 }
 
-export function uptime(sec: number): string {
+export function uptime(sec) {
   const d = Math.floor(sec / 86400);
   const h = Math.floor((sec % 86400) / 3600);
   const m = Math.floor((sec % 3600) / 60);
@@ -93,17 +93,17 @@ export function uptime(sec: number): string {
   return `${m} dk`;
 }
 
-export function fileName(path: string): string {
+export function fileName(path) {
   const i = Math.max(path.lastIndexOf("\\"), path.lastIndexOf("/"));
   return i >= 0 ? path.slice(i + 1) : path;
 }
 
-export function parentDir(path: string): string {
+export function parentDir(path) {
   const i = Math.max(path.lastIndexOf("\\"), path.lastIndexOf("/"));
   return i > 0 ? path.slice(0, i) : path;
 }
 
-export const CATEGORY_LABELS: Record<string, string> = {
+export const CATEGORY_LABELS = {
   image: "Görseller",
   video: "Videolar",
   audio: "Ses",
@@ -115,7 +115,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
   other: "Diğer",
 };
 
-export const CATEGORY_COLORS: Record<string, string> = {
+export const CATEGORY_COLORS = {
   image: "var(--chart-1)",
   video: "var(--chart-2)",
   audio: "var(--chart-7)",
@@ -127,18 +127,18 @@ export const CATEGORY_COLORS: Record<string, string> = {
   other: "var(--chart-9)",
 };
 
-export function categoryLabel(c: string): string {
+export function categoryLabel(c) {
   return CATEGORY_LABELS[c] ?? "Diğer";
 }
 
 /** Bir hata nesnesinden kullanıcıya gösterilecek Türkçe mesajı çıkarır. */
-export function errMsg(e: unknown): string {
-  if (e && typeof e === "object" && "message" in e) return String((e as any).message);
+export function errMsg(e) {
+  if (e && typeof e === "object" && "message" in e) return String(e.message);
   if (typeof e === "string") return e;
   return "Beklenmeyen bir hata oluştu.";
 }
 
-export function errCode(e: unknown): string | null {
-  if (e && typeof e === "object" && "code" in e) return String((e as any).code);
+export function errCode(e) {
+  if (e && typeof e === "object" && "code" in e) return String(e.code);
   return null;
 }

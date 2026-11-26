@@ -1,18 +1,17 @@
-<script lang="ts">
+<script>
   import { onMount } from "svelte";
   import PageHeader from "../lib/components/PageHeader.svelte";
   import Icon from "../lib/components/Icon.svelte";
   import FolderPicker from "../lib/components/FolderPicker.svelte";
   import RiskBadge from "../lib/components/RiskBadge.svelte";
-  import { api } from "../lib/api";
-  import { app, saveSettings, toast, confirm, applyTheme } from "../lib/state.svelte";
-  import { checkForUpdates, updater, STATUS_LABEL } from "../lib/updater.svelte";
-  import { bytes, num, errMsg, ago } from "../lib/format";
-  import type { Settings, UserCleanupRule, Risk } from "../lib/types";
+  import { api } from "../lib/api.js";
+  import { app, saveSettings, toast, confirm, applyTheme } from "../lib/state.svelte.js";
+  import { checkForUpdates, updater, STATUS_LABEL } from "../lib/updater.svelte.js";
+  import { bytes, num, errMsg, ago } from "../lib/format.js";
 
-  type Section = "general" | "appearance" | "monitoring" | "scanning" | "cleanup" | "history" | "updates" | "privacy";
-  let section = $state<Section>("general");
-  const sections: [Section, string, string][] = [
+  /** @typedef {"general" | "appearance" | "monitoring" | "scanning" | "cleanup" | "history" | "updates" | "privacy"} Section */
+  let section = $state("general");
+  const sections = [
     ["general", "Genel", "gear"],
     ["appearance", "Görünüm", "moon"],
     ["monitoring", "İzleme", "activity"],
@@ -23,12 +22,12 @@
     ["privacy", "Gizlilik ve veriler", "lock"],
   ];
 
-  const s = $derived(app.settings!);
+  const s = $derived(app.settings);
   let newPath = $state("");
   let newExt = $state("");
-  let usage = $state<any>(null);
-  let categories = $state<{ id: string; name: string; group: string; risk: Risk }[]>([]);
-  let rule = $state<UserCleanupRule>({ id: "", name: "", path: "", extensions: [], minAgeDays: 7 });
+  let usage = $state(null);
+  let categories = $state([]);
+  let rule = $state({ id: "", name: "", path: "", extensions: [], minAgeDays: 7 });
   let ruleExt = $state("");
 
   onMount(async () => {
@@ -44,13 +43,13 @@
     }
   });
 
-  function set<K extends keyof Settings>(key: K, value: Settings[K]) {
-    saveSettings({ [key]: value } as Partial<Settings>);
+  function set(key, value) {
+    saveSettings({ [key]: value } );
   }
 
-  function numInput(key: keyof Settings, e: Event) {
-    const v = Number((e.currentTarget as HTMLInputElement).value);
-    if (Number.isFinite(v)) set(key, v as any);
+  function numInput(key, e) {
+    const v = Number(e.currentTarget.value);
+    if (Number.isFinite(v)) set(key, v);
   }
 
   async function addPath() {
@@ -58,7 +57,7 @@
     if (!p) return;
     if (await saveSettings({ exclusions: { ...s.exclusions, paths: [...s.exclusions.paths, p] } })) newPath = "";
   }
-  function removePath(p: string) {
+  function removePath(p) {
     saveSettings({ exclusions: { ...s.exclusions, paths: s.exclusions.paths.filter((x) => x !== p) } });
   }
   async function addExt() {
@@ -66,16 +65,16 @@
     if (!e) return;
     if (await saveSettings({ exclusions: { ...s.exclusions, extensions: [...new Set([...s.exclusions.extensions, e])] } })) newExt = "";
   }
-  function removeExt(e: string) {
+  function removeExt(e) {
     saveSettings({ exclusions: { ...s.exclusions, extensions: s.exclusions.extensions.filter((x) => x !== e) } });
   }
-  function toggleCategory(id: string, excluded: boolean) {
+  function toggleCategory(id, excluded) {
     const cur = s.exclusions.cleanupCategories;
     saveSettings({ exclusions: { ...s.exclusions, cleanupCategories: excluded ? [...cur, id] : cur.filter((x) => x !== id) } });
   }
 
   async function addRule() {
-    const r: UserCleanupRule = {
+    const r = {
       ...rule,
       id: Math.random().toString(36).slice(2, 10),
       extensions: ruleExt.split(/[,\s]+/).map((x) => x.trim().replace(/^\./, "")).filter(Boolean),
@@ -96,7 +95,7 @@
       toast("success", "Kural eklendi", "Bir sonraki temizlik taramasında uygulanır.");
     }
   }
-  function removeRule(id: string) {
+  function removeRule(id) {
     saveSettings({ userRules: s.userRules.filter((r) => r.id !== id) });
   }
 
@@ -154,10 +153,10 @@
   }
 
   const catGroups = $derived.by(() => {
-    const m = new Map<string, typeof categories>();
+    const m = new Map();
     for (const c of categories) {
       if (!m.has(c.group)) m.set(c.group, []);
-      m.get(c.group)!.push(c);
+      m.get(c.group).push(c);
     }
     return [...m.entries()];
   });

@@ -1,6 +1,6 @@
-<script lang="ts">
-  import { WORDMARK_LINES, WORDMARK_DOTS, WORDMARK_DOT_R, WORDMARK_STROKE, WORDMARK_VIEWBOX } from "../brand";
-  let { height = 16 }: { height?: number } = $props();
+<script>
+  import { WORDMARK_LINES, WORDMARK_DOTS, WORDMARK_DOT_R, WORDMARK_STROKE, WORDMARK_VIEWBOX } from "../brand.js";
+  let { height = 16 } = $props();
 </script>
 
 <svg class="wm" height={height} width={(height * 72) / 46} viewBox={WORDMARK_VIEWBOX} role="img" aria-label="Ivily">

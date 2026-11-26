@@ -1,33 +1,32 @@
-<script lang="ts">
+<script>
   import { onMount } from "svelte";
   import PageHeader from "../lib/components/PageHeader.svelte";
   import Icon from "../lib/components/Icon.svelte";
   import Dialog from "../lib/components/Dialog.svelte";
   import SortTh from "../lib/components/SortTh.svelte";
   import PathActions from "../lib/components/PathActions.svelte";
-  import { api, intel } from "../lib/api";
-  import { toast, confirm, app } from "../lib/state.svelte";
-  import { bytes, num, rate, dateTime, errMsg, errCode, uptime } from "../lib/format";
-  import { sortBy, matches } from "../lib/util";
-  import type { ProcessInfo, ProcessDetails } from "../lib/types";
+  import { api, intel } from "../lib/api.js";
+  import { toast, confirm, app } from "../lib/state.svelte.js";
+  import { bytes, num, rate, dateTime, errMsg, errCode, uptime } from "../lib/format.js";
+  import { sortBy, matches } from "../lib/util.js";
 
-  let procs = $state<ProcessInfo[]>([]);
+  let procs = $state([]);
   let q = $state("");
-  let filter = $state<"all" | "apps" | "system">("all");
-  let view = $state<"grouped" | "flat" | "tree">("grouped");
+  let filter = $state("all");
+  let view = $state("grouped");
   const grouped = $derived(view === "grouped");
-  let det = $state<ProcessDetails | null>(null);
+  let det = $state(null);
   let detLoading = $state(false);
-  let collapsedTree = $state<Set<number>>(new Set());
-  let sort = $state<{ key: string; dir: 1 | -1 }>({ key: "memory", dir: -1 });
+  let collapsedTree = $state(new Set());
+  let sort = $state({ key: "memory", dir: -1 });
   let paused = $state(false);
-  let sel = $state<ProcessInfo | null>(null);
+  let sel = $state(null);
   let selOpen = $state(false);
   let loading = $state(true);
-  let error = $state<string | null>(null);
+  let error = $state(null);
 
   onMount(() => {
-    let timer: ReturnType<typeof setTimeout>;
+    let timer;
     const loop = async () => {
       if (!paused && document.visibilityState === "visible") await load();
       timer = setTimeout(loop, Math.max(2000, app.settings?.monitorIntervalMs ?? 2000));
@@ -40,7 +39,7 @@
     try {
       procs = await api.processes();
       error = null;
-      if (sel) sel = procs.find((p) => p.pid === sel!.pid) ?? sel;
+      if (sel) sel = procs.find((p) => p.pid === sel.pid) ?? sel;
     } catch (e) {
       error = errMsg(e);
     } finally {
@@ -48,30 +47,31 @@
     }
   }
 
-  interface Row {
-    depth?: number;
-    hasKids?: boolean;
-    conns: number;
-    flags: number;
-    key: string;
-    name: string;
-    pid: number;
-    count: number;
-    cpu: number;
-    memory: number;
-    io: number;
-    exe: string | null;
-    protection: string;
-    first: ProcessInfo;
-  }
+  /**
+   * @typedef {Object} Row
+   * @property {number} [depth]
+   * @property {boolean} [hasKids]
+   * @property {number} conns
+   * @property {number} flags
+   * @property {string} key
+   * @property {string} name
+   * @property {number} pid
+   * @property {number} count
+   * @property {number} cpu
+   * @property {number} memory
+   * @property {number} io
+   * @property {string | null} exe
+   * @property {string} protection
+   * @property {ProcessInfo} first
+   */
 
   const rows = $derived.by(() => {
     let list = procs.filter((p) => matches(p.name, q) || matches(p.exe, q) || String(p.pid) === q);
     if (filter === "apps") list = list.filter((p) => p.protection === "normal");
     if (filter === "system") list = list.filter((p) => p.protection !== "normal");
-    let out: Row[];
+    let out;
     if (grouped) {
-      const m = new Map<string, Row>();
+      const m = new Map();
       for (const p of list) {
         const k = p.name.toLowerCase();
         const r = m.get(k);
@@ -94,18 +94,18 @@
     if (view === "tree" && !q) {
       // Üst-alt ilişkisine göre ağaç; kardeşler seçilen ölçüte göre sıralanır.
       const byPid = new Map(out.map((r) => [r.pid, r]));
-      const kids = new Map<number, Row[]>();
-      const roots: Row[] = [];
+      const kids = new Map();
+      const roots = [];
       for (const r of out) {
         const par = r.first.parent;
         if (par != null && par !== r.pid && byPid.has(par)) {
           if (!kids.has(par)) kids.set(par, []);
-          kids.get(par)!.push(r);
+          kids.get(par).push(r);
         } else roots.push(r);
       }
-      const res: Row[] = [];
-      const seen = new Set<number>();
-      const walk = (rs: Row[], depth: number) => {
+      const res = [];
+      const seen = new Set();
+      const walk = (rs, depth) => {
         for (const r of sortBy(rs, sort)) {
           if (seen.has(r.pid)) continue;
           seen.add(r.pid);
@@ -125,7 +125,7 @@
     mem: procs.reduce((a, b) => a + b.memory, 0),
   });
 
-  async function open(r: Row | ProcessInfo) {
+  async function open(r) {
     sel = "first" in r ? r.first : r;
     selOpen = true;
     det = null;
@@ -139,7 +139,7 @@
     }
   }
 
-  async function restart(p: ProcessInfo) {
+  async function restart(p) {
     const ok = await confirm({
       title: `${p.name} yeniden başlatılsın mı?`,
       body: "Süreç kapatılır ve aynı komut satırı ve çalışma klasörüyle yeniden başlatılır. Kaydedilmemiş veriler kaybolabilir. Uygulama kendi oturum durumunu geri yüklemeyebilir.",
@@ -158,7 +158,7 @@
     }
   }
 
-  async function kill(p: ProcessInfo) {
+  async function kill(p) {
     if (p.protection === "critical") return;
     const sensitive = p.protection === "sensitive";
     const ok = await confirm({
@@ -182,12 +182,12 @@
     }
   }
 
-  const protLabel: Record<string, [string, string]> = {
+  const protLabel = {
     critical: ["Kritik", "bad"],
     sensitive: ["Sistem", "warn"],
     normal: ["", ""],
   };
-  const instances = $derived(sel ? procs.filter((p) => p.name.toLowerCase() === sel!.name.toLowerCase()) : []);
+  const instances = $derived(sel ? procs.filter((p) => p.name.toLowerCase() === sel.name.toLowerCase()) : []);
 </script>
 
 <PageHeader title="İşlemler" subtitle="Çalışan uygulamalar ve arka plan süreçleri. CPU değeri tüm işlemci kapasitesine oranlanır (Görev Yöneticisi ile tutarlı).">
@@ -332,7 +332,7 @@
     {#snippet footer()}
       {#if sel?.exe}<PathActions path={sel.exe} />{/if}
       <span class="spacer"></span>
-      {#if det?.canRestart && sel}<button class="btn" onclick={() => restart(sel!)}><Icon name="refresh" size={13} /> Yeniden başlat</button>{/if}
+      {#if det?.canRestart && sel}<button class="btn" onclick={() => restart(sel)}><Icon name="refresh" size={13} /> Yeniden başlat</button>{/if}
       <button class="btn" onclick={() => (selOpen = false)}>Kapat</button>
     {/snippet}
   </Dialog>

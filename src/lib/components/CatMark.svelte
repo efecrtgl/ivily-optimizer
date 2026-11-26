@@ -1,9 +1,9 @@
-<script lang="ts">
+<script>
   // Ivily işareti. Renk `currentColor`'dan gelir; böylece tek renkli tema
   // içinde her yüzeye uyum sağlar. Oyuklar maske ile gerçekten saydamdır.
-  import { MARK_HEAD, MARK_CUTOUTS, MARK_VIEWBOX } from "../brand";
+  import { MARK_HEAD, MARK_CUTOUTS, MARK_VIEWBOX } from "../brand.js";
 
-  let { size = 28, blink = false, class: cls = "" }: { size?: number; blink?: boolean; class?: string } = $props();
+  let { size = 28, blink = false, class: cls = "" } = $props();
   const id = `ivm-${Math.random().toString(36).slice(2, 9)}`;
 </script>
 

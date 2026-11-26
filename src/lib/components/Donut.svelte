@@ -1,5 +1,5 @@
-<script lang="ts">
-  import type { Snippet } from "svelte";
+<script>
+
   // Halka grafik: dilimler büyükten küçüğe, küçük dilimler "Diğer" altında.
   let {
     items,
@@ -7,15 +7,11 @@
     thickness = 18,
     center,
     onselect,
-  }: {
-    items: { label: string; value: number; color: string; key?: string }[];
-    size?: number;
-    thickness?: number;
-    center?: Snippet;
-    onselect?: (key: string) => void;
-  } = $props();
+  }
 
-  let hover = $state<number | null>(null);
+ = $props();
+
+  let hover = $state(null);
   const total = $derived(items.reduce((a, b) => a + b.value, 0));
   const r = $derived((size - thickness) / 2);
   const c = $derived(2 * Math.PI * r);

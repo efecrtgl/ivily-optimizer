@@ -1,18 +1,19 @@
 // Bildirim merkezi: uygulama içi bildirimlerin kısa geçmişi.
 // Yalnızca bu bilgisayarda (tarayıcı deposunda) tutulur; en fazla 50 kayıt.
 
-export interface NotificationItem {
-  id: number;
-  ts: number; // unix saniye
-  kind: "success" | "error" | "info" | "warning";
-  title: string;
-  body?: string;
-  read: boolean;
-}
+/**
+ * @typedef {Object} NotificationItem
+ * @property {number} id
+ * @property {number} ts
+ * @property {"success" | "error" | "info" | "warning"} kind unix saniye
+ * @property {string} title
+ * @property {string} [body]
+ * @property {boolean} read
+ */
 
 const KEY = "ivily.notifications.v1";
 
-function load(): NotificationItem[] {
+function load() {
   try {
     const raw = localStorage.getItem(KEY);
     const parsed = raw ? JSON.parse(raw) : [];
@@ -33,7 +34,7 @@ function persist() {
   }
 }
 
-export function pushNotification(kind: NotificationItem["kind"], title: string, body?: string) {
+export function pushNotification(kind, title, body) {
   const id = Date.now() * 1000 + Math.floor(Math.random() * 1000);
   notifications.items.unshift({ id, ts: Math.floor(Date.now() / 1000), kind, title, body, read: false });
   if (notifications.items.length > 50) notifications.items.length = 50;

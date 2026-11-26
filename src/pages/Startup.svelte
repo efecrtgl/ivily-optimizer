@@ -1,28 +1,27 @@
-<script lang="ts">
+<script>
   import { onMount } from "svelte";
   import PageHeader from "../lib/components/PageHeader.svelte";
   import Icon from "../lib/components/Icon.svelte";
   import Dialog from "../lib/components/Dialog.svelte";
   import PathActions from "../lib/components/PathActions.svelte";
   import SortTh from "../lib/components/SortTh.svelte";
-  import { sys, intel } from "../lib/api";
+  import { sys, intel } from "../lib/api.js";
   import BarList from "../lib/components/BarList.svelte";
-  import { toast, confirm, go } from "../lib/state.svelte";
-  import { errMsg, errCode, num, dateTime } from "../lib/format";
-  import { sortBy, matches } from "../lib/util";
-  import type { StartupItem, StartupExtras, BootHistory } from "../lib/types";
+  import { toast, confirm, go } from "../lib/state.svelte.js";
+  import { errMsg, errCode, num, dateTime } from "../lib/format.js";
+  import { sortBy, matches } from "../lib/util.js";
 
-  let items = $state<StartupItem[]>([]);
+  let items = $state([]);
   let loading = $state(true);
   let q = $state("");
-  let filter = $state<"all" | "enabled" | "disabled">("all");
-  let scope = $state<"" | "user" | "machine">("");
-  let sort = $state<{ key: string; dir: 1 | -1 }>({ key: "name", dir: 1 });
-  let busy = $state<string | null>(null);
-  let sel = $state<StartupItem | null>(null);
-  let tab = $state<"items" | "tasks" | "services" | "boot">("items");
-  let extras = $state<StartupExtras | null>(null);
-  let boot = $state<BootHistory | null>(null);
+  let filter = $state("all");
+  let scope = $state("");
+  let sort = $state({ key: "name", dir: 1 });
+  let busy = $state(null);
+  let sel = $state(null);
+  let tab = $state("items");
+  let extras = $state(null);
+  let boot = $state(null);
   let onlyFlagged = $state(false);
 
   async function loadExtras() {
@@ -41,7 +40,7 @@
       toast("error", "Açılış geçmişi okunamadı", errMsg(e));
     }
   }
-  const sigCls = (st?: string) => (st === "signed" ? "good" : st === "invalid" ? "bad" : st === "unsigned" ? "warn" : "info");
+  const sigCls = (st) => (st === "signed" ? "good" : st === "invalid" ? "bad" : st === "unsigned" ? "warn" : "info");
   let selOpen = $state(false);
 
   onMount(load);
@@ -57,7 +56,7 @@
     }
   }
 
-  async function toggle(it: StartupItem, enabled: boolean) {
+  async function toggle(it, enabled) {
     if (!it.canToggle) return;
     if (!enabled) {
       const ok = await confirm({
@@ -309,7 +308,7 @@
       <span class="spacer"></span>
       <button class="btn" onclick={() => (selOpen = false)}>Kapat</button>
       {#if sel?.canToggle}
-        <button class="btn primary" disabled={busy === sel.id} onclick={() => toggle(sel!, !sel!.enabled)}>{sel.enabled ? "Devre dışı bırak" : "Etkinleştir"}</button>
+        <button class="btn primary" disabled={busy === sel.id} onclick={() => toggle(sel, !sel.enabled)}>{sel.enabled ? "Devre dışı bırak" : "Etkinleştir"}</button>
       {/if}
     {/snippet}
   </Dialog>

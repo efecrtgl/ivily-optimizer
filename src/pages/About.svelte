@@ -1,18 +1,18 @@
-<script lang="ts">
+<script>
   import { onMount } from "svelte";
   import CatMark from "../lib/components/CatMark.svelte";
   import Icon from "../lib/components/Icon.svelte";
-  import { api } from "../lib/api";
-  import { app, toast } from "../lib/state.svelte";
-  import { updater, STATUS_LABEL, checkForUpdates, installUpdate, cancelUpdate, loadLastCheck } from "../lib/updater.svelte";
-  import { bytes, ago, errMsg } from "../lib/format";
+  import { api } from "../lib/api.js";
+  import { app, toast } from "../lib/state.svelte.js";
+  import { updater, STATUS_LABEL, checkForUpdates, installUpdate, cancelUpdate, loadLastCheck } from "../lib/updater.svelte.js";
+  import { bytes, ago, errMsg } from "../lib/format.js";
 
   const DEV = "https://github.com/efecrtgl";
   const REPO = "https://github.com/efecrtgl/ivily-optimizer";
 
   onMount(loadLastCheck);
 
-  async function open(url: string) {
+  async function open(url) {
     try {
       await api.openUrl(url);
     } catch (e) {
@@ -74,7 +74,7 @@
         {#if info.notes}<pre class="notes">{info.notes}</pre>{/if}
         <div class="row wrap">
           <button class="btn primary" onclick={installUpdate} disabled={busy || !info.hasSignature || !info.updaterManifestUrl}><Icon name="download" size={14} /> İndir ve kur</button>
-          {#if info.htmlUrl}<button class="btn" onclick={() => open(info.htmlUrl!)}>GitHub'da görüntüle</button>{/if}
+          {#if info.htmlUrl}<button class="btn" onclick={() => open(info.htmlUrl)}>GitHub'da görüntüle</button>{/if}
         </div>
         {#if !info.hasSignature || !info.updaterManifestUrl}
           <p class="tiny warn-t">Bu sürüm imzalı güncelleme paketi içermiyor; güvenlik nedeniyle otomatik kurulum yapılamaz.</p>

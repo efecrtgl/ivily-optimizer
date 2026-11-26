@@ -1,12 +1,12 @@
-<script lang="ts">
-  import type { Snippet } from "svelte";
+<script>
+
   import CatScene from "./CatScene.svelte";
   let {
     title,
     body = "",
     mood = "sleep",
     children,
-  }: { title: string; body?: string; mood?: "sleep" | "watch" | "happy"; children?: Snippet } = $props();
+  } = $props();
 </script>
 
 <div class="empty">

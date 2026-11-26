@@ -1,16 +1,15 @@
-<script lang="ts">
+<script>
   import { onMount } from "svelte";
   import PageHeader from "../lib/components/PageHeader.svelte";
   import Icon from "../lib/components/Icon.svelte";
   import CatMark from "../lib/components/CatMark.svelte";
-  import { api, fx } from "../lib/api";
-  import { app, saveSettings, toast } from "../lib/state.svelte";
-  import { updater, STATUS_LABEL, checkForUpdates, installUpdate, cancelUpdate, loadLastCheck } from "../lib/updater.svelte";
-  import { bytes, ago, dateTime, errMsg } from "../lib/format";
-  import type { OpEntryV2 } from "../lib/types";
+  import { api, fx } from "../lib/api.js";
+  import { app, saveSettings, toast } from "../lib/state.svelte.js";
+  import { updater, STATUS_LABEL, checkForUpdates, installUpdate, cancelUpdate, loadLastCheck } from "../lib/updater.svelte.js";
+  import { bytes, ago, dateTime, errMsg } from "../lib/format.js";
 
   const REPO = "https://github.com/efecrtgl/ivily-optimizer";
-  let history = $state<OpEntryV2[]>([]);
+  let history = $state([]);
 
   onMount(async () => {
     await loadLastCheck();
@@ -21,7 +20,7 @@
     }
   });
 
-  async function open(url: string) {
+  async function open(url) {
     try {
       await api.openUrl(url);
     } catch (e) {
@@ -38,7 +37,7 @@
     ["verifying", "İmza doğrulama"],
     ["installing", "Kurulum"],
     ["restarting", "Yeniden başlatma"],
-  ] as const;
+  ] ;
   const stepIndex = $derived(steps.findIndex(([k]) => k === updater.status));
 </script>
 
@@ -83,7 +82,7 @@
 
   {#if stepIndex >= 0}
     <ol class="steps">
-      {#each steps as [k, label], i}
+      {#each steps as [, label], i}
         <li class:done={i < stepIndex} class:now={i === stepIndex}><span class="dot"></span>{label}</li>
       {/each}
     </ol>
@@ -97,7 +96,7 @@
     <div class="release">
       <div class="row wrap">
         <h2>{info.releaseName || info.latestVersion}</h2>
-        {#if (info as any).prerelease}<span class="badge warn">Ön sürüm</span>{:else}<span class="badge good">Kararlı</span>{/if}
+        {#if info.prerelease}<span class="badge warn">Ön sürüm</span>{:else}<span class="badge good">Kararlı</span>{/if}
         {#if info.publishedAt}<span class="tiny faint">{new Date(info.publishedAt).toLocaleDateString("tr-TR", { dateStyle: "long" })}</span>{/if}
         <span class="spacer"></span>
         {#if info.installerAsset}<span class="tiny faint">{info.installerAsset.name} · {bytes(info.installerAsset.size)}</span>{/if}
@@ -105,7 +104,7 @@
       {#if info.notes}<pre class="notes">{info.notes}</pre>{/if}
       <div class="row wrap">
         <button class="btn primary" onclick={installUpdate} disabled={busy || !info.hasSignature || !info.updaterManifestUrl}><Icon name="download" size={14} /> İndir, doğrula ve kur</button>
-        {#if info.htmlUrl}<button class="btn" onclick={() => open(info.htmlUrl!)}>GitHub'da görüntüle</button>{/if}
+        {#if info.htmlUrl}<button class="btn" onclick={() => open(info.htmlUrl)}>GitHub'da görüntüle</button>{/if}
       </div>
       {#if !info.hasSignature || !info.updaterManifestUrl}
         <div class="callout warn"><Icon name="alert" size={16} /><p class="small">Bu sürüm imzalı güncelleme paketi içermiyor. Güvenlik nedeniyle otomatik kurulum yapılamaz; sürümü GitHub sayfasından elle indirebilirsiniz.</p></div>

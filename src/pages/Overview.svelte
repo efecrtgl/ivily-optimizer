@@ -1,18 +1,17 @@
-<script lang="ts">
+<script>
   import { onMount } from "svelte";
   import Icon from "../lib/components/Icon.svelte";
   import AreaChart from "../lib/components/AreaChart.svelte";
   import BarList from "../lib/components/BarList.svelte";
   import CatMark from "../lib/components/CatMark.svelte";
-  import { api } from "../lib/api";
-  import { app, live, useLive, go, saveSettings, loadSystemInfo, jobs, registerJob, toast, type Route } from "../lib/state.svelte";
-  import { updater, STATUS_LABEL, checkForUpdates } from "../lib/updater.svelte";
-  import { intelState, refreshIntelligence, type Level } from "../lib/intelligence.svelte";
-  import { notifications, markAllRead, clearNotifications } from "../lib/notify.svelte";
-  import { bytes, rate, pct, ago, uptime, num, fileName, dateTime, errMsg, categoryLabel, CATEGORY_COLORS } from "../lib/format";
-  import type { OpEntry } from "../lib/types";
+  import { api } from "../lib/api.js";
+  import { app, live, useLive, go, saveSettings, loadSystemInfo, jobs, registerJob, toast, } from "../lib/state.svelte.js";
+  import { updater, STATUS_LABEL, checkForUpdates } from "../lib/updater.svelte.js";
+  import { intelState, refreshIntelligence, } from "../lib/intelligence.svelte.js";
+  import { notifications, markAllRead, clearNotifications } from "../lib/notify.svelte.js";
+  import { bytes, rate, pct, ago, uptime, num, fileName, dateTime, errMsg, categoryLabel, CATEGORY_COLORS } from "../lib/format.js";
 
-  const WIDGETS: Record<string, { label: string; icon: string }> = {
+  const WIDGETS = {
     welcome: { label: "Karşılama", icon: "home" },
     quick: { label: "Hızlı eylemler", icon: "zap" },
     recommend: { label: "Ivily önerileri", icon: "sparkle" },
@@ -36,8 +35,8 @@
   const ALL = Object.keys(WIDGETS);
 
   let editing = $state(false);
-  let recent = $state<OpEntry[]>([]);
-  let growth = $state<{ path: string; delta: number; fast: boolean }[] | null>(null);
+  let recent = $state([]);
+  let growth = $state(null);
 
   const order = $derived((app.settings?.dashboardWidgets ?? []).filter((w) => WIDGETS[w]));
   const wide = $derived(new Set(app.settings?.dashboardWide ?? []));
@@ -56,8 +55,8 @@
   async function load() {
     refreshIntelligence();
     try {
-      recent = (await api.oplog(undefined, 6)) as any;
-      if (!Array.isArray(recent)) recent = (recent as any).items ?? [];
+      recent = (await api.oplog(undefined, 6)) ;
+      if (!Array.isArray(recent)) recent = recent.items ?? [];
     } catch {
       recent = [];
     }
@@ -73,13 +72,13 @@
   }
 
   // --- Düzen düzenleme ---
-  function setLayout(next: string[], nextWide = [...wide]) {
+  function setLayout(next, nextWide = [...wide]) {
     saveSettings({ dashboardWidgets: next, dashboardWide: nextWide });
   }
-  function toggle(id: string, on: boolean) {
+  function toggle(id, on) {
     setLayout(on ? [...order, id] : order.filter((w) => w !== id));
   }
-  function move(id: string, dir: -1 | 1) {
+  function move(id, dir) {
     const i = order.indexOf(id);
     const j = i + dir;
     if (i < 0 || j < 0 || j >= order.length) return;
@@ -87,7 +86,7 @@
     [next[i], next[j]] = [next[j], next[i]];
     setLayout(next);
   }
-  function toggleWide(id: string) {
+  function toggleWide(id) {
     const w = new Set(wide);
     w.has(id) ? w.delete(id) : w.add(id);
     setLayout(order, [...w]);
@@ -115,11 +114,11 @@
     return "İyi geceler";
   });
 
-  const lvlIcon: Record<Level, string> = { bad: "alertCircle", warn: "alert", info: "info" };
-  const lvlLabel: Record<Level, string> = { bad: "Önemli", warn: "Dikkat", info: "Bilgi" };
+  const lvlIcon = { bad: "alertCircle", warn: "alert", info: "info" };
+  const lvlLabel = { bad: "Önemli", warn: "Dikkat", info: "Bilgi" };
   const attention = $derived(intelState.items.filter((i) => i.level !== "info").length);
 
-  const shortcuts: { route: Route; label: string; icon: string; hint: string }[] = [
+  const shortcuts = [
     { route: "disk", label: "Disk Analizi", icon: "disk", hint: "Alanın nerede kullanıldığını görün" },
     { route: "files", label: "Dosya Yönetimi", icon: "files", hint: "Tarayıcı, yinelenenler, karşılaştırma" },
     { route: "cleanup", label: "Temizlik", icon: "broom", hint: "Önizlemeli güvenli temizlik" },
@@ -218,7 +217,7 @@
                   <p class="small">{r.evidence}</p>
                   {#if r.interpretation}<p class="small interp">{r.interpretation}</p>{/if}
                 </div>
-                {#if r.action}<button class="btn sm" onclick={() => go(r.action!.route, r.action!.params)}>{r.action.label}</button>{/if}
+                {#if r.action}<button class="btn sm" onclick={() => go(r.action.route, r.action.params)}>{r.action.label}</button>{/if}
               </li>
             {/each}
           </ul>

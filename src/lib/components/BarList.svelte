@@ -1,16 +1,13 @@
-<script lang="ts">
+<script>
   // Yatay çubuk listesi: sıralı boyut karşılaştırmaları için.
   let {
     items,
-    format = (v: number) => String(v),
+    format = (v) => String(v),
     onselect,
     max = null,
-  }: {
-    items: { label: string; value: number; color?: string; key?: string; hint?: string }[];
-    format?: (v: number) => string;
-    onselect?: (key: string) => void;
-    max?: number | null;
-  } = $props();
+  }
+
+ = $props();
   const top = $derived(max ?? Math.max(1, ...items.map((i) => i.value)));
 </script>
 

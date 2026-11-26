@@ -1,8 +1,8 @@
-<script lang="ts">
+<script>
   // Açılış ekranı: işaretin çevresinde dönen ince bir tarama halkası.
   import CatMark from "./CatMark.svelte";
   import Wordmark from "./Wordmark.svelte";
-  let { status = "Hazırlanıyor…", error = null }: { status?: string; error?: string | null } = $props();
+  let { status = "Hazırlanıyor…", error = null } = $props();
 </script>
 
 <div class="splash" aria-busy={!error} role="status">

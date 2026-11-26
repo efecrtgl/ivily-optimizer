@@ -1,13 +1,11 @@
-<script lang="ts">
-  // Çalışan bir işin dürüst ilerleme göstergesi. Kesin ilerleme bilinmiyorsa
-  // belirsiz çubuk gösterilir; tahminler "yaklaşık" olarak etiketlenir.
-  import type { JobView } from "../state.svelte";
-  import { cancelJob } from "../state.svelte";
-  import { bytes, num, duration } from "../format";
+<script>
+
+  import { cancelJob } from "../state.svelte.js";
+  import { bytes, num, duration } from "../format.js";
   import CatScene from "./CatScene.svelte";
   import Icon from "./Icon.svelte";
 
-  let { job, title }: { job: JobView; title: string } = $props();
+  let { job, title } = $props();
   const p = $derived(job.progress);
   let cancelling = $state(false);
 

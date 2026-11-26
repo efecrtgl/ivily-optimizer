@@ -1,32 +1,31 @@
-<script lang="ts">
+<script>
   import { onMount } from "svelte";
   import PageHeader from "../lib/components/PageHeader.svelte";
   import Icon from "../lib/components/Icon.svelte";
   import EmptyState from "../lib/components/EmptyState.svelte";
   import Dialog from "../lib/components/Dialog.svelte";
   import PathActions from "../lib/components/PathActions.svelte";
-  import { api } from "../lib/api";
-  import { toast, confirm } from "../lib/state.svelte";
-  import { bytes, num, dateTime, date, errMsg, errCode, fileName, parentDir, ago } from "../lib/format";
-  import { matches } from "../lib/util";
-  import type { QuarantineOverview, QuarantineItem } from "../lib/types";
+  import { api } from "../lib/api.js";
+  import { toast, confirm } from "../lib/state.svelte.js";
+  import { bytes, num, dateTime, date, errMsg, errCode, fileName, parentDir, ago } from "../lib/format.js";
+  import { matches } from "../lib/util.js";
 
-  let data = $state<QuarantineOverview | null>(null);
+  let data = $state(null);
   let history = $state(false);
   let q = $state("");
-  let selected = $state<Set<string>>(new Set());
-  let conflict = $state<QuarantineItem | null>(null);
+  let selected = $state(new Set());
+  let conflict = $state(null);
   let conflictOpen = $state(false);
   let busy = $state(false);
 
-  const SOURCE: Record<string, string> = {
+  const SOURCE = {
     cleanup: "Temizlik",
     large: "Büyük dosyalar",
     duplicates: "Yinelenen dosyalar",
     cold: "Eski dosyalar",
     explorer: "Disk analizi",
   };
-  const STATE: Record<string, [string, string]> = {
+  const STATE = {
     quarantined: ["Karantinada", "accent"],
     restored: ["Geri yüklendi", "good"],
     deleted: ["Kalıcı silindi", ""],
@@ -38,13 +37,13 @@
   async function load() {
     try {
       data = await api.quarantineList(history);
-      selected = new Set([...selected].filter((id) => data!.items.some((i) => i.id === id && i.state === "quarantined")));
+      selected = new Set([...selected].filter((id) => data.items.some((i) => i.id === id && i.state === "quarantined")));
     } catch (e) {
       toast("error", "Karantina yüklenemedi", errMsg(e));
     }
   }
 
-  async function restore(item: QuarantineItem, rename = false) {
+  async function restore(item, rename = false) {
     busy = true;
     try {
       const r = await api.quarantineRestore(item.id, rename);
@@ -75,7 +74,7 @@ ${r.message}`);
     }
   }
 
-  async function purge(ids: string[]) {
+  async function purge(ids) {
     const items = data?.items.filter((i) => ids.includes(i.id)) ?? [];
     const total = items.reduce((a, b) => a + b.size, 0);
     const ok = await confirm({
@@ -100,7 +99,7 @@ ${r.message}`);
     }
   }
 
-  function toggle(id: string, on: boolean) {
+  function toggle(id, on) {
     const s = new Set(selected);
     on ? s.add(id) : s.delete(id);
     selected = s;
@@ -198,7 +197,7 @@ ${r.message}`);
     <p class="small" style="margin-top:10px">Dosyayı aynı klasöre <strong>"(geri yüklendi)"</strong> ekiyle farklı bir adla geri yükleyebilirsiniz.</p>
     {#snippet footer()}
       <button class="btn" onclick={() => (conflictOpen = false)} data-autofocus>Vazgeç</button>
-      <button class="btn primary" onclick={() => { const c = conflict!; conflictOpen = false; restore(c, true); }}>Farklı adla geri yükle</button>
+      <button class="btn primary" onclick={() => { const c = conflict; conflictOpen = false; restore(c, true); }}>Farklı adla geri yükle</button>
     {/snippet}
   </Dialog>
 {/if}

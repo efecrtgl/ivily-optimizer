@@ -1,4 +1,4 @@
-<script lang="ts">
+<script>
   // Hafif SVG alan grafiği. Bir veya iki seri; isteğe bağlı sabit üst sınır.
   let {
     series,
@@ -6,23 +6,18 @@
     height = 64,
     colors = ["var(--accent)", "var(--info)"],
     label = "",
-    format = (v: number) => String(Math.round(v)),
-  }: {
-    series: number[][];
-    max?: number | null;
-    height?: number;
-    colors?: string[];
-    label?: string;
-    format?: (v: number) => string;
-  } = $props();
+    format = (v) => String(Math.round(v)),
+  }
+
+ = $props();
 
   const W = 300;
-  let hover = $state<number | null>(null);
+  let hover = $state(null);
 
   const n = $derived(Math.max(0, ...series.map((s) => s.length)));
   const top = $derived(max ?? Math.max(1, ...series.flat()) * 1.15);
 
-  function pathFor(s: number[], close: boolean) {
+  function pathFor(s, close) {
     if (s.length < 2) return "";
     const step = W / (s.length - 1);
     const pts = s.map((v, i) => `${(i * step).toFixed(1)},${(height - (Math.min(v, top) / top) * (height - 2) - 1).toFixed(1)}`);
@@ -30,8 +25,8 @@
     return close ? `${line} L${W},${height} L0,${height} Z` : line;
   }
 
-  function onmove(e: MouseEvent) {
-    const r = (e.currentTarget as SVGElement).getBoundingClientRect();
+  function onmove(e) {
+    const r = e.currentTarget.getBoundingClientRect();
     if (n < 2) return;
     hover = Math.round(((e.clientX - r.left) / r.width) * (n - 1));
   }

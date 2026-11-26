@@ -1,5 +1,5 @@
-<script lang="ts">
-  import { confirmState, closeConfirm } from "../state.svelte";
+<script>
+  import { confirmState, closeConfirm } from "../state.svelte.js";
   import Dialog from "./Dialog.svelte";
 
   let ack = $state(false);

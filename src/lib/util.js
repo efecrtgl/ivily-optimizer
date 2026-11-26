@@ -1,10 +1,10 @@
 // Küçük yardımcılar.
 
-export function sortBy<T>(arr: T[], sort: { key: string; dir: 1 | -1 }): T[] {
-  const k = sort.key as keyof T;
+export function sortBy(arr, sort) {
+  const k = sort.key;
   return [...arr].sort((a, b) => {
-    const va = a[k] as any;
-    const vb = b[k] as any;
+    const va = a[k] ;
+    const vb = b[k] ;
     if (va == null && vb == null) return 0;
     if (va == null) return 1;
     if (vb == null) return -1;
@@ -13,11 +13,11 @@ export function sortBy<T>(arr: T[], sort: { key: string; dir: 1 | -1 }): T[] {
   });
 }
 
-export function matches(text: string | null | undefined, q: string): boolean {
+export function matches(text, q) {
   if (!q) return true;
   return (text ?? "").toLocaleLowerCase("tr").includes(q.toLocaleLowerCase("tr"));
 }
 
-export function clamp(v: number, a: number, b: number) {
+export function clamp(v, a, b) {
   return Math.min(b, Math.max(a, v));
 }

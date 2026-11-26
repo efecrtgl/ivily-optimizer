@@ -1,7 +1,7 @@
-<script lang="ts">
-  import { toasts, dismissToast } from "../state.svelte";
+<script>
+  import { toasts, dismissToast } from "../state.svelte.js";
   import Icon from "./Icon.svelte";
-  const icon = { success: "checkCircle", error: "xCircle", info: "info", warning: "alert" } as const;
+  const icon = { success: "checkCircle", error: "xCircle", info: "info", warning: "alert" } ;
 </script>
 
 <div class="toasts" role="region" aria-label="Bildirimler" aria-live="polite">

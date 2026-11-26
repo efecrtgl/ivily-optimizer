@@ -1,21 +1,22 @@
-<script lang="ts">
-  import { nav, go, jobs, type Route } from "../state.svelte";
-  import { updater } from "../updater.svelte";
+<script>
+  import { nav, go, jobs, } from "../state.svelte.js";
+  import { updater } from "../updater.svelte.js";
   import Icon from "./Icon.svelte";
   import CatMark from "./CatMark.svelte";
   import Wordmark from "./Wordmark.svelte";
 
-  let { collapsed = $bindable(false) }: { collapsed?: boolean } = $props();
+  let { collapsed = $bindable(false) } = $props();
 
-  interface Item {
-    route: Route;
-    label: string;
-    icon: string;
-    jobs?: string[];
-    also?: Route[];
-  }
+  /**
+   * @typedef {Object} Item
+   * @property {Route} route
+   * @property {string} label
+   * @property {string} icon
+   * @property {string[]} [jobs]
+   * @property {Route[]} [also]
+   */
 
-  const sections: { title: string; items: Item[] }[] = [
+  const sections = [
     { title: "", items: [{ route: "overview", label: "Genel Bakış", icon: "home" }] },
     {
       title: "Depolama",
@@ -51,8 +52,8 @@
     },
   ];
 
-  const active = (it: Item) => nav.route === it.route || (it.also ?? []).includes(nav.route);
-  const busy = (it: Item) => (it.jobs ?? []).some((j) => jobs[j]);
+  const active = (it) => nav.route === it.route || (it.also ?? []).includes(nav.route);
+  const busy = (it) => (it.jobs ?? []).some((j) => jobs[j]);
 </script>
 
 <aside class="sb glass-float" class:collapsed aria-label="Ana gezinme">

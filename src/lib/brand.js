@@ -20,7 +20,7 @@ export const MARK_CUTOUTS = [
 /** "ivily" yazı işareti: yuvarlak uçlu çizgiler (yükseklik 46 birim). */
 export const WORDMARK_VIEWBOX = "0 0 72 46";
 export const WORDMARK_STROKE = 5.2;
-export const WORDMARK_LINES: [number, number, number, number][] = [
+export const WORDMARK_LINES = [
   [4, 17, 4, 34], // i
   [13, 17, 20, 34], // v sol
   [20, 34, 27, 17], // v sağ
@@ -29,7 +29,7 @@ export const WORDMARK_LINES: [number, number, number, number][] = [
   [52, 17, 59.5, 33.5], // y sol
   [67, 17, 56.5, 42], // y sağ
 ];
-export const WORDMARK_DOTS: [number, number][] = [
+export const WORDMARK_DOTS = [
   [4, 8],
   [35, 8],
 ];

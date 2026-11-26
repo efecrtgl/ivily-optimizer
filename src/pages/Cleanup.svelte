@@ -1,4 +1,4 @@
-<script lang="ts">
+<script>
   import { onMount } from "svelte";
   import PageHeader from "../lib/components/PageHeader.svelte";
   import Icon from "../lib/components/Icon.svelte";
@@ -7,20 +7,19 @@
   import RiskBadge from "../lib/components/RiskBadge.svelte";
   import Dialog from "../lib/components/Dialog.svelte";
   import CatScene from "../lib/components/CatScene.svelte";
-  import { api, fx } from "../lib/api";
-  import { jobs, registerJob, onJobDone, toast, app, go } from "../lib/state.svelte";
-  import { bytes, num, ago, errMsg } from "../lib/format";
-  import type { CleanupScanSummary, CleanupItem, CleanupReport } from "../lib/types";
+  import { api, fx } from "../lib/api.js";
+  import { jobs, registerJob, onJobDone, toast, app, go } from "../lib/state.svelte.js";
+  import { bytes, num, ago, errMsg } from "../lib/format.js";
 
-  let scan = $state<CleanupScanSummary | null>(null);
-  let selected = $state<Set<string>>(new Set());
-  let open = $state<Set<string>>(new Set());
+  let scan = $state(null);
+  let selected = $state(new Set());
+  let open = $state(new Set());
   let previewOpen = $state(false);
   let ack = $state(false);
-  let report = $state<CleanupReport | null>(null);
-  let previews = $state<Record<string, { files: { path: string; size: number; modified: number }[]; total: number; totalBytes: number } | "loading">>({});
+  let report = $state(null);
+  let previews = $state({});
 
-  async function previewFiles(id: string) {
+  async function previewFiles(id) {
     previews[id] = "loading";
     try {
       previews[id] = await fx.cleanupFiles(id, 200);
@@ -40,7 +39,7 @@
       apply(await api.cleanupScanResult());
     });
     const b = onJobDone("cleanup-run", (d) => {
-      report = d.summary as CleanupReport;
+      report = d.summary;
       scan = null;
       selected = new Set();
       if (report?.cancelled) toast("warning", "Temizlik iptal edildi", `${bytes(report.totalBytes)} boşaltıldı.`);
@@ -52,7 +51,7 @@
     };
   });
 
-  function apply(s: CleanupScanSummary | null) {
+  function apply(s) {
     scan = s;
     if (s) selected = new Set(s.items.filter((i) => i.defaultSelected).map((i) => i.id));
   }
@@ -75,22 +74,22 @@
     }
   }
 
-  function toggle(id: string, on: boolean) {
+  function toggle(id, on) {
     const s = new Set(selected);
     on ? s.add(id) : s.delete(id);
     selected = s;
   }
-  function toggleOpen(id: string) {
+  function toggleOpen(id) {
     const s = new Set(open);
     s.has(id) ? s.delete(id) : s.add(id);
     open = s;
   }
 
   const groups = $derived.by(() => {
-    const m = new Map<string, CleanupItem[]>();
+    const m = new Map();
     for (const it of scan?.items ?? []) {
       if (!m.has(it.group)) m.set(it.group, []);
-      m.get(it.group)!.push(it);
+      m.get(it.group).push(it);
     }
     return [...m.entries()];
   });

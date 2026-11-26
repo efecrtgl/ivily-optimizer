@@ -1,15 +1,15 @@
-<script lang="ts">
+<script>
   // Klasör yolu girişi + Windows klasör seçme penceresi + sürücü kısayolları.
   import { open as openDialog } from "@tauri-apps/plugin-dialog";
   import Icon from "./Icon.svelte";
-  import { app } from "../state.svelte";
+  import { app } from "../state.svelte.js";
 
   let {
     value = $bindable(""),
     disabled = false,
     placeholder = "Klasör yolu, ör. C:\\Users",
     showDrives = true,
-  }: { value?: string; disabled?: boolean; placeholder?: string; showDrives?: boolean } = $props();
+  } = $props();
 
   async function browse() {
     try {

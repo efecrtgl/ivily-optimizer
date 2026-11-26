@@ -1,11 +1,11 @@
-<script lang="ts">
+<script>
   import Icon from "./Icon.svelte";
   let {
     label,
     key,
     sort = $bindable(),
     align = "left",
-  }: { label: string; key: string; sort: { key: string; dir: 1 | -1 }; align?: "left" | "right" } = $props();
+  } = $props();
 
   function toggle() {
     if (sort.key === key) sort = { key, dir: sort.dir === 1 ? -1 : 1 };

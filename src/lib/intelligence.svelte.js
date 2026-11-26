@@ -5,42 +5,42 @@
 // - Neden-sonuç iddiası yoktur; yalnızca gözlem + olası eylem.
 // - Veri yoksa öneri üretilmez (tahmin/uydurma yok).
 
-import { api, sys, intel, fx } from "./api";
-import { app, type Route } from "./state.svelte";
-import { updater } from "./updater.svelte";
-import { bytes, ago, num } from "./format";
-import type { EventsReport, StorageInsights, StartupItem, ScanSummary } from "./types";
+import { api, sys, intel, fx } from "./api.js";
+import { app, } from "./state.svelte.js";
+import { updater } from "./updater.svelte.js";
+import { bytes, ago, num } from "./format.js";
 
-export type Level = "info" | "warn" | "bad";
+/** @typedef {"info" | "warn" | "bad"} Level */
 
-export interface Recommendation {
-  id: string;
-  level: Level;
-  source: string; // modül adı
-  title: string;
-  evidence: string; // ölçülen gerçek veri
-  interpretation?: string; // Ivily'nin yorumu (arayüzde ayrıca işaretlenir)
-  action?: { label: string; route: Route; params?: Record<string, string> };
-}
+/**
+ * @typedef {Object} Recommendation
+ * @property {string} id
+ * @property {Level} level
+ * @property {string} source
+ * @property {string} title modül adı
+ * @property {string} evidence
+ * @property {string} [interpretation] ölçülen gerçek veri
+ * @property {{ label: string; route: Route; params?: Record<string, string> }} [action] Ivily'nin yorumu (arayüzde ayrıca işaretlenir)
+ */
 
 export const intelState = $state({
-  items: [] as Recommendation[],
+  items: [] ,
   loading: false,
   updatedAt: 0,
-  events: null as EventsReport | null,
-  insights: null as StorageInsights | null,
-  scan: null as ScanSummary | null,
-  startup: null as StartupItem[] | null,
-  lastScanTs: null as number | null,
-  lastScanRoot: null as string | null,
-  cleanup: null as { total: number; safe: number; items: number } | null,
-  quarantine: null as { count: number; size: number } | null,
+  events: null,
+  insights: null,
+  scan: null,
+  startup: null,
+  lastScanTs: null,
+  lastScanRoot: null,
+  cleanup: null,
+  quarantine: null,
 });
 
-const rank: Record<Level, number> = { bad: 0, warn: 1, info: 2 };
+const rank = { bad: 0, warn: 1, info: 2 };
 
 /** Tüm kaynakları paralel okur ve önerileri yeniden hesaplar. */
-export async function refreshIntelligence(opts: { events?: boolean } = {}) {
+export async function refreshIntelligence(opts = {}) {
   if (intelState.loading) return;
   intelState.loading = true;
   const [scan, snaps, cleanup, startup, insights, quarantine, events] = await Promise.allSettled([
@@ -67,8 +67,8 @@ export async function refreshIntelligence(opts: { events?: boolean } = {}) {
   intelState.loading = false;
 }
 
-function compute(): Recommendation[] {
-  const out: Recommendation[] = [];
+function compute() {
+  const out = [];
   const st = intelState;
 
   // 1. Disk doluluğu (canlı ölçüm)

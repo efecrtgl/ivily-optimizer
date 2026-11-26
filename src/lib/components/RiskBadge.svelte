@@ -1,12 +1,12 @@
-<script lang="ts">
+<script>
   import Icon from "./Icon.svelte";
-  import type { Risk } from "../types";
-  let { risk }: { risk: Risk } = $props();
+
+  let { risk } = $props();
   const map = {
     safe: { label: "Güvenli", cls: "good", icon: "checkCircle" },
     review: { label: "İncelenmeli", cls: "warn", icon: "eye" },
     risky: { label: "Riskli", cls: "bad", icon: "alert" },
-  } as const;
+  } ;
   const m = $derived(map[risk]);
 </script>
 

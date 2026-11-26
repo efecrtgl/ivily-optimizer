@@ -1,21 +1,20 @@
-<script lang="ts">
+<script>
   // İki klasörü göreli yollara göre karşılaştırır (isteğe bağlı içerik özeti).
   import { onMount } from "svelte";
   import Icon from "../components/Icon.svelte";
   import FolderPicker from "../components/FolderPicker.svelte";
   import JobPanel from "../components/JobPanel.svelte";
   import EmptyState from "../components/EmptyState.svelte";
-  import { fx } from "../api";
-  import { toast, jobs, registerJob, onJobDone } from "../state.svelte";
-  import { bytes, num, dateTime, errMsg } from "../format";
-  import { matches } from "../util";
-  import type { CompareReport } from "../types";
+  import { fx } from "../api.js";
+  import { toast, jobs, registerJob, onJobDone } from "../state.svelte.js";
+  import { bytes, num, dateTime, errMsg } from "../format.js";
+  import { matches } from "../util.js";
 
   let a = $state("");
   let b = $state("");
   let content = $state(false);
-  let report = $state<CompareReport | null>(null);
-  let view = $state<"onlyA" | "onlyB" | "different">("different");
+  let report = $state(null);
+  let view = $state("different");
   let q = $state("");
   const job = $derived(jobs["compare"]);
 

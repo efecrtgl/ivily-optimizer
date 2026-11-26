@@ -1,32 +1,31 @@
-<script lang="ts">
+<script>
   import { onMount } from "svelte";
   import PageHeader from "../lib/components/PageHeader.svelte";
   import Icon from "../lib/components/Icon.svelte";
   import EmptyState from "../lib/components/EmptyState.svelte";
   import Dialog from "../lib/components/Dialog.svelte";
   import AreaChart from "../lib/components/AreaChart.svelte";
-  import { api, fx } from "../lib/api";
-  import { toast, confirm, go, nav } from "../lib/state.svelte";
-  import { bytes, num, dateTime, ago, errMsg, signedBytes, duration, pct } from "../lib/format";
-  import type { OpEntryV2, SnapshotInfo, Comparison } from "../lib/types";
+  import { api, fx } from "../lib/api.js";
+  import { toast, confirm, go, nav } from "../lib/state.svelte.js";
+  import { bytes, num, dateTime, ago, errMsg, signedBytes, duration, pct } from "../lib/format.js";
 
-  let tab = $state<"ops" | "snaps">(nav.params.tab === "snaps" ? "snaps" : "ops");
-  let ops = $state<OpEntryV2[]>([]);
+  let tab = $state(nav.params.tab === "snaps" ? "snaps" : "ops");
+  let ops = $state([]);
   let total = $state(0);
   let kind = $state("");
   let outcome = $state("");
   let query = $state("");
   let page = $state(0);
   const PAGE = 50;
-  let snaps = $state<SnapshotInfo[]>([]);
+  let snaps = $state([]);
   let rootFilter = $state("");
-  let pick = $state<number[]>([]);
-  let cmp = $state<Comparison | null>(null);
-  let detail = $state<OpEntryV2 | null>(null);
+  let pick = $state([]);
+  let cmp = $state(null);
+  let detail = $state(null);
   let detailOpen = $state(false);
-  let restoring = $state<number | null>(null);
+  let restoring = $state(null);
 
-  const KIND: Record<string, string> = {
+  const KIND = {
     cleanup: "Temizlik",
     files: "Dosya işlemi",
     folders: "Boş klasör",
@@ -39,19 +38,19 @@
     process: "Süreç",
     update: "Güncelleme",
   };
-  const OUT: Record<string, [string, string]> = {
+  const OUT = {
     success: ["Başarılı", "good"],
     partial: ["Kısmi", "warn"],
     failed: ["Başarısız", "bad"],
     cancelled: ["İptal edildi", ""],
   };
-  const RESTORE: Record<string, [string, string]> = {
+  const RESTORE = {
     none: ["Geri alınamaz", ""],
     available: ["Geri alınabilir", "accent"],
     restored: ["Geri alındı", "good"],
     failed: ["Geri alma başarısız", "bad"],
   };
-  const SNAP: Record<string, [string, string]> = {
+  const SNAP = {
     complete: ["Tam tarama", "good"],
     cancelled: ["Kısmi — iptal edildi", "warn"],
     failed: ["Başarısız", "bad"],
@@ -62,7 +61,7 @@
     loadSnaps();
   });
 
-  let searchTimer: ReturnType<typeof setTimeout>;
+  let searchTimer;
   function onSearch() {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(() => {
@@ -88,7 +87,7 @@
     }
   }
 
-  async function exportOps(format: "csv" | "json") {
+  async function exportOps(format) {
     try {
       const p = await fx.oplogExport(format);
       toast("success", "Geçmiş dışa aktarıldı", p);
@@ -98,7 +97,7 @@
     }
   }
 
-  function togglePick(id: number) {
+  function togglePick(id) {
     pick = pick.includes(id) ? pick.filter((x) => x !== id) : [...pick.slice(-1), id];
     cmp = null;
   }
@@ -112,7 +111,7 @@
     }
   }
 
-  async function del(s: SnapshotInfo) {
+  async function del(s) {
     const ok = await confirm({ title: "Anlık görüntü silinsin mi?", body: `${s.root} · ${dateTime(s.ts)}\nBu taramanın özet verileri silinecek. Dosyalarınız etkilenmez.`, confirmLabel: "Sil", danger: true });
     if (!ok) return;
     try {
@@ -129,7 +128,7 @@
   const shownSnaps = $derived(rootFilter ? snaps.filter((s) => s.root === rootFilter) : snaps);
   const timeline = $derived(rootFilter ? [...shownSnaps].filter((s) => s.status === "complete").reverse().map((s) => s.totalSize) : []);
 
-  async function restore(e: OpEntryV2) {
+  async function restore(e) {
     const ok = await confirm({
       title: "Bu işlem geri alınsın mı?",
       body: `"${e.title}" önceki durumuna döndürülecek. Geri alma işlemi de geçmişe kaydedilir. Gerekirse Windows yönetici onayı istenir; karantinadan geri yüklemede mevcut dosyaların üzerine yazılmaz.`,
@@ -149,7 +148,7 @@
     }
   }
 
-  function stateText(v: any): string {
+  function stateText(v) {
     if (v == null) return "—";
     if (typeof v !== "object") return String(v);
     return Object.entries(v)
@@ -157,9 +156,9 @@
       .join(" · ");
   }
 
-  function detailLines(e: OpEntryV2): [string, string][] {
+  function detailLines(e) {
     const d = e.detail ?? {};
-    const out: [string, string][] = [];
+    const out = [];
     if (e.kind === "cleanup") {
       out.push(["Boşaltılan", bytes(d.totalBytes)], ["İşlenen dosya", num(d.totalFiles)], ["Sorunlu öğe", num(d.totalProblems)]);
       out.push(["Yöntem", d.usedQuarantine ? "Karantinaya taşıma (geri alınabilir)" : "Kalıcı silme"]);
@@ -342,7 +341,7 @@
       {/each}
     </dl>
     {#snippet footer()}
-      {#if detail?.restoreStatus === "available"}<button class="btn" disabled={restoring === detail.id} onclick={() => restore(detail!)}><Icon name="restore" size={12} /> Geri al</button>{/if}
+      {#if detail?.restoreStatus === "available"}<button class="btn" disabled={restoring === detail.id} onclick={() => restore(detail)}><Icon name="restore" size={12} /> Geri al</button>{/if}
       <span class="spacer"></span>
       <button class="btn" onclick={() => (detailOpen = false)}>Kapat</button>
     {/snippet}

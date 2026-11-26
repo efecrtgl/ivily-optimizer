@@ -1,14 +1,13 @@
-<script lang="ts">
+<script>
   import { onMount } from "svelte";
   import PageHeader from "../lib/components/PageHeader.svelte";
   import Icon from "../lib/components/Icon.svelte";
   import AreaChart from "../lib/components/AreaChart.svelte";
-  import { sys } from "../lib/api";
-  import { app, live, useLive, toast, confirm, go } from "../lib/state.svelte";
-  import { bytes, rate, pct, uptime, errMsg, num } from "../lib/format";
-  import type { PowerOverview, PowerPlan } from "../lib/types";
+  import { sys } from "../lib/api.js";
+  import { app, live, useLive, toast, confirm, go } from "../lib/state.svelte.js";
+  import { bytes, rate, pct, uptime, errMsg, num } from "../lib/format.js";
 
-  let power = $state<PowerOverview | null>(null);
+  let power = $state(null);
   let busy = $state(false);
   const s = $derived(live.stats);
   const info = $derived(app.info);
@@ -27,7 +26,7 @@
     }
   }
 
-  async function activate(p: PowerPlan) {
+  async function activate(p) {
     const ok = await confirm({
       title: `"${p.name}" planına geçilsin mi?`,
       body: `${p.description}\n\nBu değişiklik yalnızca Windows'un kendi güç planı ayarını değiştirir ve istediğiniz zaman geri alınabilir.`,

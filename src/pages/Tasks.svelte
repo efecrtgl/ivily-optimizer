@@ -1,19 +1,19 @@
-<script lang="ts">
-  let { embedded = false }: { embedded?: boolean } = $props();
+<script>
+  let { embedded = false } = $props();
   import { onMount } from "svelte";
   import PageHeader from "../lib/components/PageHeader.svelte";
   import Icon from "../lib/components/Icon.svelte";
   import Dialog from "../lib/components/Dialog.svelte";
   import SortTh from "../lib/components/SortTh.svelte";
-  import { sys } from "../lib/api";
-  import { toast, confirm } from "../lib/state.svelte";
-  import { errMsg, errCode, num } from "../lib/format";
-  import { sortBy, matches } from "../lib/util";
-  import type { TaskInfo, TaskHistory } from "../lib/types";
-  import { intel } from "../lib/api";
-  let hist = $state<TaskHistory | null>(null);
+  import { sys } from "../lib/api.js";
+  import { toast, confirm } from "../lib/state.svelte.js";
+  import { errMsg, errCode, num } from "../lib/format.js";
+  import { sortBy, matches } from "../lib/util.js";
+
+  import { intel } from "../lib/api.js";
+  let hist = $state(null);
   let histLoading = $state(false);
-  async function loadHistory(t: TaskInfo) {
+  async function loadHistory(t) {
     histLoading = true;
     hist = null;
     try {
@@ -25,14 +25,14 @@
     }
   }
 
-  let list = $state<TaskInfo[]>([]);
+  let list = $state([]);
   let loading = $state(true);
-  let error = $state<string | null>(null);
+  let error = $state(null);
   let q = $state("");
   let showMs = $state(false);
   let stateFilter = $state("");
-  let sort = $state<{ key: string; dir: 1 | -1 }>({ key: "name", dir: 1 });
-  let sel = $state<TaskInfo | null>(null);
+  let sort = $state({ key: "name", dir: 1 });
+  let sel = $state(null);
   let selOpen = $state(false);
   let busy = $state(false);
 
@@ -50,14 +50,14 @@
     }
   }
 
-  const fmt = (iso: string | null) => {
+  const fmt = (iso) => {
     if (!iso) return "—";
     const d = new Date(iso);
     if (isNaN(d.getTime()) || d.getFullYear() < 2000) return "—";
     return new Intl.DateTimeFormat("tr-TR", { dateStyle: "medium", timeStyle: "short" }).format(d);
   };
 
-  async function setEnabled(t: TaskInfo, enabled: boolean) {
+  async function setEnabled(t, enabled) {
     const ok = await confirm({
       title: enabled ? `"${t.name}" etkinleştirilsin mi?` : `"${t.name}" devre dışı bırakılsın mı?`,
       body: enabled
@@ -175,7 +175,7 @@
     <ul class="ul small">
       {#each sel.triggers as tr}<li>{tr.label}{tr.startBoundary ? ` · başlangıç ${fmt(tr.startBoundary)}` : ""}{tr.enabled ? "" : " (devre dışı)"}</li>{:else}<li class="muted">Tetikleyici yok</li>{/each}
     </ul>
-    <div class="row"><h3 class="h">Çalışma geçmişi</h3><span class="spacer"></span>{#if !hist}<button class="btn sm" disabled={histLoading} onclick={() => loadHistory(sel!)}>{histLoading ? "Okunuyor…" : "Geçmişi göster"}</button>{/if}</div>
+    <div class="row"><h3 class="h">Çalışma geçmişi</h3><span class="spacer"></span>{#if !hist}<button class="btn sm" disabled={histLoading} onclick={() => loadHistory(sel)}>{histLoading ? "Okunuyor…" : "Geçmişi göster"}</button>{/if}</div>
     {#if hist}
       {#if hist.logEnabled === false || !hist.events.length}<p class="small muted">{hist.note}</p>{/if}
       {#if hist.events.length}
@@ -190,7 +190,7 @@
       <span class="spacer"></span>
       <button class="btn" onclick={() => (selOpen = false)}>Kapat</button>
       {#if sel && !sel.protected}
-        <button class="btn primary" disabled={busy} onclick={() => setEnabled(sel!, !sel!.enabled)}>{sel.enabled ? "Devre dışı bırak" : "Etkinleştir"}</button>
+        <button class="btn primary" disabled={busy} onclick={() => setEnabled(sel, !sel.enabled)}>{sel.enabled ? "Devre dışı bırak" : "Etkinleştir"}</button>
       {/if}
     {/snippet}
   </Dialog>

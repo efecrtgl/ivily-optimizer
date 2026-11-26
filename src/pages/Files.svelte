@@ -1,4 +1,4 @@
-<script lang="ts">
+<script>
   import { onMount } from "svelte";
   import PageHeader from "../lib/components/PageHeader.svelte";
   import Icon from "../lib/components/Icon.svelte";
@@ -7,43 +7,42 @@
   import FolderPicker from "../lib/components/FolderPicker.svelte";
   import PathActions from "../lib/components/PathActions.svelte";
   import SortTh from "../lib/components/SortTh.svelte";
-  import { api } from "../lib/api";
-  import { jobs, registerJob, onJobDone, toast, confirm, go, app, nav } from "../lib/state.svelte";
+  import { api } from "../lib/api.js";
+  import { jobs, registerJob, onJobDone, toast, confirm, go, app, nav } from "../lib/state.svelte.js";
   import FileBrowser from "../lib/files/FileBrowser.svelte";
   import FolderCompare from "../lib/files/FolderCompare.svelte";
   import EmptyFoldersView from "../lib/files/EmptyFolders.svelte";
-  import { bytes, num, dateTime, date, errMsg, categoryLabel, fileName, parentDir, CATEGORY_LABELS } from "../lib/format";
-  import { sortBy } from "../lib/util";
-  import type { LargeFile, ColdReport, DupReport } from "../lib/types";
+  import { bytes, num, dateTime, date, errMsg, categoryLabel, fileName, parentDir, CATEGORY_LABELS } from "../lib/format.js";
+  import { sortBy } from "../lib/util.js";
 
-  type Tab = "browse" | "large" | "cold" | "dupes" | "empty" | "compare";
-  const TABS: Tab[] = ["browse", "large", "cold", "dupes", "empty", "compare"];
-  let tab = $state<Tab>(TABS.includes(nav.params.tab as Tab) ? (nav.params.tab as Tab) : "browse");
+  /** @typedef {"browse" | "large" | "cold" | "dupes" | "empty" | "compare"} Tab */
+  const TABS = ["browse", "large", "cold", "dupes", "empty", "compare"];
+  let tab = $state(TABS.includes(nav.params.tab) ? nav.params.tab : "browse");
 
   // --- Büyük dosyalar ---
   let hasScan = $state(false);
-  let large = $state<LargeFile[]>([]);
+  let large = $state([]);
   let minMb = $state(app.settings?.largeFileMinMb ?? 256);
   let extFilter = $state("");
   let catFilter = $state("");
   let locFilter = $state("");
-  let largeSort = $state<{ key: string; dir: 1 | -1 }>({ key: "size", dir: -1 });
+  let largeSort = $state({ key: "size", dir: -1 });
 
   // --- Eski dosyalar ---
   let coldRoot = $state("");
   let coldDays = $state(365);
   let coldCustom = $state(730);
   let coldMinMb = $state(10);
-  let cold = $state<ColdReport | null>(null);
-  let coldSort = $state<{ key: string; dir: 1 | -1 }>({ key: "size", dir: -1 });
+  let cold = $state(null);
+  let coldSort = $state({ key: "size", dir: -1 });
 
   // --- Yinelenenler ---
   let dupRoot = $state("");
   let dupMinMb = $state(1);
-  let dupes = $state<DupReport | null>(null);
-  let expanded = $state<Set<number>>(new Set());
+  let dupes = $state(null);
+  let expanded = $state(new Set());
 
-  let selected = $state<Set<string>>(new Set());
+  let selected = $state(new Set());
   let busy = $state(false);
 
   const coldJob = $derived(jobs["cold"]);
@@ -90,12 +89,12 @@
     }
   }
 
-  function switchTab(t: Tab) {
+  function switchTab(t) {
     tab = t;
     selected = new Set();
   }
 
-  function toggle(path: string, on: boolean) {
+  function toggle(path, on) {
     const s = new Set(selected);
     on ? s.add(path) : s.delete(path);
     selected = s;
@@ -122,12 +121,12 @@
 
   function suggestDupes() {
     if (!dupes) return;
-    const s = new Set<string>();
+    const s = new Set();
     for (const g of dupes.groups) g.files.forEach((f, i) => i !== g.keepIndex && !f.protected && s.add(f.path));
     selected = s;
   }
 
-  const sizeOf = (p: string): number => {
+  const sizeOf = (p) => {
     if (tab === "large") return large.find((f) => f.path === p)?.size ?? 0;
     if (tab === "cold") return cold?.files.find((f) => f.path === p)?.size ?? 0;
     return dupes?.groups.find((g) => g.files.some((f) => f.path === p))?.size ?? 0;
@@ -139,7 +138,7 @@
     tab === "dupes" && dupes ? dupes.groups.filter((g) => g.files.every((f) => selected.has(f.path))).length : 0,
   );
 
-  async function remove(mode: "quarantine" | "recycle") {
+  async function remove(mode) {
     const paths = [...selected];
     if (!paths.length) return;
     if (dupAllSelectedGroups > 0) {

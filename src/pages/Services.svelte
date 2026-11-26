@@ -1,34 +1,33 @@
-<script lang="ts">
-  let { embedded = false }: { embedded?: boolean } = $props();
+<script>
+  let { embedded = false } = $props();
   import { onMount } from "svelte";
   import PageHeader from "../lib/components/PageHeader.svelte";
   import Icon from "../lib/components/Icon.svelte";
   import Dialog from "../lib/components/Dialog.svelte";
   import SortTh from "../lib/components/SortTh.svelte";
-  import { sys } from "../lib/api";
-  import { toast, confirm, app } from "../lib/state.svelte";
-  import { errMsg, errCode, num } from "../lib/format";
-  import { sortBy, matches } from "../lib/util";
-  import type { ServiceInfo } from "../lib/types";
+  import { sys } from "../lib/api.js";
+  import { toast, confirm, app } from "../lib/state.svelte.js";
+  import { errMsg, errCode, num } from "../lib/format.js";
+  import { sortBy, matches } from "../lib/util.js";
 
-  let list = $state<ServiceInfo[]>([]);
+  let list = $state([]);
   let loading = $state(true);
   let q = $state("");
-  let status = $state<"" | "running" | "stopped">("");
+  let status = $state("");
   let start = $state("");
-  let sort = $state<{ key: string; dir: 1 | -1 }>({ key: "displayName", dir: 1 });
-  let sel = $state<ServiceInfo | null>(null);
+  let sort = $state({ key: "displayName", dir: 1 });
+  let sel = $state(null);
   let selOpen = $state(false);
   let busy = $state(false);
   let newStart = $state("manual");
 
-  const START_LABEL: Record<string, string> = {
+  const START_LABEL = {
     auto: "Otomatik",
     auto_delayed: "Otomatik (gecikmeli)",
     manual: "El ile",
     disabled: "Devre dışı",
   };
-  const CONSEQ: Record<string, string> = {
+  const CONSEQ = {
     auto: "Servis Windows açılışında başlatılır.",
     auto_delayed: "Servis açılıştan kısa süre sonra başlatılır; açılış sırasında daha az kaynak kullanılır.",
     manual: "Servis yalnızca bir uygulama veya Windows ihtiyaç duyduğunda başlatılır.",
@@ -41,7 +40,7 @@
     loading = true;
     try {
       list = await sys.servicesList();
-      if (sel) sel = list.find((s) => s.name === sel!.name) ?? sel;
+      if (sel) sel = list.find((s) => s.name === sel.name) ?? sel;
     } catch (e) {
       toast("error", "Servisler okunamadı", errMsg(e));
     } finally {
@@ -49,18 +48,18 @@
     }
   }
 
-  function open(s: ServiceInfo) {
+  function open(s) {
     sel = s;
     newStart = ["auto", "auto_delayed", "manual", "disabled"].includes(s.startType) ? s.startType : "manual";
     selOpen = true;
   }
 
-  function replace(s: ServiceInfo) {
+  function replace(s) {
     list = list.map((x) => (x.name === s.name ? s : x));
     sel = s;
   }
 
-  function handleErr(e: unknown, title: string) {
+  function handleErr(e, title) {
     if (errCode(e) === "cancelled") toast("info", "Yönetici onayı verilmedi", "Değişiklik yapılmadı.");
     else toast(errCode(e) === "protected" ? "warning" : "error", title, errMsg(e));
   }
@@ -87,7 +86,7 @@
     }
   }
 
-  async function control(action: "start" | "stop" | "restart") {
+  async function control(action) {
     if (!sel) return;
     if (action === "restart") {
       const ok = await confirm({

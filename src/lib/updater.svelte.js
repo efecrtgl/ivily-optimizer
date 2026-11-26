@@ -7,38 +7,27 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { app, toast } from "./state.svelte";
-import { errCode, errMsg } from "./format";
+import { app, toast } from "./state.svelte.js";
+import { errCode, errMsg } from "./format.js";
 
-export interface UpdateInfo {
-  currentVersion: string;
-  latestVersion: string | null;
-  updateAvailable: boolean;
-  releaseName: string | null;
-  notes: string | null;
-  publishedAt: string | null;
-  htmlUrl: string | null;
-  installerAsset: { name: string; size: number; url: string } | null;
-  hasSignature: boolean;
-  updaterManifestUrl: string | null;
-  checkedAt: number;
-}
+/**
+ * @typedef {Object} UpdateInfo
+ * @property {string} currentVersion
+ * @property {string | null} latestVersion
+ * @property {boolean} updateAvailable
+ * @property {string | null} releaseName
+ * @property {string | null} notes
+ * @property {string | null} publishedAt
+ * @property {string | null} htmlUrl
+ * @property {{ name: string; size: number; url: string } | null} installerAsset
+ * @property {boolean} hasSignature
+ * @property {string | null} updaterManifestUrl
+ * @property {number} checkedAt
+ */
 
-export type UpdateStatus =
-  | "idle"
-  | "checking"
-  | "none"
-  | "available"
-  | "preparing"
-  | "downloading"
-  | "verifying"
-  | "installing"
-  | "restarting"
-  | "failed"
-  | "offline"
-  | "cancelled";
+/** @typedef {"idle" | "checking" | "none" | "available" | "preparing" | "downloading" | "verifying" | "installing" | "restarting" | "failed" | "offline" | "cancelled"} UpdateStatus */
 
-export const STATUS_LABEL: Record<UpdateStatus, string> = {
+export const STATUS_LABEL = {
   idle: "Henüz denetlenmedi",
   checking: "Güncellemeler kontrol ediliyor…",
   none: "Güncelleme bulunamadı. En son sürümü kullanıyorsunuz.",
@@ -54,16 +43,16 @@ export const STATUS_LABEL: Record<UpdateStatus, string> = {
 };
 
 export const updater = $state({
-  status: "idle" as UpdateStatus,
-  info: null as UpdateInfo | null,
-  error: null as string | null,
+  status: "idle" ,
+  info: null,
+  error: null,
   downloaded: 0,
   total: 0,
 });
 
 export async function loadLastCheck() {
   try {
-    const last = await invoke<UpdateInfo | null>("update_last_check");
+    const last = await invoke("update_last_check");
     if (last && updater.status === "idle") {
       updater.info = last;
       updater.status = last.updateAvailable ? "available" : "none";
@@ -73,12 +62,12 @@ export async function loadLastCheck() {
   }
 }
 
-export async function checkForUpdates(manual = true): Promise<void> {
+export async function checkForUpdates(manual = true) {
   if (["checking", "downloading", "verifying", "installing"].includes(updater.status)) return;
   updater.status = "checking";
   updater.error = null;
   try {
-    const info = await invoke<UpdateInfo>("update_check", {
+    const info = await invoke("update_check", {
       includePrerelease: app.settings?.updateIncludePrerelease ?? false,
     });
     updater.info = info;
@@ -103,7 +92,7 @@ export async function startupUpdateCheck() {
   if (due) setTimeout(() => checkForUpdates(false), 4000);
 }
 
-let unlisten: (() => void) | null = null;
+let unlisten = null;
 
 export async function installUpdate() {
   const info = updater.info;
@@ -119,7 +108,7 @@ export async function installUpdate() {
   updater.downloaded = 0;
   updater.total = 0;
   unlisten?.();
-  unlisten = await listen<{ stage: string; downloaded: number; total: number }>("update-progress", (e) => {
+  unlisten = await listen("update-progress", (e) => {
     const p = e.payload;
     if (p.stage === "downloading") {
       updater.status = "downloading";

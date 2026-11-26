@@ -1,37 +1,20 @@
 // Uygulama genelindeki durum (Svelte 5 runes).
 
 import { listen } from "@tauri-apps/api/event";
-import { api } from "./api";
-import type { JobDone, JobProgress, LiveStats, Settings, SystemInfo } from "./types";
-import { errMsg } from "./format";
-import { pushNotification } from "./notify.svelte";
+import { api } from "./api.js";
 
-export type Route =
-  | "overview"
-  | "insights"
-  | "disk"
-  | "files"
-  | "cleanup"
-  | "quarantine"
-  | "startup"
-  | "processes"
-  | "services"
-  | "tasks"
-  | "performance"
-  | "network"
-  | "history"
-  | "events"
-  | "updates"
-  | "settings"
-  | "about";
+import { errMsg } from "./format.js";
+import { pushNotification } from "./notify.svelte.js";
+
+/** @typedef {"overview" | "insights" | "disk" | "files" | "cleanup" | "quarantine" | "startup" | "processes" | "services" | "tasks" | "performance" | "network" | "history" | "events" | "updates" | "settings" | "about"} Route */
 
 // ---------------------------------------------------------------------------
 // Gezinme
 // ---------------------------------------------------------------------------
 
-export const nav = $state({ route: "overview" as Route, params: {} as Record<string, string> });
+export const nav = $state({ route: "overview" , params: {}  });
 
-export function go(route: Route, params: Record<string, string> = {}) {
+export function go(route, params = {}) {
   nav.route = route;
   nav.params = params;
   document.getElementById("main")?.scrollTo({ top: 0 });
@@ -42,9 +25,9 @@ export function go(route: Route, params: Record<string, string> = {}) {
 // ---------------------------------------------------------------------------
 
 export const app = $state({
-  settings: null as Settings | null,
-  info: null as SystemInfo | null,
-  infoSavedAt: null as number | null,
+  settings: null,
+  info: null,
+  infoSavedAt: null,
   infoLive: false,
 });
 
@@ -66,7 +49,7 @@ export async function loadSettings() {
   applyTheme();
 }
 
-export async function saveSettings(patch: Partial<Settings>): Promise<boolean> {
+export async function saveSettings(patch) {
   if (!app.settings) return false;
   try {
     app.settings = await api.settingsSet({ ...app.settings, ...patch });
@@ -82,17 +65,18 @@ export async function saveSettings(patch: Partial<Settings>): Promise<boolean> {
 // Bildirimler (toast)
 // ---------------------------------------------------------------------------
 
-export interface Toast {
-  id: number;
-  kind: "success" | "error" | "info" | "warning";
-  title: string;
-  body?: string;
-}
+/**
+ * @typedef {Object} Toast
+ * @property {number} id
+ * @property {"success" | "error" | "info" | "warning"} kind
+ * @property {string} title
+ * @property {string} [body]
+ */
 
-export const toasts = $state<Toast[]>([]);
+export const toasts = $state([]);
 let toastSeq = 0;
 
-export function toast(kind: Toast["kind"], title: string, body?: string, ms = 5000) {
+export function toast(kind, title, body, ms = 5000) {
   pushNotification(kind, title, body);
   if (app.settings && !app.settings.notifications && kind !== "error") return;
   const id = ++toastSeq;
@@ -101,7 +85,7 @@ export function toast(kind: Toast["kind"], title: string, body?: string, ms = 50
   setTimeout(() => dismissToast(id), kind === "error" ? Math.max(ms, 8000) : ms);
 }
 
-export function dismissToast(id: number) {
+export function dismissToast(id) {
   const i = toasts.findIndex((t) => t.id === id);
   if (i >= 0) toasts.splice(i, 1);
 }
@@ -110,24 +94,24 @@ export function dismissToast(id: number) {
 // Onay penceresi
 // ---------------------------------------------------------------------------
 
-export interface ConfirmOptions {
-  title: string;
-  body?: string;
-  details?: string[];
-  confirmLabel?: string;
-  cancelLabel?: string;
-  danger?: boolean;
-  /** Kullanıcının işaretlemesi gereken onay kutusu metni. */
-  acknowledge?: string;
-}
+/**
+ * @typedef {Object} ConfirmOptions
+ * @property {string} title
+ * @property {string} [body]
+ * @property {string[]} [details]
+ * @property {string} [confirmLabel]
+ * @property {string} [cancelLabel]
+ * @property {boolean} [danger]
+ * @property {string} [acknowledge] Kullanıcının işaretlemesi gereken onay kutusu metni.
+ */
 
 export const confirmState = $state({
   open: false,
-  opts: null as ConfirmOptions | null,
-  resolve: null as ((v: boolean) => void) | null,
+  opts: null,
+  resolve: null,
 });
 
-export function confirm(opts: ConfirmOptions): Promise<boolean> {
+export function confirm(opts) {
   return new Promise((resolve) => {
     confirmState.opts = opts;
     confirmState.resolve = resolve;
@@ -135,7 +119,7 @@ export function confirm(opts: ConfirmOptions): Promise<boolean> {
   });
 }
 
-export function closeConfirm(result: boolean) {
+export function closeConfirm(result) {
   confirmState.resolve?.(result);
   confirmState.open = false;
   confirmState.resolve = null;
@@ -145,27 +129,28 @@ export function closeConfirm(result: boolean) {
 // Arka plan işleri
 // ---------------------------------------------------------------------------
 
-export interface JobView {
-  id: string;
-  kind: string;
-  progress: JobProgress | null;
-}
+/**
+ * @typedef {Object} JobView
+ * @property {string} id
+ * @property {string} kind
+ * @property {JobProgress | null} progress
+ */
 
-export const jobs = $state<Record<string, JobView>>({});
-type DoneHandler = (d: JobDone) => void;
-const doneHandlers = new Map<string, Set<DoneHandler>>();
+export const jobs = $state({});
+/** @typedef {(d: JobDone) => void} DoneHandler */
+const doneHandlers = new Map();
 
-export function onJobDone(kind: string, fn: DoneHandler): () => void {
+export function onJobDone(kind, fn) {
   if (!doneHandlers.has(kind)) doneHandlers.set(kind, new Set());
-  doneHandlers.get(kind)!.add(fn);
+  doneHandlers.get(kind).add(fn);
   return () => doneHandlers.get(kind)?.delete(fn);
 }
 
-export function registerJob(kind: string, id: string) {
+export function registerJob(kind, id) {
   jobs[kind] = { id, kind, progress: null };
 }
 
-export async function cancelJob(kind: string) {
+export async function cancelJob(kind) {
   const j = jobs[kind];
   if (j) await api.cancelJob(j.id);
 }
@@ -174,13 +159,13 @@ let listening = false;
 export async function initJobs() {
   if (listening) return;
   listening = true;
-  await listen<JobProgress>("job-progress", (e) => {
+  await listen("job-progress", (e) => {
     const p = e.payload;
     const j = jobs[p.kind];
     if (j && j.id === p.id) j.progress = p;
     else jobs[p.kind] = { id: p.id, kind: p.kind, progress: p };
   });
-  await listen<JobDone>("job-done", (e) => {
+  await listen("job-done", (e) => {
     const d = e.payload;
     delete jobs[d.kind];
     doneHandlers.get(d.kind)?.forEach((fn) => fn(d));
@@ -193,8 +178,8 @@ export async function initJobs() {
 // Canlı izleme (tek, paylaşılan yoklayıcı)
 // ---------------------------------------------------------------------------
 
-export const live = $state({ stats: null as LiveStats | null, error: null as string | null });
-let pollTimer: ReturnType<typeof setTimeout> | null = null;
+export const live = $state({ stats: null, error: null });
+let pollTimer = null;
 let subscribers = 0;
 
 async function tick() {
@@ -212,7 +197,7 @@ async function tick() {
 }
 
 /** Canlı izlemeye abone olur; dönen işlev aboneliği bırakır. */
-export function useLive(): () => void {
+export function useLive() {
   subscribers++;
   if (subscribers === 1 && !pollTimer) tick();
   return () => {

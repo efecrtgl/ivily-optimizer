@@ -1,12 +1,12 @@
-<script lang="ts">
+<script>
   import { onMount } from "svelte";
   import Sidebar from "./lib/components/Sidebar.svelte";
   import Toasts from "./lib/components/Toasts.svelte";
   import ConfirmDialog from "./lib/components/ConfirmDialog.svelte";
   import Onboarding from "./lib/components/Onboarding.svelte";
   import Splash from "./lib/components/Splash.svelte";
-  import { app, nav, loadSettings, initJobs, loadSystemInfo } from "./lib/state.svelte";
-  import { startupUpdateCheck } from "./lib/updater.svelte";
+  import { app, nav, loadSettings, initJobs, loadSystemInfo } from "./lib/state.svelte.js";
+  import { startupUpdateCheck } from "./lib/updater.svelte.js";
 
   import Overview from "./pages/Overview.svelte";
   import Insights from "./pages/Insights.svelte";
@@ -46,7 +46,7 @@
   };
 
   let ready = $state(false);
-  let failed = $state<string | null>(null);
+  let failed = $state(null);
   let collapsed = $state(window.innerWidth < 1100);
   const Page = $derived(pages[nav.route]);
 
@@ -58,7 +58,7 @@
       loadSystemInfo();
       startupUpdateCheck();
     } catch (e) {
-      failed = String((e as any)?.message ?? e);
+      failed = String(e?.message ?? e);
     }
     const mq = window.matchMedia("(max-width: 1099px)");
     mq.addEventListener("change", (ev) => (collapsed = ev.matches));
