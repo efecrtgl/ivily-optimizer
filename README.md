@@ -92,6 +92,7 @@ Uygulama GitHub Releases'teki sürümleri denetler, sürümleri anlamsal sürüm
 | [docs/DERLEME.md](docs/DERLEME.md) | Kaynak koddan derleme |
 | [docs/GELISTIRME.md](docs/GELISTIRME.md) | Geliştirme ortamı, testler, kod düzeni |
 | [docs/MIMARI.md](docs/MIMARI.md) | Mimari ve teknoloji kararları |
+| [docs/PERFORMANS.md](docs/PERFORMANS.md) | Ölçülen kaynak kullanımı ve ölçüm yöntemi |
 | [docs/OZELLIKLER.md](docs/OZELLIKLER.md) | Özelliklerin ayrıntılı açıklaması |
 | [docs/SISTEM-GECMISI.md](docs/SISTEM-GECMISI.md) | Olay günlüğü analizi ve Ivily Zekâsı |
 | [docs/TASARIM-SISTEMI.md](docs/TASARIM-SISTEMI.md) | Tek renkli cam tasarım sistemi |

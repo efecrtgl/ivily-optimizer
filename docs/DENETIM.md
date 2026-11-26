@@ -184,3 +184,8 @@ Bu bölüm her faz tamamlandıkça güncellenir.
 | V3 | ✅ Faz 5 | Daha yeni şemalı veritabanına dokunulmaz; oturum bellek içi çalışır ve kullanıcı uyarılır. |
 | V4 | ✅ Faz 5 | Yükseltme öncesi `VACUUM INTO` yedeği; yedek alınamazsa göç yapılmaz. |
 | V5 | ✅ Faz 5 | `settings_import`: yalnızca ayarlar, doğrulanarak ve onayla içe aktarılır. |
+| P1 | ✅ Faz 6 | İşlemler sayfası `createPoller` kullanır; kapatılınca sürmekte olan istek bitse de yeniden zamanlanmaz. |
+| P2 | ✅ Faz 6 | Canlı izleme tek zincirli `createPoller` ile; nesil sayacı ikinci zinciri önler. |
+| P3 | ✅ Faz 6 | Gizli pencerede zamanlayıcı tamamen durur, görünür olunca devam eder. |
+| P4 | ✅ Faz 6 | Ivily Zekâsı 2 dakikalık önbellek; ilgili iş bitince geçersiz kılınır. Hesaplama hatasında yükleme durumu artık takılı kalmaz. |
+| P5 | ✅ Faz 6 | Sayfalar tembel yüklenir; açılış JS'i 394 KB → 144 KB. Ölçümler: `docs/PERFORMANS.md`. |

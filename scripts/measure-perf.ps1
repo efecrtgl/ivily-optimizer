@@ -19,10 +19,14 @@ param(
   [Parameter(Mandatory = $true)][string]$Exe,
   [int]$IdleSeconds = 30,
   [int]$Runs = 3,
-  [int]$SettleSeconds = 5
+  [int]$SettleSeconds = 5,
+  # Isınmadan sonra pencereyi simge durumuna küçültür; böylece arka planda
+  # (gizli pencere) boştaki kaynak kullanımı ölçülür.
+  [switch]$Minimize
 )
 $ErrorActionPreference = "Stop"
 $Exe = (Resolve-Path $Exe).Path
+Add-Type -Namespace IvilyPerf -Name User32 -MemberDefinition '[DllImport("user32.dll")] public static extern bool ShowWindow(System.IntPtr hWnd, int nCmdShow);'
 
 function Get-Tree([int]$RootId) {
   $all = Get-CimInstance Win32_Process -Property ProcessId, ParentProcessId, Name
@@ -65,10 +69,14 @@ for ($r = 1; $r -le $Runs; $r++) {
   $windowMs = [int]$sw.Elapsed.TotalMilliseconds
   if ($p.HasExited) { Write-Error "Çalıştırma ${r}: uygulama hemen kapandı (çıkış kodu $($p.ExitCode)); başka bir örnek çalışıyor olabilir." }
   Start-Sleep -Seconds $SettleSeconds
+  if ($Minimize) {
+    [void][IvilyPerf.User32]::ShowWindow($p.MainWindowHandle, 6) # SW_MINIMIZE
+    Start-Sleep -Seconds 2
+  }
   $start = Sample $p.Id
   Start-Sleep -Seconds $IdleSeconds
   $end = Sample $p.Id
-  $cpuPct = [math]::Round(100 * ($end.CpuSeconds - $start.CpuSeconds) / ($IdleSeconds * [Environment]::ProcessorCount), 2)
+  $cpuSec = $end.CpuSeconds - $start.CpuSeconds
   $results += [pscustomobject]@{
     Run             = $r
     WindowMs        = $windowMs
@@ -76,7 +84,9 @@ for ($r = 1; $r -le $Runs; $r++) {
     HostWorkingMB   = $end.HostMB
     TotalWorkingMB  = $end.WorkingMB
     TotalPrivateMB  = $end.PrivateMB
-    IdleCpuPercent  = $cpuPct
+    # Boşta geçen sürede tüm süreç ağacının harcadığı toplam işlemci süresi.
+    IdleCpuMs       = [int](1000 * $cpuSec)
+    IdleCpuPercent  = [math]::Round(100 * $cpuSec / ($IdleSeconds * [Environment]::ProcessorCount), 3)
   }
   $tree = @(Get-Tree $p.Id)
   $tree | ForEach-Object { Stop-Process -Id $_.Id -Force -ErrorAction SilentlyContinue }
