@@ -18,7 +18,7 @@
 
 ## Doğrulama
 
-- [ ] `npm run check` hatasız ve uyarısız
+- [ ] `npm run check` (ESLint) hatasız ve `npm test` başarılı
 - [ ] `npm run build` başarılı
 - [ ] `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` ve `cargo test --locked` başarılı (`src-tauri/` içinde)
 - [ ] Sistemi değiştiren yollar testlerde **çalıştırılmadı**; yalnızca geçici klasörlerde veya taklitlerle sınandı

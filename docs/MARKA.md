@@ -6,7 +6,7 @@ Ivily işareti; iki üçgen kulağı, altıgenimsi yüz hattı, sakin ve hafif �
 
 ## Tek kaynak
 
-Tüm geometri `src/lib/brand.ts` dosyasındadır:
+Tüm geometri `src/lib/brand.js` dosyasındadır:
 
 - `MARK_HEAD`, `MARK_CUTOUTS` — işaret (64×64)
 - `WORDMARK_LINES`, `WORDMARK_DOTS` — yuvarlak uçlu çizgilerden oluşan "ivily" yazı işareti

@@ -20,7 +20,7 @@ Olay metinleri Windows'tan olduğu gibi gelir. Ivily'nin açıklamaları ("Bu ol
 
 ## Ivily Zekâsı
 
-Kaynak: `src/lib/intelligence.svelte.ts`.
+Kaynak: `src/lib/intelligence.svelte.js`.
 
 Modüller arasında köprü kuran öneri katmanıdır. Şu kaynakları paralel okur ve yalnızca **ölçülen veri varsa** öneri üretir:
 

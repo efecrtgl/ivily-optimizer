@@ -5,14 +5,15 @@
 ```
 assets/brand/          Logo ve simge kaynakları (SVG)
 docs/                  Türkçe dokümantasyon
-scripts/               Yardımcı betikler (sürüm denetimi)
-src/                   Svelte 5 arayüzü
+scripts/               Yardımcı betikler (sürüm denetimi, marka varlıkları, kaynak ölçümü)
+src/                   Svelte 5 arayüzü (düz JavaScript; TypeScript kullanılmaz)
   App.svelte           Kabuk ve sayfa yönlendirme
   app.css              Tasarım sistemi (renk belirteçleri, bileşen stilleri)
-  lib/api.ts           Rust komutlarına tür güvenli erişim
-  lib/types.ts         Rust yapılarının TypeScript karşılıkları
-  lib/state.svelte.ts  Genel durum: gezinme, ayarlar, bildirimler, işler, canlı izleme
-  lib/updater.svelte.ts Güncelleme durum makinesi
+  lib/api.js           Rust komutlarına erişim (her yöntem JSDoc ile belgelenir)
+  lib/types.js         Rust yapılarının JSDoc tanımları (@typedef)
+  lib/state.svelte.js  Genel durum: gezinme, ayarlar, bildirimler, işler, canlı izleme
+  lib/updater.svelte.js Güncelleme durum makinesi
+  lib/*.test.js        Vitest testleri
   lib/components/      Yeniden kullanılabilir bileşenler (grafikler, pencereler…)
   pages/               Her sayfa için bir bileşen
 src-tauri/             Rust çekirdeği (bkz. MIMARI.md)
@@ -23,11 +24,13 @@ src-tauri/             Rust çekirdeği (bkz. MIMARI.md)
 
 ```powershell
 npm run tauri dev        # arayüz + Rust, sıcak yeniden yükleme
-npm run check            # svelte-check (TypeScript + erişilebilirlik uyarıları)
+npm run check            # ESLint (JavaScript + Svelte kuralları, erişilebilirlik uyarıları)
+npm test                 # Vitest: biçimlendirme ve Rust komut sözleşmesi testleri
 npm run build            # arayüz üretim derlemesi
 cd src-tauri
+cargo fmt --check        # biçim denetimi (rustfmt.toml)
+cargo clippy --all-targets -- -D warnings
 cargo test               # Rust birim ve entegrasyon testleri
-cargo clippy             # isteğe bağlı statik analiz
 ```
 
 Ayrıntılı günlük için: `$env:IVILY_LOG = "debug"; npm run tauri dev`.
@@ -40,6 +43,7 @@ Ayrıntılı günlük için: `$env:IVILY_LOG = "debug"; npm run tauri dev`.
 
 ## Kod kuralları
 
+- Arayüz **düz JavaScript** ile yazılır; `.ts` dosyası, `lang="ts"` veya `typescript` bağımlılığı eklenmez. Rust'tan gelen veri yapıları `src/lib/types.js` içinde JSDoc `@typedef` olarak, yeni komutlar `src/lib/api.js` içinde `@param`/`@returns` ile belgelenir. Yeni bir Rust komutu `api.js`'e eklendiğinde `src/lib/api.test.js` kayıtlı olup olmadığını otomatik denetler.
 - Kullanıcıya görünen tüm metinler doğal, profesyonel **Türkçe** olmalıdır. Kod tanımlayıcıları İngilizce kalabilir.
 - Yeni bir sistem değiştiren işlem: doğrulama → (gerekirse) tek seferlik yükseltme → gerçek durumu yeniden okuma → `oplog::record` ile önceki durumu kaydetme.
 - Dış program çağrılarında kabuk kullanmayın; `platform::hidden_command(platform::system_tool(..))` kullanın.
@@ -48,10 +52,14 @@ Ayrıntılı günlük için: `$env:IVILY_LOG = "debug"; npm run tauri dev`.
 
 ## Commit biçimi
 
+0.3.0'dan itibaren commit mesajları İngilizce [Conventional Commits](https://www.conventionalcommits.org/) biçimindedir (daha eski commit'ler Türkçedir):
+
 ```
-feat: disk tarama motorunu oluştur
-fix: tarama iptal işlemini düzelt
-perf: disk tarama kaynak kullanımını iyileştir
-test: disk analiz testlerini ekle
-docs: Türkçe kullanım dokümantasyonunu oluştur
+feat: add ecosystem capability discovery
+fix: reject parent-directory components in protected path checks
+perf: stop live polling while the window is hidden
+refactor: convert frontend from TypeScript to plain JavaScript
+test: add Rust command contract tests
+docs: document data paths and recovery
+ci: enforce clippy and dependency audits
 ```

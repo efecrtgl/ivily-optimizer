@@ -9,16 +9,24 @@
 | Slint | İyi performans; ancak lisans koşulları ve bileşen ekosistemi bu proje için Tauri kadar uygun değil. |
 | Electron | Her kurulumda Chromium ve Node.js taşır; "hafif uygulama" gereksinimine aykırı. |
 
-Svelte 5, derleme zamanında çalışma zamanı kodunu en aza indirdiği için seçildi (üretim JS paketi ~90 KB gzip). Grafikler (alan grafiği, halka, çubuk listesi, treemap) ek kitaplık olmadan SVG/HTML ile yazıldı.
+Svelte 5, derleme zamanında çalışma zamanı kodunu en aza indirdiği için seçildi (üretim JS paketi ~120 KB gzip). Grafikler (alan grafiği, halka, çubuk listesi, treemap) ek kitaplık olmadan SVG/HTML ile yazıldı.
+
+### Arayüz dili: düz JavaScript (0.3.0)
+
+Ivily ekosisteminin ortak kuralı arayüzlerde **TypeScript kullanılmaması** ve React + düz JavaScript tercih edilmesidir. Optimizer'ın 0.2.0 arayüzü Svelte 5 + TypeScript ile yazılmıştı. 0.3.0'da:
+
+- **TypeScript tamamen kaldırıldı.** Dönüşüm otomatik yapıldı; üretim paketinin içerik özeti dönüşümden önce ve sonra **birebir aynıdır** (`index-B6XAcwXW.js`), yani çalışan kod değişmedi.
+- **Svelte 5 korundu, React'e geçilmedi.** 17 sayfalık çalışan arayüzü yeniden yazmak gerileme riski taşıyordu ve Svelte'in derlenmiş çıktısı sanal DOM çalışma zamanı taşımadığından "hafif uygulama" hedefiyle daha uyumludur. Bu, ekosistem kuralından bilinçli ve belgelenmiş bir sapmadır; Optimizer'ın Center ile entegrasyonu arayüz çatısından bağımsızdır (bkz. IEP).
+- TypeScript'in sağladığı güvencenin yerine: Rust yapıları `types.js`'te JSDoc `@typedef` olarak belgelenir, ESLint tanımsız/kullanılmayan değişkenleri yakalar ve `api.test.js`, arayüzün çağırdığı her komutun arka uçta kayıtlı olduğunu doğrular.
 
 ## Katmanlar
 
 ```
 ┌──────────────────────────── Svelte arayüzü (src/) ─────────────────────────────┐
 │ pages/*  ·  lib/components/*  ·  lib/files/*                                   │
-│ lib/state.svelte.ts (gezinme, ayarlar, işler, canlı izleme)                    │
-│ lib/intelligence.svelte.ts (Ivily Zekâsı)  ·  lib/notify.svelte.ts (bildirimler)│
-│ lib/updater.svelte.ts  ·  lib/brand.ts (marka geometrisi)  ·  lib/api.ts       │
+│ lib/state.svelte.js (gezinme, ayarlar, işler, canlı izleme)                    │
+│ lib/intelligence.svelte.js (Ivily Zekâsı)  ·  lib/notify.svelte.js (bildirimler)│
+│ lib/updater.svelte.js  ·  lib/brand.js (marka geometrisi)  ·  lib/api.js       │
 └──────────────────────────────── invoke / olaylar ──────────────────────────────┘
 ┌──────────────────────────── Rust çekirdeği (src-tauri/src) ─────────────────────┐
 │ commands/   system · disk · maintenance · settings · sysmgmt · intel ·          │
