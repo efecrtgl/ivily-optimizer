@@ -6,7 +6,7 @@
 // - Veri yoksa öneri üretilmez (tahmin/uydurma yok).
 
 import { api, sys, intel, fx } from "./api.js";
-import { app, } from "./state.svelte.js";
+import { app, onJobDone } from "./state.svelte.js";
 import { updater } from "./updater.svelte.js";
 import { bytes, ago, num } from "./format.js";
 
@@ -39,10 +39,29 @@ export const intelState = $state({
 
 const rank = { bad: 0, warn: 1, info: 2 };
 
-/** Tüm kaynakları paralel okur ve önerileri yeniden hesaplar. */
+// Önerileri etkileyen işler bittiğinde önbelleği geçersiz kıl; bir sonraki
+// pano ziyaretinde yeniden hesaplanır.
+for (const kind of ["disk-scan", "cleanup-scan", "cleanup-run", "dupes", "cold"]) {
+  onJobDone(kind, () => (intelState.updatedAt = 0));
+}
+
+/**
+ * Tüm kaynakları paralel okur ve önerileri yeniden hesaplar.
+ * @param {{ events?: boolean, maxAgeSec?: number }} [opts] `maxAgeSec`
+ *   verilirse ve son hesaplama bundan yeniyse hiçbir komut çalıştırılmaz.
+ */
 export async function refreshIntelligence(opts = {}) {
   if (intelState.loading) return;
+  if (opts.maxAgeSec && intelState.updatedAt && Date.now() / 1000 - intelState.updatedAt < opts.maxAgeSec) return;
   intelState.loading = true;
+  try {
+    await load(opts);
+  } finally {
+    intelState.loading = false;
+  }
+}
+
+async function load(opts) {
   const [scan, snaps, cleanup, startup, insights, quarantine, events] = await Promise.allSettled([
     api.scanSummary(),
     api.snapshots(),
@@ -64,7 +83,6 @@ export async function refreshIntelligence(opts = {}) {
   if (events.status === "fulfilled") intelState.events = events.value;
   intelState.items = compute();
   intelState.updatedAt = Math.floor(Date.now() / 1000);
-  intelState.loading = false;
 }
 
 function compute() {

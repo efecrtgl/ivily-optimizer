@@ -53,7 +53,9 @@
   });
 
   async function load() {
-    refreshIntelligence();
+    // Pano her açıldığında 7 komutu yeniden çalıştırmamak için kısa süreli
+    // önbellek; ilgili bir iş bitince önbellek zaten geçersiz kılınır.
+    refreshIntelligence({ maxAgeSec: 120 });
     try {
       recent = (await api.oplog(undefined, 6)) ;
       if (!Array.isArray(recent)) recent = recent.items ?? [];

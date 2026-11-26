@@ -9,47 +9,47 @@
   import { api } from "./lib/api.js";
   import { startupUpdateCheck } from "./lib/updater.svelte.js";
 
+  // Açılışta yalnızca ilk ekran (Genel Bakış) yüklenir; diğer sayfalar ilk
+  // ziyaretlerinde ayrı parçalar olarak yüklenip önbellekte tutulur.
   import Overview from "./pages/Overview.svelte";
-  import Insights from "./pages/Insights.svelte";
-  import Disk from "./pages/Disk.svelte";
-  import Files from "./pages/Files.svelte";
-  import Cleanup from "./pages/Cleanup.svelte";
-  import Quarantine from "./pages/Quarantine.svelte";
-  import Startup from "./pages/Startup.svelte";
-  import Processes from "./pages/Processes.svelte";
-  import ServicesTasks from "./pages/ServicesTasks.svelte";
-  import Events from "./pages/Events.svelte";
-  import Updates from "./pages/Updates.svelte";
-  import Performance from "./pages/Performance.svelte";
-  import Network from "./pages/Network.svelte";
-  import History from "./pages/History.svelte";
-  import SettingsPage from "./pages/Settings.svelte";
-  import About from "./pages/About.svelte";
 
-  const pages = {
-    overview: Overview,
-    insights: Insights,
-    disk: Disk,
-    files: Files,
-    cleanup: Cleanup,
-    quarantine: Quarantine,
-    startup: Startup,
-    processes: Processes,
-    services: ServicesTasks,
-    tasks: ServicesTasks,
-    events: Events,
-    updates: Updates,
-    performance: Performance,
-    network: Network,
-    history: History,
-    settings: SettingsPage,
-    about: About,
+  const loaders = {
+    insights: () => import("./pages/Insights.svelte"),
+    disk: () => import("./pages/Disk.svelte"),
+    files: () => import("./pages/Files.svelte"),
+    cleanup: () => import("./pages/Cleanup.svelte"),
+    quarantine: () => import("./pages/Quarantine.svelte"),
+    startup: () => import("./pages/Startup.svelte"),
+    processes: () => import("./pages/Processes.svelte"),
+    services: () => import("./pages/ServicesTasks.svelte"),
+    tasks: () => import("./pages/ServicesTasks.svelte"),
+    events: () => import("./pages/Events.svelte"),
+    updates: () => import("./pages/Updates.svelte"),
+    performance: () => import("./pages/Performance.svelte"),
+    network: () => import("./pages/Network.svelte"),
+    history: () => import("./pages/History.svelte"),
+    settings: () => import("./pages/Settings.svelte"),
+    about: () => import("./pages/About.svelte"),
   };
+
+  let loaded = $state.raw({ overview: Overview });
+  let loadError = $state(null);
+
+  $effect(() => {
+    const route = nav.route;
+    if (loaded[route] || !loaders[route]) return;
+    loadError = null;
+    loaders[route]()
+      .then((m) => (loaded = { ...loaded, [route]: m.default }))
+      .catch((e) => {
+        if (nav.route === route) loadError = String(e?.message ?? e);
+      });
+  });
 
   let ready = $state(false);
   let failed = $state(null);
   let collapsed = $state(window.innerWidth < 1100);
-  const Page = $derived(pages[nav.route]);
+  const Page = $derived(loaded[nav.route]);
 
   onMount(async () => {
     try {
@@ -81,7 +81,13 @@
     <main id="main" tabindex="-1">
       <div class="page">
         {#key nav.route}
-          <Page />
+          {#if Page}
+            <Page />
+          {:else if loadError}
+            <p class="muted" role="alert">Sayfa yüklenemedi: {loadError}</p>
+          {:else}
+            <div class="page-loading" aria-busy="true" aria-label="Sayfa yükleniyor"></div>
+          {/if}
         {/key}
       </div>
     </main>
@@ -113,6 +119,9 @@
     .page {
       padding: 20px 18px 36px;
     }
+  }
+  .page-loading {
+    min-height: 40vh;
   }
   .skip {
     position: absolute;
