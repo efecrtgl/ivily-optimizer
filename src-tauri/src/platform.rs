@@ -100,7 +100,9 @@ fn shell_open(target: &str) -> AppResult<()> {
     use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
     let op = to_wide("open");
     let file = to_wide(target);
-    let r = unsafe { ShellExecuteW(None, PCWSTR(op.as_ptr()), PCWSTR(file.as_ptr()), PCWSTR::null(), PCWSTR::null(), SW_SHOWNORMAL) };
+    let r = unsafe {
+        ShellExecuteW(None, PCWSTR(op.as_ptr()), PCWSTR(file.as_ptr()), PCWSTR::null(), PCWSTR::null(), SW_SHOWNORMAL)
+    };
     if r.0 as isize <= 32 {
         return Err(AppError::System("adres açılamadı".into()));
     }
@@ -239,8 +241,12 @@ pub fn recycle_bin_info() -> Option<(u64, u64)> {
 pub fn empty_recycle_bin() -> AppResult<()> {
     use windows::Win32::UI::Shell::{SHEmptyRecycleBinW, SHERB_NOCONFIRMATION, SHERB_NOPROGRESSUI, SHERB_NOSOUND};
     unsafe {
-        SHEmptyRecycleBinW(None, windows::core::PCWSTR::null(), SHERB_NOCONFIRMATION | SHERB_NOPROGRESSUI | SHERB_NOSOUND)
-            .map_err(|e| AppError::System(format!("Geri Dönüşüm Kutusu boşaltılamadı: {e}")))
+        SHEmptyRecycleBinW(
+            None,
+            windows::core::PCWSTR::null(),
+            SHERB_NOCONFIRMATION | SHERB_NOPROGRESSUI | SHERB_NOSOUND,
+        )
+        .map_err(|e| AppError::System(format!("Geri Dönüşüm Kutusu boşaltılamadı: {e}")))
     }
 }
 #[cfg(not(windows))]

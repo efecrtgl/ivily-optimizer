@@ -169,13 +169,7 @@ pub fn spawn_reporter(app: AppHandle, ctl: JobCtl, estimated_bytes: Option<u64>)
 pub fn emit_done(app: &AppHandle, ctl: &JobCtl, status: &str, message: Option<String>, summary: serde_json::Value) {
     let _ = app.emit(
         "job-done",
-        JobDoneEvent {
-            id: ctl.id.clone(),
-            kind: ctl.kind.to_string(),
-            status: status.to_string(),
-            message,
-            summary,
-        },
+        JobDoneEvent { id: ctl.id.clone(), kind: ctl.kind.to_string(), status: status.to_string(), message, summary },
     );
 }
 

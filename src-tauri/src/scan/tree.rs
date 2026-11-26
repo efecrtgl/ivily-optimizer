@@ -5,8 +5,8 @@ use super::classify;
 use super::walker::{self, DirVisit, ScanErrorItem, WalkOptions, WalkProgress};
 use parking_lot::Mutex;
 use serde::Serialize;
-use std::collections::{BinaryHeap, HashMap};
 use std::cmp::Reverse;
+use std::collections::{BinaryHeap, HashMap};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
@@ -366,9 +366,8 @@ impl DiskScan {
     }
 
     pub fn largest_dirs(&self, limit: usize, max_depth: u16) -> Vec<NodeView> {
-        let mut ids: Vec<u32> = (1..self.nodes.len() as u32)
-            .filter(|&i| self.nodes[i as usize].depth <= max_depth)
-            .collect();
+        let mut ids: Vec<u32> =
+            (1..self.nodes.len() as u32).filter(|&i| self.nodes[i as usize].depth <= max_depth).collect();
         ids.sort_by(|a, b| self.nodes[*b as usize].size.cmp(&self.nodes[*a as usize].size));
         ids.truncate(limit);
         ids.into_iter().filter_map(|i| self.view(i)).collect()
@@ -445,19 +444,37 @@ pub fn recognize_dir(path: &str) -> Option<(&'static str, &'static str)> {
     if last == "node_modules" {
         return Some(("node_modules", "Bir JavaScript projesinin bağımlılıkları. Proje artık kullanılmıyorsa proje klasöründe silinip gerektiğinde `npm install` ile yeniden oluşturulabilir."));
     }
-    if (last == "target" && (std::path::Path::new(path).parent().map(|p| p.join("Cargo.toml").exists()).unwrap_or(false)))
+    if (last == "target"
+        && (std::path::Path::new(path).parent().map(|p| p.join("Cargo.toml").exists()).unwrap_or(false)))
         || has("target\\debug")
     {
-        return Some(("rust-target", "Rust derleme çıktıları. `cargo clean` ile güvenle silinebilir ve gerektiğinde yeniden derlenir."));
+        return Some((
+            "rust-target",
+            "Rust derleme çıktıları. `cargo clean` ile güvenle silinebilir ve gerektiğinde yeniden derlenir.",
+        ));
     }
     if last == ".git" || last == "objects" && lower.contains("\\.git\\") {
         return Some(("git", "Git deposu verisi. Silmeyin; `git gc` ile sıkıştırılabilir."));
     }
     if last == "__pycache__" || last == ".venv" || last == "venv" || last == "site-packages" {
-        return Some(("python", "Python ortamı veya önbelleği. Sanal ortamlar proje klasöründen yeniden oluşturulabilir."));
+        return Some((
+            "python",
+            "Python ortamı veya önbelleği. Sanal ortamlar proje klasöründen yeniden oluşturulabilir.",
+        ));
     }
-    if has("npm-cache") || has("yarn\\cache") || has("pnpm-store") || has(".nuget\\packages") || has("pip\\cache") || has(".gradle") || has(".m2") || has(".cargo\\registry") {
-        return Some(("package-cache", "Paket yöneticisi önbelleği. Kendi aracıyla temizlenmesi önerilir (ör. `npm cache clean`)."));
+    if has("npm-cache")
+        || has("yarn\\cache")
+        || has("pnpm-store")
+        || has(".nuget\\packages")
+        || has("pip\\cache")
+        || has(".gradle")
+        || has(".m2")
+        || has(".cargo\\registry")
+    {
+        return Some((
+            "package-cache",
+            "Paket yöneticisi önbelleği. Kendi aracıyla temizlenmesi önerilir (ör. `npm cache clean`).",
+        ));
     }
     if has("winsxs") || has("system32") || has("windows\\installer") {
         return Some(("windows", "Windows sistem bileşenleri. Elle değiştirilmemelidir."));

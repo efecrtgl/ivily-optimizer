@@ -77,11 +77,7 @@ pub fn running_process_names() -> HashSet<String> {
         Ok(s) => s,
         Err(_) => return HashSet::new(),
     };
-    sys.refresh_processes_specifics(
-        sysinfo::ProcessesToUpdate::All,
-        true,
-        sysinfo::ProcessRefreshKind::nothing(),
-    );
+    sys.refresh_processes_specifics(sysinfo::ProcessesToUpdate::All, true, sysinfo::ProcessRefreshKind::nothing());
     sys.processes().values().map(|p| p.name().to_string_lossy().to_lowercase()).collect()
 }
 
@@ -203,7 +199,12 @@ pub fn scan_categories(
             description: cat.description.to_string(),
             consequence: cat.consequence.to_string(),
             risk: cat.risk,
-            locations: cat.targets.iter().filter(|t| t.path.exists()).map(|t| t.path.to_string_lossy().into_owned()).collect(),
+            locations: cat
+                .targets
+                .iter()
+                .filter(|t| t.path.exists())
+                .map(|t| t.path.to_string_lossy().into_owned())
+                .collect(),
             size,
             files: count,
             errors,
@@ -248,7 +249,11 @@ impl CleanupScan {
             files: v
                 .into_iter()
                 .take(limit)
-                .map(|c| CleanupFile { path: c.path.to_string_lossy().into_owned(), size: c.size, modified: c.modified })
+                .map(|c| CleanupFile {
+                    path: c.path.to_string_lossy().into_owned(),
+                    size: c.size,
+                    modified: c.modified,
+                })
                 .collect(),
         })
     }
@@ -497,8 +502,15 @@ mod tests {
 
     fn scan_one(c: Category, running: &[&str]) -> CleanupScan {
         let running: HashSet<String> = running.iter().map(|s| s.to_string()).collect();
-        scan_categories(vec![c], &Default::default(), false, &AtomicBool::new(false), &WalkProgress::default(), &running)
-            .unwrap()
+        scan_categories(
+            vec![c],
+            &Default::default(),
+            false,
+            &AtomicBool::new(false),
+            &WalkProgress::default(),
+            &running,
+        )
+        .unwrap()
     }
 
     #[test]

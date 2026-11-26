@@ -300,20 +300,14 @@ pub fn like_escape(s: &str) -> String {
 pub fn query(db: &Db, f: &OpFilter) -> AppResult<(Vec<OpEntry>, i64)> {
     let kind = f.kind.as_deref().filter(|s| !s.is_empty());
     let outcome = f.outcome.as_deref().filter(|s| !s.is_empty());
-    let pattern = f
-        .query
-        .as_deref()
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-        .map(|q| format!("%{}%", like_escape(q)));
+    let pattern = f.query.as_deref().map(str::trim).filter(|s| !s.is_empty()).map(|q| format!("%{}%", like_escape(q)));
     let filter = "(?1 IS NULL OR kind = ?1) AND (?2 IS NULL OR outcome = ?2)
          AND (?3 IS NULL OR title LIKE ?3 ESCAPE '\\' OR COALESCE(target,'') LIKE ?3 ESCAPE '\\')";
     db.with(|c| {
-        let total: i64 = c.query_row(
-            &format!("SELECT COUNT(*) FROM oplog WHERE {filter}"),
-            params![kind, outcome, pattern],
-            |r| r.get(0),
-        )?;
+        let total: i64 =
+            c.query_row(&format!("SELECT COUNT(*) FROM oplog WHERE {filter}"), params![kind, outcome, pattern], |r| {
+                r.get(0)
+            })?;
         let mut st = c.prepare(&format!(
             "SELECT {COLS} FROM oplog WHERE {filter} ORDER BY ts DESC, id DESC LIMIT ?4 OFFSET ?5"
         ))?;
@@ -444,34 +438,70 @@ mod tests {
         assert_eq!(e.restore_status, "available");
 
         // "boot" önceki türü geri yüklenemez.
-        let id = record(&db, "service", "x", Outcome::Success, true, json!({"action":"start_type","name":"a","previousStartType":"boot"})).unwrap();
+        let id = record(
+            &db,
+            "service",
+            "x",
+            Outcome::Success,
+            true,
+            json!({"action":"start_type","name":"a","previousStartType":"boot"}),
+        )
+        .unwrap();
         assert_eq!(get(&db, id).unwrap().unwrap().restore_status, "none");
         // Hizmet durdurma/başlatma geri alınabilir sayılmaz.
-        let id = record(&db, "service", "x", Outcome::Success, true, json!({"action":"stop","name":"a","previousStartType":"auto"})).unwrap();
+        let id = record(
+            &db,
+            "service",
+            "x",
+            Outcome::Success,
+            true,
+            json!({"action":"stop","name":"a","previousStartType":"auto"}),
+        )
+        .unwrap();
         assert_eq!(get(&db, id).unwrap().unwrap().restore_status, "none");
         // Başarısız işlem geri alınamaz; hata alanı doldurulur.
-        let id = record(&db, "startup", "x", Outcome::Failed, true, json!({"id":"a","previousEnabled":true,"error":"erişim yok"})).unwrap();
+        let id = record(
+            &db,
+            "startup",
+            "x",
+            Outcome::Failed,
+            true,
+            json!({"id":"a","previousEnabled":true,"error":"erişim yok"}),
+        )
+        .unwrap();
         let e = get(&db, id).unwrap().unwrap();
         assert_eq!(e.restore_status, "none");
         assert_eq!(e.error.as_deref(), Some("erişim yok"));
         // Görev hedefi yol + ad.
-        let id = record(&db, "task", "x", Outcome::Success, true, json!({"path":"\\Ivily\\","name":"T","previousEnabled":false})).unwrap();
+        let id = record(
+            &db,
+            "task",
+            "x",
+            Outcome::Success,
+            true,
+            json!({"path":"\\Ivily\\","name":"T","previousEnabled":false}),
+        )
+        .unwrap();
         let e = get(&db, id).unwrap().unwrap();
         assert_eq!(e.target.as_deref(), Some("\\Ivily\\T"));
         assert_eq!(e.restore_status, "available");
         // Karantina kimlikleri olmayan dosya işlemi geri alınamaz.
-        let id = record(&db, "files", "x", Outcome::Success, true, json!({"mode":"quarantine","items":["C:\\a.txt"]})).unwrap();
+        let id = record(&db, "files", "x", Outcome::Success, true, json!({"mode":"quarantine","items":["C:\\a.txt"]}))
+            .unwrap();
         let e = get(&db, id).unwrap().unwrap();
         assert_eq!(e.restore_status, "none");
         assert_eq!(e.target.as_deref(), Some("C:\\a.txt"));
-        let id = record(&db, "files", "x", Outcome::Success, true, json!({"mode":"recycle","quarantineIds":["q"]})).unwrap();
+        let id =
+            record(&db, "files", "x", Outcome::Success, true, json!({"mode":"recycle","quarantineIds":["q"]})).unwrap();
         assert_eq!(get(&db, id).unwrap().unwrap().restore_status, "none");
-        let id = record(&db, "files", "x", Outcome::Success, true, json!({"mode":"quarantine","quarantineIds":["q"]})).unwrap();
+        let id = record(&db, "files", "x", Outcome::Success, true, json!({"mode":"quarantine","quarantineIds":["q"]}))
+            .unwrap();
         assert_eq!(get(&db, id).unwrap().unwrap().restore_status, "available");
         // Güncelleme onaylı sayılmaz.
         let id = record(&db, "update", "x", Outcome::Success, false, json!({})).unwrap();
         assert!(!get(&db, id).unwrap().unwrap().confirmed);
-        let id = record(&db, "quarantine", "Karantinadan kalıcı silme: 2 öğe", Outcome::Success, false, json!({})).unwrap();
+        let id =
+            record(&db, "quarantine", "Karantinadan kalıcı silme: 2 öğe", Outcome::Success, false, json!({})).unwrap();
         assert!(get(&db, id).unwrap().unwrap().confirmed);
     }
 
@@ -481,7 +511,8 @@ mod tests {
         for i in 0..25 {
             record(&db, "cleanup", &format!("Temizlik {i}"), Outcome::Success, false, json!({})).unwrap();
         }
-        record(&db, "files", "100% indirim_dosyası", Outcome::Partial, true, json!({"items":["C:\\x\\rapor.pdf"]})).unwrap();
+        record(&db, "files", "100% indirim_dosyası", Outcome::Partial, true, json!({"items":["C:\\x\\rapor.pdf"]}))
+            .unwrap();
         let f = |kind: Option<&str>, q: Option<&str>, o: Option<&str>, limit, offset| OpFilter {
             kind: kind.map(Into::into),
             query: q.map(Into::into),
@@ -510,7 +541,15 @@ mod tests {
     #[test]
     fn csv_export_contents() {
         let db = Db::open_in_memory().unwrap();
-        record(&db, "files", "2 dosya; \"karantina\"", Outcome::Success, true, json!({"mode":"quarantine","quarantineIds":["a"]})).unwrap();
+        record(
+            &db,
+            "files",
+            "2 dosya; \"karantina\"",
+            Outcome::Success,
+            true,
+            json!({"mode":"quarantine","quarantineIds":["a"]}),
+        )
+        .unwrap();
         let csv = to_csv(&list(&db, None, 10).unwrap());
         assert!(csv.starts_with('\u{feff}'));
         let mut lines = csv.trim_start_matches('\u{feff}').lines();

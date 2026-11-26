@@ -94,9 +94,7 @@ impl Db {
         conn.pragma_update(None, "foreign_keys", "ON")?;
         let version: i64 = conn.pragma_query_value(None, "user_version", |r| r.get(0))?;
         if version > SCHEMA_VERSION {
-            return Err(AppError::Storage(
-                "veritabanı daha yeni bir sürüm tarafından oluşturulmuş".into(),
-            ));
+            return Err(AppError::Storage("veritabanı daha yeni bir sürüm tarafından oluşturulmuş".into()));
         }
         if version < 1 {
             conn.execute_batch(MIGRATION_1)?;
@@ -124,10 +122,7 @@ impl Db {
     }
 
     pub fn kv_get(&self, key: &str) -> AppResult<Option<String>> {
-        self.with(|c| {
-            c.query_row("SELECT value FROM kv WHERE key = ?1", [key], |r| r.get(0))
-                .optional()
-        })
+        self.with(|c| c.query_row("SELECT value FROM kv WHERE key = ?1", [key], |r| r.get(0)).optional())
     }
 
     pub fn kv_set(&self, key: &str, value: &str) -> AppResult<()> {

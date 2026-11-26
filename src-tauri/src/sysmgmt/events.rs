@@ -216,7 +216,11 @@ pub fn categorize(provider: &str, id: u32, message: &str) -> &'static str {
         ("microsoft-windows-kernel-general", 12 | 13) => "boot",
         ("user32", 1074) => "shutdown_planned",
         _ => {
-            if p.starts_with("nvlddmkm") || p.starts_with("amdkmdag") || p.starts_with("igfx") || p.starts_with("amdwddmg") {
+            if p.starts_with("nvlddmkm")
+                || p.starts_with("amdkmdag")
+                || p.starts_with("igfx")
+                || p.starts_with("amdwddmg")
+            {
                 "driver"
             } else {
                 "other"
@@ -225,7 +229,8 @@ pub fn categorize(provider: &str, id: u32, message: &str) -> &'static str {
     }
 }
 
-const UNKNOWN_INTERPRETATION: &str = "Bu olay seçilen dönemde tekrarlandı. Ivily bu olay için özel bir yorum içermiyor.";
+const UNKNOWN_INTERPRETATION: &str =
+    "Bu olay seçilen dönemde tekrarlandı. Ivily bu olay için özel bir yorum içermiyor.";
 
 /// Kısa Türkçe açıklama ("Ivily yorumu").
 pub fn interpretation(provider: &str, id: u32, category: &str) -> &'static str {
@@ -554,7 +559,8 @@ pub fn context(ts: i64, window_minutes: u32) -> AppResult<EventsContext> {
         from,
         to,
         events,
-        note: "Bu olaylar aynı zaman aralığında kaydedildi. Aralarında neden-sonuç ilişkisi olduğu kanıtlanmamıştır.".into(),
+        note: "Bu olaylar aynı zaman aralığında kaydedildi. Aralarında neden-sonuç ilişkisi olduğu kanıtlanmamıştır."
+            .into(),
     })
 }
 
@@ -563,7 +569,11 @@ pub fn context(ts: i64, window_minutes: u32) -> AppResult<EventsContext> {
 // ---------------------------------------------------------------------------
 
 fn fmt_local(ts: i64) -> String {
-    Local.timestamp_opt(ts, 0).single().map(|d| d.format("%Y-%m-%d %H:%M:%S").to_string()).unwrap_or_else(|| ts.to_string())
+    Local
+        .timestamp_opt(ts, 0)
+        .single()
+        .map(|d| d.format("%Y-%m-%d %H:%M:%S").to_string())
+        .unwrap_or_else(|| ts.to_string())
 }
 
 fn csv_field(s: &str) -> String {
@@ -729,7 +739,8 @@ mod tests {
         assert_eq!(categorize("Microsoft-Windows-Kernel-General", 12, ""), "boot");
         assert_eq!(categorize("User32", 1074, ""), "shutdown_planned");
         assert_eq!(category_label("bsod"), "Mavi ekran (sistem hatası)");
-        assert!(interpretation("Microsoft-Windows-Kernel-Power", 41, "unexpected_shutdown").starts_with("Bilgisayar düzgün kapatılmadan"));
+        assert!(interpretation("Microsoft-Windows-Kernel-Power", 41, "unexpected_shutdown")
+            .starts_with("Bilgisayar düzgün kapatılmadan"));
         assert_eq!(interpretation("Foo", 1, "other"), UNKNOWN_INTERPRETATION);
     }
 
@@ -767,7 +778,10 @@ mod tests {
         assert_eq!(s.by_day.iter().map(|d| d.critical + d.error + d.warning).sum::<u32>(), 6);
         let n = compute_notable(&events);
         assert_eq!(n.unexpected_shutdowns, 2);
-        let r = build_report(&QueryParams { days: 7, levels: vec![1, 2, 3], logs: vec!["System".into()], max: 100 }, events);
+        let r = build_report(
+            &QueryParams { days: 7, levels: vec![1, 2, 3], logs: vec!["System".into()], max: 100 },
+            events,
+        );
         assert!(!r.truncated);
         let txt = to_txt(&r);
         assert!(txt.contains("Ivily yorumu:"));
@@ -781,7 +795,8 @@ mod tests {
         assert!(parse_events("").unwrap().is_empty());
         assert!(parse_events("null").unwrap().is_empty());
         assert!(parse_events("[]").unwrap().is_empty());
-        let one = r#"{"t":1700000000,"g":"System","v":1,"p":"Microsoft-Windows-Kernel-Power","i":41,"r":12345,"m":null}"#;
+        let one =
+            r#"{"t":1700000000,"g":"System","v":1,"p":"Microsoft-Windows-Kernel-Power","i":41,"r":12345,"m":null}"#;
         let v = parse_events(one).unwrap();
         assert_eq!(v.len(), 1);
         assert_eq!(v[0].id, "System:12345");

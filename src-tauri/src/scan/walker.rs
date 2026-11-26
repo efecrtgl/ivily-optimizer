@@ -41,7 +41,8 @@ impl FileEntry {
     }
     /// OneDrive gibi bulut yer tutucuları: boyut yerel diskte olmayabilir.
     pub fn is_cloud_placeholder(&self) -> bool {
-        self.attrs & (FILE_ATTRIBUTE_OFFLINE | FILE_ATTRIBUTE_RECALL_ON_OPEN | FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS) != 0
+        self.attrs & (FILE_ATTRIBUTE_OFFLINE | FILE_ATTRIBUTE_RECALL_ON_OPEN | FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS)
+            != 0
     }
 }
 
@@ -119,10 +120,7 @@ pub struct WalkOutcome {
 const MAX_ERRORS_KEPT: usize = 500;
 
 fn ts(t: std::io::Result<std::time::SystemTime>) -> i64 {
-    t.ok()
-        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-        .map(|d| d.as_secs() as i64)
-        .unwrap_or(0)
+    t.ok().and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map(|d| d.as_secs() as i64).unwrap_or(0)
 }
 
 #[cfg(windows)]
@@ -171,7 +169,13 @@ impl<V> Shared<'_, V> {
 
 /// `root` altını gezer. Ziyaretçi her klasör için bir kez çağrılır ve klasöre
 /// verdiği kimliği döndürür; alt klasörler bu kimliği `parent` olarak alır.
-pub fn walk<V>(root: &Path, opts: &WalkOptions, cancel: &AtomicBool, progress: &WalkProgress, visitor: &V) -> WalkOutcome
+pub fn walk<V>(
+    root: &Path,
+    opts: &WalkOptions,
+    cancel: &AtomicBool,
+    progress: &WalkProgress,
+    visitor: &V,
+) -> WalkOutcome
 where
     V: Fn(DirVisit) -> u32 + Sync,
 {
@@ -288,16 +292,8 @@ fn visit_dir<'s, V>(
         }
     }
 
-    let id = (sh.visitor)(DirVisit {
-        path: &path,
-        name: &name,
-        parent,
-        depth,
-        modified,
-        files,
-        skipped_links,
-        unreadable,
-    });
+    let id =
+        (sh.visitor)(DirVisit { path: &path, name: &name, parent, depth, modified, files, skipped_links, unreadable });
 
     if let Some(max) = sh.opts.max_depth {
         if depth >= max {
@@ -419,11 +415,7 @@ mod tests {
         let t = tree();
         let link = t.path().join("loop");
         // Kökü gösteren bir junction: izlenseydi sonsuz döngü oluşurdu.
-        let status = std::process::Command::new("cmd")
-            .args(["/C", "mklink", "/J"])
-            .arg(&link)
-            .arg(t.path())
-            .output();
+        let status = std::process::Command::new("cmd").args(["/C", "mklink", "/J"]).arg(&link).arg(t.path()).output();
         if !matches!(status, Ok(ref o) if o.status.success()) {
             return; // junction oluşturulamadıysa testi atla
         }

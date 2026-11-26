@@ -174,7 +174,12 @@ pub fn list() -> AppResult<PowerOverview> {
     } else {
         "Güç planı değişikliği yönetici izni gerektirmez ve istediğiniz zaman geri alınabilir. Yüksek performanslı planlar enerji tüketimini artırır; oyun performansında belirgin bir artış garanti etmez.".into()
     };
-    Ok(PowerOverview { active_guid: active.or_else(|| plans.iter().find(|p| p.active).map(|p| p.guid.clone())), plans, battery: battery(), note })
+    Ok(PowerOverview {
+        active_guid: active.or_else(|| plans.iter().find(|p| p.active).map(|p| p.guid.clone())),
+        plans,
+        battery: battery(),
+        note,
+    })
 }
 
 /// Etkin güç planını değiştirir (yönetici izni gerekmez).
@@ -185,7 +190,12 @@ pub fn set_active(db: &Db, guid: &str) -> AppResult<ChangeResult<PowerPlan>> {
         return Err(AppError::NotFound("bu güç planı sistemde bulunamadı".into()));
     };
     if target.active {
-        return Ok(ChangeResult { message: format!("\"{}\" zaten etkin.", target.name), item: target, elevated: false, oplog_id: None });
+        return Ok(ChangeResult {
+            message: format!("\"{}\" zaten etkin.", target.name),
+            item: target,
+            elevated: false,
+            oplog_id: None,
+        });
     }
     let previous = before.active_guid.clone();
     let previous_name = before.plans.iter().find(|p| Some(&p.guid) == previous.as_ref()).map(|p| p.name.clone());
@@ -213,7 +223,12 @@ pub fn set_active(db: &Db, guid: &str) -> AppResult<ChangeResult<PowerPlan>> {
     )
     .ok();
     let item = PowerPlan { active: true, ..target };
-    Ok(ChangeResult { message: format!("\"{}\" güç planı etkinleştirildi.", item.name), item, elevated: false, oplog_id })
+    Ok(ChangeResult {
+        message: format!("\"{}\" güç planı etkinleştirildi.", item.name),
+        item,
+        elevated: false,
+        oplog_id,
+    })
 }
 
 #[cfg(test)]

@@ -15,24 +15,24 @@ pub const CATEGORIES: &[(&str, &str)] = &[
 
 pub fn category_of_ext(ext: &str) -> &'static str {
     match ext {
-        "jpg" | "jpeg" | "png" | "gif" | "bmp" | "webp" | "tif" | "tiff" | "heic" | "heif" | "svg" | "ico"
-        | "raw" | "cr2" | "nef" | "arw" | "dng" | "psd" | "avif" => "image",
+        "jpg" | "jpeg" | "png" | "gif" | "bmp" | "webp" | "tif" | "tiff" | "heic" | "heif" | "svg" | "ico" | "raw"
+        | "cr2" | "nef" | "arw" | "dng" | "psd" | "avif" => "image",
         "mp4" | "mkv" | "avi" | "mov" | "wmv" | "flv" | "webm" | "m4v" | "mpg" | "mpeg" | "ts" | "m2ts" | "3gp" => {
             "video"
         }
         "mp3" | "wav" | "flac" | "aac" | "ogg" | "m4a" | "wma" | "opus" | "aiff" | "mid" | "midi" => "audio",
         "pdf" | "doc" | "docx" | "xls" | "xlsx" | "ppt" | "pptx" | "odt" | "ods" | "odp" | "rtf" | "txt" | "md"
         | "csv" | "epub" | "pages" | "numbers" | "key" | "one" => "document",
-        "zip" | "rar" | "7z" | "tar" | "gz" | "bz2" | "xz" | "zst" | "cab" | "iso" | "img" | "vhd" | "vhdx" | "vmdk"
-        | "wim" | "esd" => "archive",
+        "zip" | "rar" | "7z" | "tar" | "gz" | "bz2" | "xz" | "zst" | "cab" | "iso" | "img" | "vhd" | "vhdx"
+        | "vmdk" | "wim" | "esd" => "archive",
         "exe" | "dll" | "msi" | "msix" | "appx" | "sys" | "com" | "scr" | "ocx" | "drv" | "efi" | "jar" | "apk" => {
             "executable"
         }
         "rs" | "c" | "h" | "cpp" | "hpp" | "cc" | "cs" | "java" | "kt" | "py" | "pyc" | "js" | "mjs" | "cjs"
-        | "tsx" | "jsx" | "go" | "rb" | "php" | "swift" | "lua" | "json" | "toml" | "yaml" | "yml"
-        | "xml" | "html" | "css" | "scss" | "vue" | "svelte" | "sql" | "sh" | "ps1" | "bat" | "cmd" | "obj"
-        | "o" | "a" | "lib" | "pdb" | "ilk" | "rlib" | "rmeta" | "d" | "class" | "map" | "wasm" | "node"
-        | "lock" | "gradle" | "sln" | "csproj" | "vcxproj" | "ipynb" => "code",
+        | "tsx" | "jsx" | "go" | "rb" | "php" | "swift" | "lua" | "json" | "toml" | "yaml" | "yml" | "xml" | "html"
+        | "css" | "scss" | "vue" | "svelte" | "sql" | "sh" | "ps1" | "bat" | "cmd" | "obj" | "o" | "a" | "lib"
+        | "pdb" | "ilk" | "rlib" | "rmeta" | "d" | "class" | "map" | "wasm" | "node" | "lock" | "gradle" | "sln"
+        | "csproj" | "vcxproj" | "ipynb" => "code",
         "tmp" | "temp" | "log" | "etl" | "dmp" | "old" | "bak" | "chk" | "~" => "temp",
         _ => "other",
     }

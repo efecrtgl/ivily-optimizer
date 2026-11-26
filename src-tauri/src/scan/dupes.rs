@@ -105,7 +105,8 @@ fn group_by<K: std::hash::Hash + Eq + Send>(
 pub fn find(root: &Path, opts: &WalkOptions, min_size: u64, ctl: &JobCtl) -> DupReport {
     let progress: &WalkProgress = &ctl.progress;
     ctl.set_phase("Dosyalar listeleniyor", 0);
-    let (files, outcome) = collect_files(root, opts, &ctl.cancel, progress, |_, f| f.size >= min_size && !f.is_cloud_placeholder());
+    let (files, outcome) =
+        collect_files(root, opts, &ctl.cancel, progress, |_, f| f.size >= min_size && !f.is_cloud_placeholder());
     let scanned = files.len() as u64;
     let mut report = DupReport {
         root: root.to_string_lossy().into_owned(),

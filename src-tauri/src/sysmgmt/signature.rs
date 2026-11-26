@@ -70,10 +70,15 @@ pub fn classify(code: u32) -> Option<&'static str> {
     match code {
         0 => Some("signed"),
         TRUST_E_NOSIGNATURE | TRUST_E_SUBJECT_FORM_UNKNOWN | TRUST_E_PROVIDER_UNKNOWN => None,
-        TRUST_E_BAD_DIGEST | TRUST_E_CERT_SIGNATURE | TRUST_E_EXPLICIT_DISTRUST | CERT_E_UNTRUSTEDROOT
-        | CERT_E_REVOKED | CERT_E_EXPIRED | CERT_E_UNTRUSTEDTESTROOT | CERT_E_WRONG_USAGE | TRUST_E_TIME_STAMP => {
-            Some("invalid")
-        }
+        TRUST_E_BAD_DIGEST
+        | TRUST_E_CERT_SIGNATURE
+        | TRUST_E_EXPLICIT_DISTRUST
+        | CERT_E_UNTRUSTEDROOT
+        | CERT_E_REVOKED
+        | CERT_E_EXPIRED
+        | CERT_E_UNTRUSTEDTESTROOT
+        | CERT_E_WRONG_USAGE
+        | TRUST_E_TIME_STAMP => Some("invalid"),
         // Zincir çevrimdışı kurulamadı, ilke engeli vb.: dürüstçe "doğrulanamadı".
         _ => Some("unknown"),
     }
@@ -283,7 +288,9 @@ mod imp {
                 CERT_QUERY_OBJECT_FILE,
                 wpath.as_ptr() as *const _,
                 // Katalog dosyaları da PKCS#7 imzalı ileti olarak açılır.
-                CERT_QUERY_CONTENT_TYPE_FLAGS(CERT_QUERY_CONTENT_FLAG_PKCS7_SIGNED.0 | CERT_QUERY_CONTENT_FLAG_PKCS7_SIGNED_EMBED.0),
+                CERT_QUERY_CONTENT_TYPE_FLAGS(
+                    CERT_QUERY_CONTENT_FLAG_PKCS7_SIGNED.0 | CERT_QUERY_CONTENT_FLAG_PKCS7_SIGNED_EMBED.0,
+                ),
                 CERT_QUERY_FORMAT_FLAG_BINARY,
                 0,
                 None,

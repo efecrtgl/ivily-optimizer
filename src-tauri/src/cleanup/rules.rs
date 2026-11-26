@@ -174,7 +174,8 @@ pub fn categories(temp_min_age_hours: u64, user_rules: &[crate::settings::UserCl
             id: "directx-shader-cache".into(),
             group: "Windows",
             name: "DirectX gölgelendirici önbelleği".into(),
-            description: "Oyun ve uygulamaların derlenmiş gölgelendiricileri (D3DSCache). Gerektiğinde yeniden oluşturulur.",
+            description:
+                "Oyun ve uygulamaların derlenmiş gölgelendiricileri (D3DSCache). Gerektiğinde yeniden oluşturulur.",
             consequence: "Oyunlar ilk açılışta gölgelendiricileri yeniden derlerken kısa süreli takılmalar olabilir.",
             risk: Risk::Safe,
             kind: Kind::Files,
@@ -186,7 +187,8 @@ pub fn categories(temp_min_age_hours: u64, user_rules: &[crate::settings::UserCl
             id: "gpu-shader-cache".into(),
             group: "Windows",
             name: "Ekran kartı sürücüsü gölgelendirici önbelleği".into(),
-            description: "NVIDIA, AMD ve Intel sürücülerinin gölgelendirici önbellekleri. Sürücü bunları yeniden oluşturur.",
+            description:
+                "NVIDIA, AMD ve Intel sürücülerinin gölgelendirici önbellekleri. Sürücü bunları yeniden oluşturur.",
             consequence: "Oyunlar ilk açılışta kısa süre daha yavaş yüklenebilir.",
             risk: Risk::Safe,
             kind: Kind::Files,
@@ -234,7 +236,8 @@ pub fn categories(temp_min_age_hours: u64, user_rules: &[crate::settings::UserCl
         group: "Windows",
         name: "Geri Dönüşüm Kutusu".into(),
         description: "Daha önce sildiğiniz ve Geri Dönüşüm Kutusu'nda bekleyen dosyalar.",
-        consequence: "Geri Dönüşüm Kutusu'ndaki dosyalar kalıcı olarak silinir ve geri alınamaz. Önce içeriğini gözden geçirin.",
+        consequence:
+            "Geri Dönüşüm Kutusu'ndaki dosyalar kalıcı olarak silinir ve geri alınamaz. Önce içeriğini gözden geçirin.",
         risk: Risk::Review,
         kind: Kind::RecycleBin,
         targets: vec![],
@@ -292,8 +295,10 @@ pub fn categories(temp_min_age_hours: u64, user_rules: &[crate::settings::UserCl
                     id: "browser-firefox".into(),
                     group: "Tarayıcılar",
                     name: "Mozilla Firefox önbelleği".into(),
-                    description: "Firefox'un disk önbelleği (cache2). Çerezler, oturumlar, geçmiş ve parolalar etkilenmez.",
-                    consequence: "Siteler ilk ziyarette biraz daha yavaş açılabilir. Firefox açıkken temizlik yapılmaz.",
+                    description:
+                        "Firefox'un disk önbelleği (cache2). Çerezler, oturumlar, geçmiş ve parolalar etkilenmez.",
+                    consequence:
+                        "Siteler ilk ziyarette biraz daha yavaş açılabilir. Firefox açıkken temizlik yapılmaz.",
                     risk: Risk::Safe,
                     kind: Kind::Files,
                     targets,
@@ -450,12 +455,16 @@ pub fn is_protected_path(path: &str) -> bool {
         }
     }
     let drive = &p[..2.min(p.len())];
-    for sys in ["system volume information", "$recycle.bin", "recovery", "boot", "$windows.~bt", "$windows.~ws", "$winreagent"] {
+    for sys in
+        ["system volume information", "$recycle.bin", "recovery", "boot", "$windows.~bt", "$windows.~ws", "$winreagent"]
+    {
         if paths::is_within(&p, &format!("{drive}\\{sys}")) {
             return true;
         }
     }
-    for f in ["pagefile.sys", "hiberfil.sys", "swapfile.sys", "bootmgr", "bootnxt", "dumpstack.log", "dumpstack.log.tmp"] {
+    for f in
+        ["pagefile.sys", "hiberfil.sys", "swapfile.sys", "bootmgr", "bootnxt", "dumpstack.log", "dumpstack.log.tmp"]
+    {
         if p == format!("{drive}\\{f}") {
             return true;
         }

@@ -79,11 +79,14 @@ pub fn fill_dependents(list: &mut [ServiceInfo]) {
 // ---------------------------------------------------------------------------
 
 const R_CORE: &str = "Windows'un temel bileşenlerinden biridir; değiştirilmesi sistemin açılmamasına veya kararsız çalışmasına yol açabilir.";
-const R_SECURITY: &str = "Bilgisayarınızın güvenliği için gereklidir (güvenlik duvarı, virüs koruması, kimlik bilgileri veya şifreleme).";
-const R_NETWORK: &str = "Ağ ve internet bağlantısı için gereklidir; değiştirilmesi bağlantının kesilmesine yol açabilir.";
+const R_SECURITY: &str =
+    "Bilgisayarınızın güvenliği için gereklidir (güvenlik duvarı, virüs koruması, kimlik bilgileri veya şifreleme).";
+const R_NETWORK: &str =
+    "Ağ ve internet bağlantısı için gereklidir; değiştirilmesi bağlantının kesilmesine yol açabilir.";
 const R_AUDIO: &str = "Ses aygıtlarının çalışması için gereklidir.";
 const R_UPDATE: &str = "Windows güncellemeleri, lisans etkinleştirme veya yazılım kurulumu için gereklidir; değiştirilmesi güvenlik güncellemelerinin alınmasını engelleyebilir.";
-const R_UAC: &str = "Yönetici izni (UAC) isteklerini işler; değiştirilmesi yönetici gerektiren işlemleri imkânsız hâle getirebilir.";
+const R_UAC: &str =
+    "Yönetici izni (UAC) isteklerini işler; değiştirilmesi yönetici gerektiren işlemleri imkânsız hâle getirebilir.";
 
 /// Korunan hizmetler ve gerekçeleri. Bu hizmetlerin başlangıç türü
 /// değiştirilemez ve durdurulamaz (başlatılmalarına izin verilir).
@@ -211,7 +214,9 @@ pub fn sc_start_value(start_type: &str) -> AppResult<&'static str> {
         "auto_delayed" => Ok("delayed-auto"),
         "manual" => Ok("demand"),
         "disabled" => Ok("disabled"),
-        _ => Err(AppError::InvalidInput("başlangıç türü geçersiz (auto, auto_delayed, manual veya disabled olmalı)".into())),
+        _ => Err(AppError::InvalidInput(
+            "başlangıç türü geçersiz (auto, auto_delayed, manual veya disabled olmalı)".into(),
+        )),
     }
 }
 
@@ -328,7 +333,9 @@ mod imp {
             if n2 > 0 {
                 let mut b2 = aligned(n2 as usize);
                 let bytes = as_bytes(&mut b2);
-                if QueryServiceConfig2W(svc.0, SERVICE_CONFIG_DESCRIPTION, Some(&mut bytes[..n2 as usize]), &mut n2).is_ok() {
+                if QueryServiceConfig2W(svc.0, SERVICE_CONFIG_DESCRIPTION, Some(&mut bytes[..n2 as usize]), &mut n2)
+                    .is_ok()
+                {
                     let d = &*(b2.as_ptr() as *const SERVICE_DESCRIPTIONW);
                     let s = pwstr_to_string(d.lpDescription);
                     // Çözümlenemeyen kaynak dizeleri ("@%SystemRoot%\...,-100") gösterilmez.
@@ -343,7 +350,9 @@ mod imp {
                 let mut b3 = aligned(16);
                 let mut n3 = 0u32;
                 let bytes = as_bytes(&mut b3);
-                if QueryServiceConfig2W(svc.0, SERVICE_CONFIG_DELAYED_AUTO_START_INFO, Some(&mut bytes[..16]), &mut n3).is_ok() {
+                if QueryServiceConfig2W(svc.0, SERVICE_CONFIG_DELAYED_AUTO_START_INFO, Some(&mut bytes[..16]), &mut n3)
+                    .is_ok()
+                {
                     let d = &*(b3.as_ptr() as *const SERVICE_DELAYED_AUTO_START_INFO);
                     delayed = d.fDelayedAutostart.as_bool();
                 }
@@ -358,7 +367,11 @@ mod imp {
         let start = cfg.as_ref().map(|c| start_type_code(c.start_raw, c.delayed)).unwrap_or("unknown");
         let prot = protection(&name);
         ServiceInfo {
-            display_name: if display.is_empty() { cfg.as_ref().and_then(|c| c.display.clone()).unwrap_or_else(|| name.clone()) } else { display },
+            display_name: if display.is_empty() {
+                cfg.as_ref().and_then(|c| c.display.clone()).unwrap_or_else(|| name.clone())
+            } else {
+                display
+            },
             description: cfg.as_ref().and_then(|c| c.description.clone()),
             status: status.to_string(),
             status_label: status_label(status).to_string(),
@@ -402,7 +415,9 @@ mod imp {
                 Err(e) if e.code() == windows::Win32::Foundation::ERROR_MORE_DATA.to_hresult() => true,
                 Err(e) => return Err(AppError::System(format!("hizmetler listelenemedi ({e})"))),
             };
-            let entries = unsafe { std::slice::from_raw_parts(buf.as_ptr() as *const ENUM_SERVICE_STATUS_PROCESSW, count as usize) };
+            let entries = unsafe {
+                std::slice::from_raw_parts(buf.as_ptr() as *const ENUM_SERVICE_STATUS_PROCESSW, count as usize)
+            };
             for e in entries {
                 let name = unsafe { pwstr_to_string(e.lpServiceName) };
                 let display = unsafe { pwstr_to_string(e.lpDisplayName) };
@@ -471,7 +486,10 @@ mod imp {
             );
             let mut sp = SERVICE_STATUS_PROCESS::default();
             let mut needed = 0u32;
-            let bytes = std::slice::from_raw_parts_mut(&mut sp as *mut _ as *mut u8, std::mem::size_of::<SERVICE_STATUS_PROCESS>());
+            let bytes = std::slice::from_raw_parts_mut(
+                &mut sp as *mut _ as *mut u8,
+                std::mem::size_of::<SERVICE_STATUS_PROCESS>(),
+            );
             QueryServiceStatusEx(svc.0, SC_STATUS_PROCESS_INFO, Some(bytes), &mut needed)
                 .map_err(|e| AppError::System(format!("hizmet durumu okunamadı ({e})")))?;
             drop(svc);
@@ -569,7 +587,10 @@ pub fn set_start_type(db: &Db, name: &str, start_type: &str) -> AppResult<Change
     let oplog_id = oplog::record(
         db,
         "service",
-        &format!("Hizmet başlangıç türü değiştirildi: {} ({} → {})", after.display_name, before.start_type_label, after.start_type_label),
+        &format!(
+            "Hizmet başlangıç türü değiştirildi: {} ({} → {})",
+            after.display_name, before.start_type_label, after.start_type_label
+        ),
         Outcome::Success,
         true,
         serde_json::json!({
@@ -603,7 +624,9 @@ fn restart(db: &Db, name: &str) -> AppResult<ChangeResult<ServiceInfo>> {
         return Err(AppError::Conflict("hizmet şu anda çalışmıyor; yeniden başlatmak yerine başlatabilirsiniz".into()));
     }
     if !before.can_stop {
-        return Err(AppError::Conflict("bu hizmet şu anda durdurma isteğini kabul etmiyor; yeniden başlatılamaz".into()));
+        return Err(AppError::Conflict(
+            "bu hizmet şu anda durdurma isteğini kabul etmiyor; yeniden başlatılamaz".into(),
+        ));
     }
     let detail = serde_json::json!({
         "action": "restart",
@@ -706,7 +729,9 @@ pub fn control(db: &Db, name: &str, action: &str) -> AppResult<ChangeResult<Serv
         });
     }
     if action == "start" && before.start_type == "disabled" {
-        return Err(AppError::Conflict("hizmet devre dışı olduğu için başlatılamıyor; önce başlangıç türünü değiştirin".into()));
+        return Err(AppError::Conflict(
+            "hizmet devre dışı olduğu için başlatılamıyor; önce başlangıç türünü değiştirin".into(),
+        ));
     }
     if action == "stop" && before.status == "running" && !before.can_stop {
         return Err(AppError::Conflict("bu hizmet şu anda durdurma isteğini kabul etmiyor".into()));
@@ -727,7 +752,11 @@ pub fn control(db: &Db, name: &str, action: &str) -> AppResult<ChangeResult<Serv
     match crate::platform::run_elevated("sc.exe", &args) {
         Ok(0) => {}
         Ok(code) => {
-            let e = AppError::System(format!("hizmet {}: {}", if action == "start" { "başlatılamadı" } else { "durdurulamadı" }, sc_error_message(code)));
+            let e = AppError::System(format!(
+                "hizmet {}: {}",
+                if action == "start" { "başlatılamadı" } else { "durdurulamadı" },
+                sc_error_message(code)
+            ));
             record_failure(db, title_fail, detail, &e);
             return Err(e);
         }

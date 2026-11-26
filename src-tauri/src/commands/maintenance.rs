@@ -40,7 +40,8 @@ pub async fn cleanup_scan_start(app: AppHandle, st: St<'_>) -> AppResult<String>
         match res {
             Ok(scan) => {
                 let sum = scan.summary();
-                let summary = serde_json::json!({ "total": sum.total_size, "safe": sum.safe_size, "items": sum.items.len() });
+                let summary =
+                    serde_json::json!({ "total": sum.total_size, "safe": sum.safe_size, "items": sum.items.len() });
                 let _ = st.db.kv_set("cleanup_last", &summary.to_string());
                 *st.cleanup_scan.lock() = Some(Arc::new(scan));
                 jobs::emit_done(&app, &ctl, "complete", None, summary);
@@ -60,11 +61,8 @@ pub async fn cleanup_scan_result(st: St<'_>) -> AppResult<Option<CleanupScanSumm
 /// Bir temizlik kategorisinin aday dosyaları (en büyükler önce).
 #[tauri::command]
 pub async fn cleanup_item_files(st: St<'_>, id: String, limit: Option<usize>) -> AppResult<cleanup::CleanupItemFiles> {
-    let scan = st
-        .cleanup_scan
-        .lock()
-        .clone()
-        .ok_or_else(|| AppError::NotFound("önce bir temizlik taraması yapın".into()))?;
+    let scan =
+        st.cleanup_scan.lock().clone().ok_or_else(|| AppError::NotFound("önce bir temizlik taraması yapın".into()))?;
     scan.item_files(&id, limit.unwrap_or(300).clamp(1, 20_000))
         .ok_or_else(|| AppError::NotFound("bu kategori son taramada bulunamadı".into()))
 }
@@ -76,11 +74,8 @@ pub async fn cleanup_last_summary(st: St<'_>) -> AppResult<Option<serde_json::Va
 
 #[tauri::command]
 pub async fn cleanup_run(app: AppHandle, st: St<'_>, ids: Vec<String>) -> AppResult<String> {
-    let scan = st
-        .cleanup_scan
-        .lock()
-        .clone()
-        .ok_or_else(|| AppError::NotFound("önce bir temizlik taraması yapın".into()))?;
+    let scan =
+        st.cleanup_scan.lock().clone().ok_or_else(|| AppError::NotFound("önce bir temizlik taraması yapın".into()))?;
     if ids.is_empty() {
         return Err(AppError::InvalidInput("temizlenecek öğe seçilmedi".into()));
     }
@@ -190,7 +185,11 @@ pub struct QuarantineRestoreResult {
 }
 
 #[tauri::command]
-pub async fn quarantine_restore(st: St<'_>, id: String, rename_on_conflict: bool) -> AppResult<QuarantineRestoreResult> {
+pub async fn quarantine_restore(
+    st: St<'_>,
+    id: String,
+    rename_on_conflict: bool,
+) -> AppResult<QuarantineRestoreResult> {
     let q = st.quarantine();
     let item = q.get(&id)?;
     let res = q.restore(&id, rename_on_conflict);

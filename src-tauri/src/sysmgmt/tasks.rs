@@ -166,7 +166,8 @@ pub fn parse_tasks(json: &str) -> AppResult<Vec<TaskInfo>> {
                 labels.push(&t.label);
             }
         }
-        let trigger_summary = if labels.is_empty() { "Tetikleyici yok (yalnızca el ile)".to_string() } else { labels.join("; ") };
+        let trigger_summary =
+            if labels.is_empty() { "Tetikleyici yok (yalnızca el ile)".to_string() } else { labels.join("; ") };
         let actions = arr(v, "Actions")
             .into_iter()
             .map(|a| TaskAction { execute: s(a, "Execute"), arguments: s(a, "Arguments") })
@@ -265,7 +266,14 @@ pub fn set_enabled(db: &Db, path: &str, name: &str, enabled: bool) -> AppResult<
             if !matches!(e, AppError::Cancelled) {
                 let mut d = detail.clone();
                 d["error"] = Value::String(e.to_string());
-                let _ = oplog::record(db, "task", &format!("Zamanlanmış görev değiştirilemedi: {full}"), Outcome::Failed, false, d);
+                let _ = oplog::record(
+                    db,
+                    "task",
+                    &format!("Zamanlanmış görev değiştirilemedi: {full}"),
+                    Outcome::Failed,
+                    false,
+                    d,
+                );
             }
             return Err(e);
         }
@@ -273,7 +281,10 @@ pub fn set_enabled(db: &Db, path: &str, name: &str, enabled: bool) -> AppResult<
 
     let after = query(path, name)?;
     if after.enabled != enabled {
-        return Err(AppError::System(format!("komut çalıştı ancak görevin durumu değişmedi (şu an: {})", after.state_label)));
+        return Err(AppError::System(format!(
+            "komut çalıştı ancak görevin durumu değişmedi (şu an: {})",
+            after.state_label
+        )));
     }
     let oplog_id = oplog::record(
         db,
@@ -292,7 +303,11 @@ pub fn set_enabled(db: &Db, path: &str, name: &str, enabled: bool) -> AppResult<
         }),
     )
     .ok();
-    let mut message = if enabled { "Görev etkinleştirildi.".to_string() } else { "Görev devre dışı bırakıldı; silinmedi ve yeniden etkinleştirilebilir.".to_string() };
+    let mut message = if enabled {
+        "Görev etkinleştirildi.".to_string()
+    } else {
+        "Görev devre dışı bırakıldı; silinmedi ve yeniden etkinleştirilebilir.".to_string()
+    };
     if elevated {
         message.push_str(" Değişiklik yönetici onayıyla (UAC) uygulandı.");
     }
@@ -411,7 +426,8 @@ pub fn parse_history(json: &str) -> AppResult<TaskHistory> {
     } else if error.is_some() {
         "Görev geçmişi okunamadı; bu günlüğe erişim izni olmayabilir.".to_string()
     } else if events.is_empty() {
-        "Bu görev için kayıtlı geçmiş bulunamadı. Görev son zamanlarda çalışmamış veya eski kayıtlar silinmiş olabilir.".to_string()
+        "Bu görev için kayıtlı geçmiş bulunamadı. Görev son zamanlarda çalışmamış veya eski kayıtlar silinmiş olabilir."
+            .to_string()
     } else {
         format!("Bu görev için son {} olay gösteriliyor.", events.len())
     };
@@ -437,7 +453,8 @@ mod tests {
         assert_eq!(h.log_enabled, Some(false));
         assert!(h.events.is_empty());
         assert!(h.note.contains("varsayılan olarak kapalı"));
-        let h = parse_history(r#"{"enabled":true,"error":null,"events":{"t":1700000000,"id":102,"rc":"0x0"}}"#).unwrap();
+        let h =
+            parse_history(r#"{"enabled":true,"error":null,"events":{"t":1700000000,"id":102,"rc":"0x0"}}"#).unwrap();
         assert_eq!(h.events.len(), 1);
         assert_eq!(h.events[0].label, "Görev tamamlandı");
         assert_eq!(h.events[0].result_code, Some(0));

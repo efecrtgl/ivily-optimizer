@@ -76,14 +76,30 @@ pub struct Settings {
 }
 
 pub const ALL_WIDGETS: &[&str] = &[
-    "welcome", "quick", "recommend", "health", "hardware", "cpu", "memory", "disk", "storage", "network", "cleanup",
-    "largest", "growth", "startup", "events", "notifications", "recent", "update", "shortcuts",
+    "welcome",
+    "quick",
+    "recommend",
+    "health",
+    "hardware",
+    "cpu",
+    "memory",
+    "disk",
+    "storage",
+    "network",
+    "cleanup",
+    "largest",
+    "growth",
+    "startup",
+    "events",
+    "notifications",
+    "recent",
+    "update",
+    "shortcuts",
 ];
 
 /// Varsayılan pano düzeni (sıra önemlidir).
-pub const DEFAULT_WIDGETS: &[&str] = &[
-    "welcome", "quick", "recommend", "cpu", "memory", "disk", "storage", "events", "recent", "update",
-];
+pub const DEFAULT_WIDGETS: &[&str] =
+    &["welcome", "quick", "recommend", "cpu", "memory", "disk", "storage", "events", "recent", "update"];
 
 impl Default for Settings {
     fn default() -> Self {
@@ -141,11 +157,9 @@ impl Settings {
         self.update_check_interval_hours = self.update_check_interval_hours.clamp(1, 24 * 30);
 
         let mut seen = std::collections::HashSet::new();
-        self.dashboard_widgets
-            .retain(|w| ALL_WIDGETS.contains(&w.as_str()) && seen.insert(w.clone()));
+        self.dashboard_widgets.retain(|w| ALL_WIDGETS.contains(&w.as_str()) && seen.insert(w.clone()));
         let mut seen_wide = std::collections::HashSet::new();
-        self.dashboard_wide
-            .retain(|w| ALL_WIDGETS.contains(&w.as_str()) && seen_wide.insert(w.clone()));
+        self.dashboard_wide.retain(|w| ALL_WIDGETS.contains(&w.as_str()) && seen_wide.insert(w.clone()));
 
         self.exclusions.extensions = self
             .exclusions
@@ -154,13 +168,8 @@ impl Settings {
             .map(|e| clean_ext(e))
             .filter(|e| !e.is_empty() && e.chars().all(|c| c.is_alphanumeric() || c == '_' || c == '-'))
             .collect();
-        self.exclusions.paths = self
-            .exclusions
-            .paths
-            .iter()
-            .map(|p| p.trim().to_string())
-            .filter(|p| !p.is_empty())
-            .collect();
+        self.exclusions.paths =
+            self.exclusions.paths.iter().map(|p| p.trim().to_string()).filter(|p| !p.is_empty()).collect();
 
         for r in &mut self.user_rules {
             r.path = r.path.trim().to_string();

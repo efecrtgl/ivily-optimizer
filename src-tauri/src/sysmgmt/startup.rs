@@ -240,8 +240,10 @@ pub fn resolve_command(cmd: &str) -> Option<PathBuf> {
 }
 
 fn split_id(id: &str) -> AppResult<(Source, &str)> {
-    let (src, name) = id.split_once('|').ok_or_else(|| AppError::InvalidInput("başlangıç öğesi kimliği geçersiz".into()))?;
-    let source = Source::from_id(src).ok_or_else(|| AppError::InvalidInput("başlangıç öğesi kaynağı geçersiz".into()))?;
+    let (src, name) =
+        id.split_once('|').ok_or_else(|| AppError::InvalidInput("başlangıç öğesi kimliği geçersiz".into()))?;
+    let source =
+        Source::from_id(src).ok_or_else(|| AppError::InvalidInput("başlangıç öğesi kaynağı geçersiz".into()))?;
     if name.is_empty() || name.len() > 1024 || name.chars().any(|c| c.is_control()) {
         return Err(AppError::InvalidInput("başlangıç öğesi adı geçersiz".into()));
     }
@@ -376,7 +378,8 @@ mod imp {
             let mut len = 0u32;
             let tr = super::super::wide("\\VarFileInfo\\Translation");
             let mut langs: Vec<(u16, u16)> = Vec::new();
-            if VerQueryValueW(data.as_ptr() as *const _, PCWSTR(tr.as_ptr()), &mut ptr, &mut len).as_bool() && len >= 4 {
+            if VerQueryValueW(data.as_ptr() as *const _, PCWSTR(tr.as_ptr()), &mut ptr, &mut len).as_bool() && len >= 4
+            {
                 let n = (len / 4) as usize;
                 let s = std::slice::from_raw_parts(ptr as *const u16, n * 2);
                 for i in 0..n {
@@ -451,7 +454,8 @@ fn items_of(source: Source) -> Vec<StartupItem> {
                 let is_lnk = path.extension().map(|x| x.eq_ignore_ascii_case("lnk")).unwrap_or(false);
                 let (command, resolved) = match is_lnk.then(|| imp::resolve_shortcut(&path)).flatten() {
                     Some((target, args)) => {
-                        let cmd = if args.is_empty() { format!("\"{target}\"") } else { format!("\"{target}\" {args}") };
+                        let cmd =
+                            if args.is_empty() { format!("\"{target}\"") } else { format!("\"{target}\" {args}") };
                         (cmd, Some(PathBuf::from(target)))
                     }
                     None => (path.to_string_lossy().into_owned(), Some(path.clone())),
@@ -560,7 +564,8 @@ pub fn set_enabled(db: &Db, id: &str, enabled: bool) -> AppResult<ChangeResult<S
     if after.enabled != enabled {
         return Err(AppError::System("değişiklik uygulanmadı; öğenin durumu değişmedi".into()));
     }
-    let title = format!("Başlangıç öğesi {}: {}", if enabled { "etkinleştirildi" } else { "devre dışı bırakıldı" }, item.name);
+    let title =
+        format!("Başlangıç öğesi {}: {}", if enabled { "etkinleştirildi" } else { "devre dışı bırakıldı" }, item.name);
     let oplog_id = oplog::record(
         db,
         "startup",
@@ -637,7 +642,9 @@ pub fn startup_tasks(tasks: &[super::tasks::TaskInfo]) -> Vec<StartupTask> {
         .filter_map(|t| {
             let mut labels: Vec<&str> = Vec::new();
             for tr in &t.triggers {
-                if matches!(tr.kind.as_str(), "MSFT_TaskLogonTrigger" | "MSFT_TaskBootTrigger") && !labels.contains(&tr.label.as_str()) {
+                if matches!(tr.kind.as_str(), "MSFT_TaskLogonTrigger" | "MSFT_TaskBootTrigger")
+                    && !labels.contains(&tr.label.as_str())
+                {
                     labels.push(&tr.label);
                 }
             }
@@ -661,7 +668,10 @@ pub fn startup_tasks(tasks: &[super::tasks::TaskInfo]) -> Vec<StartupTask> {
 pub fn service_binary_in_system_root(binary: &str, system_root: &str) -> bool {
     let b = binary.trim();
     let lower = b.trim_start_matches('"').to_ascii_lowercase();
-    if lower.starts_with("\\systemroot\\") || lower.starts_with("system32\\") || lower.starts_with("\\??\\") && lower[4..].starts_with(&system_root.to_ascii_lowercase()) {
+    if lower.starts_with("\\systemroot\\")
+        || lower.starts_with("system32\\")
+        || lower.starts_with("\\??\\") && lower[4..].starts_with(&system_root.to_ascii_lowercase())
+    {
         return true;
     }
     match parse_command_exe(&expand_env(b)) {
@@ -789,7 +799,8 @@ pub fn parse_boot_history(json: &str) -> AppResult<BootHistory> {
         AppError::System("açılış geçmişi okunamadı (beklenmeyen çıktı)".into())
     })?;
     let status = v.get("status").and_then(|s| s.as_str()).unwrap_or("error");
-    let empty = |note: &str| BootHistory { available: false, note: note.to_string(), boots: vec![], degradations: vec![] };
+    let empty =
+        |note: &str| BootHistory { available: false, note: note.to_string(), boots: vec![], degradations: vec![] };
     match status {
         "ok" => {}
         "denied" => {
@@ -823,7 +834,8 @@ pub fn parse_boot_history(json: &str) -> AppResult<BootHistory> {
             }
         } else if (101..=110).contains(&id) {
             let file = str_field(d, "FileName").or_else(|| str_field(d, "Name"));
-            let name = str_field(d, "FriendlyName").or_else(|| file.clone()).unwrap_or_else(|| "Bilinmeyen bileşen".into());
+            let name =
+                str_field(d, "FriendlyName").or_else(|| file.clone()).unwrap_or_else(|| "Bilinmeyen bileşen".into());
             let (kind, label) = degradation_kind(id as u32);
             degradations.push(BootDegradation {
                 ts,
@@ -933,9 +945,15 @@ mod tests {
 
     #[test]
     fn command_parsing() {
-        assert_eq!(parse_command_exe("\"C:\\Program Files\\App\\app.exe\" --min").as_deref(), Some("C:\\Program Files\\App\\app.exe"));
+        assert_eq!(
+            parse_command_exe("\"C:\\Program Files\\App\\app.exe\" --min").as_deref(),
+            Some("C:\\Program Files\\App\\app.exe")
+        );
         assert_eq!(parse_command_exe("\"C:\\a b\\x.exe\"").as_deref(), Some("C:\\a b\\x.exe"));
-        assert_eq!(parse_command_exe("C:\\Program Files\\App\\app.exe /background").as_deref(), Some("C:\\Program Files\\App\\app.exe"));
+        assert_eq!(
+            parse_command_exe("C:\\Program Files\\App\\app.exe /background").as_deref(),
+            Some("C:\\Program Files\\App\\app.exe")
+        );
         assert_eq!(parse_command_exe("C:\\Tools\\tool.EXE").as_deref(), Some("C:\\Tools\\tool.EXE"));
         assert_eq!(parse_command_exe("rundll32.exe shell32.dll,Control_RunDLL").as_deref(), Some("rundll32.exe"));
         assert_eq!(parse_command_exe("C:\\x.exe.bak\\y.exe -a").as_deref(), Some("C:\\x.exe.bak\\y.exe"));

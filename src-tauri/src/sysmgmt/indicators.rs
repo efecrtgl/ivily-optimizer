@@ -37,8 +37,17 @@ pub fn text_of(code: &str) -> &'static str {
 /// Windows'un iyi bilinen süreç adları (yalnızca Windows klasöründen
 /// çalışmaları beklenir).
 pub const WELL_KNOWN_SYSTEM: &[&str] = &[
-    "svchost.exe", "lsass.exe", "csrss.exe", "services.exe", "winlogon.exe", "smss.exe", "explorer.exe", "dwm.exe",
-    "taskhostw.exe", "rundll32.exe", "conhost.exe",
+    "svchost.exe",
+    "lsass.exe",
+    "csrss.exe",
+    "services.exe",
+    "winlogon.exe",
+    "smss.exe",
+    "explorer.exe",
+    "dwm.exe",
+    "taskhostw.exe",
+    "rundll32.exe",
+    "conhost.exe",
 ];
 
 /// Yol denetimleri için bir kez okunan konumlar.
@@ -58,7 +67,9 @@ impl PathContext {
         let env = |k: &str| std::env::var(k).ok().filter(|v| !v.is_empty());
         let system_root = env("SystemRoot").unwrap_or_else(|| "C:\\Windows".into());
         let mut temp_dirs: Vec<String> = Vec::new();
-        for t in [env("TEMP"), env("TMP"), Some(std::env::temp_dir().to_string_lossy().into_owned())].into_iter().flatten() {
+        for t in
+            [env("TEMP"), env("TMP"), Some(std::env::temp_dir().to_string_lossy().into_owned())].into_iter().flatten()
+        {
             temp_dirs.push(t);
         }
         if let Some(l) = env("LOCALAPPDATA") {
@@ -83,7 +94,8 @@ impl PathContext {
     }
 
     pub fn in_temp_or_downloads(&self, path: &str) -> bool {
-        self.temp_dirs.iter().any(|t| is_within(path, t)) || self.downloads.as_deref().is_some_and(|d| is_within(path, d))
+        self.temp_dirs.iter().any(|t| is_within(path, t))
+            || self.downloads.as_deref().is_some_and(|d| is_within(path, d))
     }
 
     /// Kalıcı programlar için olağan dışı, kullanıcının yazabildiği konum:
@@ -107,7 +119,12 @@ fn file_name_lower(path: &str) -> String {
 }
 
 /// Süreçler için ucuz göstergeler (imza denetimi yok).
-pub fn process_indicators(ctx: &PathContext, name: &str, exe: Option<&str>, exe_exists: impl FnOnce(&str) -> bool) -> Vec<Indicator> {
+pub fn process_indicators(
+    ctx: &PathContext,
+    name: &str,
+    exe: Option<&str>,
+    exe_exists: impl FnOnce(&str) -> bool,
+) -> Vec<Indicator> {
     let mut v = Vec::new();
     let Some(exe) = exe.filter(|e| !e.is_empty()) else { return v };
     let lname = name.to_lowercase();
@@ -130,7 +147,8 @@ const SCRIPT_EXTS: &[&str] = &["vbs", "vbe", "js", "jse", "wsf", "hta", "ps1", "
 
 /// Komut bir betik yorumlayıcısı üzerinden mi çalışıyor?
 pub fn is_script_host(command: &str, resolved: Option<&str>) -> bool {
-    let target = resolved.map(str::to_string).or_else(|| super::startup::parse_command_exe(command)).unwrap_or_default();
+    let target =
+        resolved.map(str::to_string).or_else(|| super::startup::parse_command_exe(command)).unwrap_or_default();
     let fname = file_name_lower(&target);
     if let Some(ext) = fname.rsplit_once('.').map(|(_, e)| e) {
         if SCRIPT_EXTS.contains(&ext) {
@@ -231,7 +249,10 @@ mod tests {
     fn script_hosts() {
         assert!(is_script_host("wscript.exe \"C:\\x\\a.vbs\"", Some("C:\\Windows\\System32\\wscript.exe")));
         assert!(is_script_host("C:\\x\\run.bat", Some("C:\\x\\run.bat")));
-        assert!(is_script_host("powershell.exe -WindowStyle Hidden -File C:\\x.ps1", Some("C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe")));
+        assert!(is_script_host(
+            "powershell.exe -WindowStyle Hidden -File C:\\x.ps1",
+            Some("C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe")
+        ));
         assert!(is_script_host("\"C:\\Windows\\System32\\cmd.exe\" /c start x", None));
         assert!(!is_script_host("cmd.exe", None));
         assert!(!is_script_host("\"C:\\Program Files\\App\\app.exe\" --min", Some("C:\\Program Files\\App\\app.exe")));
@@ -241,7 +262,13 @@ mod tests {
     fn startup_rules() {
         let c = ctx();
         let uns = crate::sysmgmt::signature::SignatureStatus::new("unsigned", None);
-        let v = startup_indicators(&c, "C:\\Users\\a\\Downloads\\x.exe", Some("C:\\Users\\a\\Downloads\\x.exe"), false, Some(&uns));
+        let v = startup_indicators(
+            &c,
+            "C:\\Users\\a\\Downloads\\x.exe",
+            Some("C:\\Users\\a\\Downloads\\x.exe"),
+            false,
+            Some(&uns),
+        );
         let codes: Vec<_> = v.iter().map(|i| i.code.as_str()).collect();
         assert_eq!(codes, vec!["missing_file", "unsigned", "user_writable_location"]);
         assert!(v.iter().all(|i| !i.text.is_empty()));

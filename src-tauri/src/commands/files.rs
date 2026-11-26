@@ -131,7 +131,13 @@ fn validate_dir(p: &str) -> AppResult<PathBuf> {
 }
 
 #[tauri::command]
-pub async fn folder_compare_start(app: AppHandle, st: St<'_>, a: String, b: String, content: bool) -> AppResult<String> {
+pub async fn folder_compare_start(
+    app: AppHandle,
+    st: St<'_>,
+    a: String,
+    b: String,
+    content: bool,
+) -> AppResult<String> {
     let a = validate_dir(&a)?;
     let b = validate_dir(&b)?;
     if files::same_dir(&a, &b) {

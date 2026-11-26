@@ -1,0 +1,4 @@
+# Mevcut kod stiline en yakın ayarlar: geniş satırlar ve kısa ifadelerin tek
+# satırda kalması. CI `cargo fmt --check` ile denetler.
+max_width = 120
+use_small_heuristics = "Max"

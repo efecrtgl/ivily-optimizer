@@ -9,8 +9,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 use std::time::Instant;
 use sysinfo::{
-    CpuRefreshKind, DiskRefreshKind, Disks, MemoryRefreshKind, Networks, Pid, ProcessRefreshKind,
-    ProcessesToUpdate, RefreshKind, System, UpdateKind,
+    CpuRefreshKind, DiskRefreshKind, Disks, MemoryRefreshKind, Networks, Pid, ProcessRefreshKind, ProcessesToUpdate,
+    RefreshKind, System, UpdateKind,
 };
 
 pub const HISTORY_LEN: usize = 150;
@@ -316,9 +316,7 @@ impl Monitor {
         let name = p.name().to_string_lossy().into_owned();
         // PID yeniden kullanılmış olabilir: adı doğrula.
         if !name.eq_ignore_ascii_case(expected_name) {
-            return Err(AppError::Conflict(format!(
-                "PID {pid} artık başka bir sürece ({name}) ait; liste yenilendi"
-            )));
+            return Err(AppError::Conflict(format!("PID {pid} artık başka bir sürece ({name}) ait; liste yenilendi")));
         }
         let exe = p.exe().map(|e| e.to_string_lossy().into_owned());
         match protection_of(&name, exe.as_deref(), pid, std::process::id()) {
@@ -371,17 +369,50 @@ pub struct ProcessInfo {
 
 /// Sonlandırılması sistemi çökertebilecek veya oturumu kapatabilecek süreçler.
 const CRITICAL: &[&str] = &[
-    "system", "registry", "smss.exe", "csrss.exe", "wininit.exe", "winlogon.exe", "services.exe", "lsass.exe",
-    "lsaiso.exe", "memory compression", "secure system", "system idle process", "fontdrvhost.exe", "svchost.exe",
-    "dwm.exe", "sihost.exe", "ctfmon.exe", "msmpeng.exe", "mpdefendercoreservice.exe", "nissrv.exe",
-    "securityhealthservice.exe", "wudfhost.exe", "spoolsv.exe", "audiodg.exe",
+    "system",
+    "registry",
+    "smss.exe",
+    "csrss.exe",
+    "wininit.exe",
+    "winlogon.exe",
+    "services.exe",
+    "lsass.exe",
+    "lsaiso.exe",
+    "memory compression",
+    "secure system",
+    "system idle process",
+    "fontdrvhost.exe",
+    "svchost.exe",
+    "dwm.exe",
+    "sihost.exe",
+    "ctfmon.exe",
+    "msmpeng.exe",
+    "mpdefendercoreservice.exe",
+    "nissrv.exe",
+    "securityhealthservice.exe",
+    "wudfhost.exe",
+    "spoolsv.exe",
+    "audiodg.exe",
 ];
 
 /// Sonlandırılabilir ama beklenmedik sonuçları olabilecek süreçler.
 const SENSITIVE: &[&str] = &[
-    "explorer.exe", "searchhost.exe", "searchindexer.exe", "startmenuexperiencehost.exe", "shellexperiencehost.exe",
-    "runtimebroker.exe", "taskhostw.exe", "conhost.exe", "dllhost.exe", "textinputhost.exe", "wmiprvse.exe",
-    "msiexec.exe", "trustedinstaller.exe", "tiworker.exe", "securityhealthsystray.exe", "smartscreen.exe",
+    "explorer.exe",
+    "searchhost.exe",
+    "searchindexer.exe",
+    "startmenuexperiencehost.exe",
+    "shellexperiencehost.exe",
+    "runtimebroker.exe",
+    "taskhostw.exe",
+    "conhost.exe",
+    "dllhost.exe",
+    "textinputhost.exe",
+    "wmiprvse.exe",
+    "msiexec.exe",
+    "trustedinstaller.exe",
+    "tiworker.exe",
+    "securityhealthsystray.exe",
+    "smartscreen.exe",
 ];
 
 pub fn protection_of(name: &str, exe: Option<&str>, pid: u32, self_pid: u32) -> (&'static str, Option<&'static str>) {

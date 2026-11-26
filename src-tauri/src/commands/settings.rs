@@ -44,7 +44,9 @@ pub async fn settings_reset(st: St<'_>) -> AppResult<Settings> {
 /// aktarır. Dosya içerikleri dahil edilmez.
 #[tauri::command]
 pub async fn data_export(st: St<'_>) -> AppResult<String> {
-    let dir = dirs::download_dir().or_else(dirs::desktop_dir).ok_or_else(|| AppError::NotFound("İndirilenler klasörü".into()))?;
+    let dir = dirs::download_dir()
+        .or_else(dirs::desktop_dir)
+        .ok_or_else(|| AppError::NotFound("İndirilenler klasörü".into()))?;
     let name = format!("ivily-veri-{}.json", chrono::Local::now().format("%Y%m%d-%H%M%S"));
     let path = dir.join(name);
     let data = serde_json::json!({
@@ -94,7 +96,9 @@ pub async fn logs_open() -> AppResult<()> {
 /// Günlükleri tek bir metin dosyası olarak İndirilenler klasörüne aktarır.
 #[tauri::command]
 pub async fn logs_export() -> AppResult<String> {
-    let dir = dirs::download_dir().or_else(dirs::desktop_dir).ok_or_else(|| AppError::NotFound("İndirilenler klasörü".into()))?;
+    let dir = dirs::download_dir()
+        .or_else(dirs::desktop_dir)
+        .ok_or_else(|| AppError::NotFound("İndirilenler klasörü".into()))?;
     let path = dir.join(format!("ivily-gunluk-{}.txt", chrono::Local::now().format("%Y%m%d-%H%M%S")));
     let mut files: Vec<_> = std::fs::read_dir(crate::paths::logs_dir())
         .map_err(|e| AppError::io(e, "günlük klasörü"))?

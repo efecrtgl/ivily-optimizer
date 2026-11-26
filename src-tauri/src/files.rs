@@ -33,10 +33,7 @@ const FILE_ATTRIBUTE_ENCRYPTED: u32 = 0x4000;
 // ---------------------------------------------------------------------------
 
 pub fn ts_of(t: std::io::Result<std::time::SystemTime>) -> i64 {
-    t.ok()
-        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-        .map(|d| d.as_secs() as i64)
-        .unwrap_or(0)
+    t.ok().and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map(|d| d.as_secs() as i64).unwrap_or(0)
 }
 
 #[cfg(windows)]
@@ -72,11 +69,7 @@ pub fn fmt_local(ts: i64) -> String {
     if ts <= 0 {
         return String::new();
     }
-    chrono::Local
-        .timestamp_opt(ts, 0)
-        .single()
-        .map(|d| d.format("%Y-%m-%d %H:%M:%S").to_string())
-        .unwrap_or_default()
+    chrono::Local.timestamp_opt(ts, 0).single().map(|d| d.format("%Y-%m-%d %H:%M:%S").to_string()).unwrap_or_default()
 }
 
 /// Türkçe biçimli boyut: "12,3 GB".
@@ -97,9 +90,7 @@ pub fn fmt_bytes(b: u64) -> String {
 
 /// Dışa aktarma dosyaları için klasör: İndirilenler, yoksa Masaüstü.
 pub fn export_dir() -> AppResult<PathBuf> {
-    dirs::download_dir()
-        .or_else(dirs::desktop_dir)
-        .ok_or_else(|| AppError::NotFound("İndirilenler klasörü".into()))
+    dirs::download_dir().or_else(dirs::desktop_dir).ok_or_else(|| AppError::NotFound("İndirilenler klasörü".into()))
 }
 
 pub fn stamp() -> String {
@@ -320,21 +311,20 @@ pub fn metadata(path: &str, scan: Option<&DiskScan>) -> AppResult<FsMetadata> {
     let md = std::fs::symlink_metadata(&p).map_err(|e| AppError::io(e, &p.to_string_lossy()))?;
     let attrs = attrs_of(&md);
     let is_dir = md.is_dir();
-    let name = p
-        .file_name()
-        .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_else(|| p.to_string_lossy().into_owned());
+    let name =
+        p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| p.to_string_lossy().into_owned());
     let ext = if is_dir { String::new() } else { extension_of(&name) };
     let size = if is_dir {
         scan.and_then(|s| s.find(&p.to_string_lossy()).map(|id| s.nodes[id as usize].size)).unwrap_or(0)
     } else {
         md.len()
     };
-    let version_info = if !is_dir && matches!(ext.as_str(), "exe" | "dll" | "sys" | "ocx" | "cpl" | "scr" | "drv" | "mui") {
-        version_info(&p)
-    } else {
-        None
-    };
+    let version_info =
+        if !is_dir && matches!(ext.as_str(), "exe" | "dll" | "sys" | "ocx" | "cpl" | "scr" | "drv" | "mui") {
+            version_info(&p)
+        } else {
+            None
+        };
     Ok(FsMetadata {
         path: p.to_string_lossy().into_owned(),
         category: if is_dir { "folder".into() } else { classify::category_of(&ext, size).to_string() },
@@ -397,7 +387,11 @@ pub fn version_info(path: &Path) -> Option<VersionInfo> {
             company_name: query("CompanyName"),
             file_description: query("FileDescription"),
         };
-        if vi.product_name.is_none() && vi.file_version.is_none() && vi.company_name.is_none() && vi.file_description.is_none() {
+        if vi.product_name.is_none()
+            && vi.file_version.is_none()
+            && vi.company_name.is_none()
+            && vi.file_description.is_none()
+        {
             None
         } else {
             Some(vi)
@@ -449,10 +443,8 @@ pub fn find_empty_folders(scan: &DiskScan) -> AppResult<EmptyFolders> {
     order.sort_by_key(|&i| std::cmp::Reverse(nodes[i].depth));
     for &i in &order {
         let nd = &nodes[i];
-        clean[i] = nd.files == 0
-            && !nd.unreadable
-            && nd.skipped_links == 0
-            && nd.children.iter().all(|&c| clean[c as usize]);
+        clean[i] =
+            nd.files == 0 && !nd.unreadable && nd.skipped_links == 0 && nd.children.iter().all(|&c| clean[c as usize]);
     }
     // eligible[i]: kök değil, `$` ataları yok, korunmuyor. Derinliğe göre
     // artan sırayla hesaplanır ki üst düğüm önce bilinsin.
@@ -491,7 +483,8 @@ pub fn find_empty_folders(scan: &DiskScan) -> AppResult<EmptyFolders> {
 /// Alt ağacı gerçekten (diskte) dosyasız mı? Klasörleri alttan üste sırayla
 /// döndürür; dosya, bağlantı veya okunamayan klasör varsa hata verir.
 fn verify_empty_tree(p: &Path, out: &mut Vec<PathBuf>) -> Result<(), String> {
-    let rd = std::fs::read_dir(p).map_err(|e| format!("Klasör okunamadı: {}", AppError::io(e, &p.to_string_lossy())))?;
+    let rd =
+        std::fs::read_dir(p).map_err(|e| format!("Klasör okunamadı: {}", AppError::io(e, &p.to_string_lossy())))?;
     for e in rd {
         let e = e.map_err(|_| "Klasör içeriği okunamadı".to_string())?;
         let md = e.metadata().map_err(|_| "Klasör içeriği okunamadı".to_string())?;
@@ -819,7 +812,13 @@ pub struct InventoryResult {
 pub const INVENTORY_LIMIT: u64 = 500_000;
 
 /// `root` altındaki dosyaları CSV olarak `out` dosyasına yazar.
-pub fn write_inventory(root: &Path, recursive: bool, mut opts: WalkOptions, out: &Path, cap: u64) -> AppResult<InventoryResult> {
+pub fn write_inventory(
+    root: &Path,
+    recursive: bool,
+    mut opts: WalkOptions,
+    out: &Path,
+    cap: u64,
+) -> AppResult<InventoryResult> {
     if !recursive {
         opts.max_depth = Some(0);
     }
@@ -871,11 +870,8 @@ pub fn write_inventory(root: &Path, recursive: bool, mut opts: WalkOptions, out:
                 rows.fetch_sub(n - allowed, Ordering::SeqCst);
             }
             if allowed > 0 {
-                let text: String = if allowed == n {
-                    buf
-                } else {
-                    buf.split_inclusive("\r\n").take(allowed as usize).collect()
-                };
+                let text: String =
+                    if allowed == n { buf } else { buf.split_inclusive("\r\n").take(allowed as usize).collect() };
                 if w.lock().write_all(text.as_bytes()).is_err() {
                     write_err.store(true, Ordering::Relaxed);
                     stop.store(true, Ordering::Relaxed);
@@ -1050,7 +1046,8 @@ pub fn insights(inp: InsightInputs) -> StorageInsights {
 
     // Geçici / önbellek / günlük klasörleri (en üst düzey olanlar)
     let nodes = &scan.nodes;
-    let qualifies = |i: usize| nodes[i].size >= 100 * MB && temp_kind(&nodes[i].name).is_some() && nodes[i].parent != u32::MAX;
+    let qualifies =
+        |i: usize| nodes[i].size >= 100 * MB && temp_kind(&nodes[i].name).is_some() && nodes[i].parent != u32::MAX;
     let mut temp_like = Vec::new();
     for i in 0..nodes.len() {
         if !qualifies(i) {
@@ -1147,20 +1144,21 @@ pub fn insights(inp: InsightInputs) -> StorageInsights {
         cov.push(format!("Şu uygulama konumları taranan konumun dışında kaldı: {}.", app_uncovered.join(", ")));
     }
     if scan.error_count > 0 {
-        cov.push(format!("{} konum erişim izni veya kilit nedeniyle okunamadı; boyutları hesaba katılmadı.", scan.error_count));
+        cov.push(format!(
+            "{} konum erişim izni veya kilit nedeniyle okunamadı; boyutları hesaba katılmadı.",
+            scan.error_count
+        ));
     }
     if inp.volume.is_none() {
         cov.push("Taranan konumun bulunduğu birimin doluluk bilgisi alınamadı.".to_string());
     }
     match &inp.growth {
         Some(g) if g.enough_data => {}
-        _ => cov.push("Büyüme analizi için bu konumun son 30 günde en az iki tamamlanmış taraması gerekir.".to_string()),
+        _ => {
+            cov.push("Büyüme analizi için bu konumun son 30 günde en az iki tamamlanmış taraması gerekir.".to_string())
+        }
     }
-    let coverage = if cov.is_empty() {
-        "Taranan konumun tamamı analiz edildi.".to_string()
-    } else {
-        cov.join(" ")
-    };
+    let coverage = if cov.is_empty() { "Taranan konumun tamamı analiz edildi.".to_string() } else { cov.join(" ") };
 
     StorageInsights { root: root_s, user_folders, app_storage, temp_like, bottlenecks, coverage }
 }
@@ -1210,7 +1208,8 @@ mod tests {
         assert_eq!(b.size, Some(5));
         assert_eq!(b.ext, "txt");
         assert_eq!(b.category, "document");
-        let hidden_attr_applied = fs::metadata(&hidden).map(|m| attrs_of(&m) & FILE_ATTRIBUTE_HIDDEN != 0).unwrap_or(false);
+        let hidden_attr_applied =
+            fs::metadata(&hidden).map(|m| attrs_of(&m) & FILE_ATTRIBUTE_HIDDEN != 0).unwrap_or(false);
         if hidden_attr_applied {
             assert!(l.entries.iter().all(|e| e.name != "gizli.txt"));
             let l2 = list_dir(&r.to_string_lossy(), true, None).unwrap();
@@ -1261,7 +1260,10 @@ mod tests {
         assert!(!m.is_dir);
         assert!(!m.protected);
         assert!(m.version_info.is_none());
-        assert_eq!(attribute_labels(0x1 | 0x2 | 0x400 | 0x400000), vec!["Gizli", "Salt okunur", "Bağlantı noktası", "Çevrimdışı (bulut)"]);
+        assert_eq!(
+            attribute_labels(0x1 | 0x2 | 0x400 | 0x400000),
+            vec!["Gizli", "Salt okunur", "Bağlantı noktası", "Çevrimdışı (bulut)"]
+        );
     }
 
     #[cfg(windows)]

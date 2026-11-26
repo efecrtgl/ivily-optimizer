@@ -243,7 +243,10 @@ mod tests {
         assert!(!is_guid("381b4222xf694-41f0-9685-ff5bb260df2e"));
         assert!(!is_guid("381b4222-f694-41f0-9685-ff5bb260df2g"));
         assert!(!is_guid("381b4222-f694-41f0-9685-ff5bb260df2e "));
-        assert_eq!(validate_guid("8C5E7FDA-E8BF-4A96-9A85-A6E23A8C635C").unwrap(), "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c");
+        assert_eq!(
+            validate_guid("8C5E7FDA-E8BF-4A96-9A85-A6E23A8C635C").unwrap(),
+            "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c"
+        );
     }
 
     #[test]

@@ -26,7 +26,11 @@ pub async fn startup_list() -> AppResult<Vec<startup::StartupItem>> {
 }
 
 #[tauri::command]
-pub async fn startup_set_enabled(st: St<'_>, id: String, enabled: bool) -> AppResult<ChangeResult<startup::StartupItem>> {
+pub async fn startup_set_enabled(
+    st: St<'_>,
+    id: String,
+    enabled: bool,
+) -> AppResult<ChangeResult<startup::StartupItem>> {
     let db = st.db.clone();
     blocking(move || startup::set_enabled(&db, &id, enabled)).await
 }
@@ -49,7 +53,11 @@ pub async fn service_set_start_type(
 }
 
 #[tauri::command]
-pub async fn service_control(st: St<'_>, name: String, action: String) -> AppResult<ChangeResult<services::ServiceInfo>> {
+pub async fn service_control(
+    st: St<'_>,
+    name: String,
+    action: String,
+) -> AppResult<ChangeResult<services::ServiceInfo>> {
     let db = st.db.clone();
     blocking(move || services::control(&db, &name, &action)).await
 }

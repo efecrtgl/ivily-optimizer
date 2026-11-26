@@ -240,11 +240,19 @@ fn tcp_check(addr: SocketAddr, label: &str) -> TcpCheck {
     match TcpStream::connect_timeout(&addr, Duration::from_secs(3)) {
         Ok(s) => {
             let _ = s.shutdown(std::net::Shutdown::Both);
-            TcpCheck { target: addr.to_string(), label: label.into(), ok: true, latency_ms: Some(start.elapsed().as_millis() as u64), error: None }
+            TcpCheck {
+                target: addr.to_string(),
+                label: label.into(),
+                ok: true,
+                latency_ms: Some(start.elapsed().as_millis() as u64),
+                error: None,
+            }
         }
         Err(e) => {
             let msg = match e.kind() {
-                std::io::ErrorKind::TimedOut | std::io::ErrorKind::WouldBlock => "3 saniye içinde yanıt alınamadı".to_string(),
+                std::io::ErrorKind::TimedOut | std::io::ErrorKind::WouldBlock => {
+                    "3 saniye içinde yanıt alınamadı".to_string()
+                }
                 std::io::ErrorKind::ConnectionRefused => "bağlantı reddedildi".to_string(),
                 _ => match e.raw_os_error() {
                     Some(10051) | Some(10065) => "ağa ulaşılamıyor".to_string(),
@@ -312,23 +320,46 @@ pub fn connectivity_check() -> ConnectivityReport {
         (SocketAddr::from(([8, 8, 8, 8], 53)), "Google DNS (TCP 53)"),
     ];
     let hosts = ["github.com", "www.microsoft.com"];
-    let tcp_handles: Vec<_> = targets.iter().map(|(a, l)| {
-        let (a, l) = (*a, l.to_string());
-        std::thread::spawn(move || tcp_check(a, &l))
-    }).collect();
-    let dns_handles: Vec<_> = hosts.iter().map(|h| {
-        let h = h.to_string();
-        std::thread::spawn(move || resolve(&h))
-    }).collect();
+    let tcp_handles: Vec<_> = targets
+        .iter()
+        .map(|(a, l)| {
+            let (a, l) = (*a, l.to_string());
+            std::thread::spawn(move || tcp_check(a, &l))
+        })
+        .collect();
+    let dns_handles: Vec<_> = hosts
+        .iter()
+        .map(|h| {
+            let h = h.to_string();
+            std::thread::spawn(move || resolve(&h))
+        })
+        .collect();
     let tcp: Vec<TcpCheck> = tcp_handles
         .into_iter()
         .zip(targets.iter())
-        .map(|(h, (a, l))| h.join().unwrap_or_else(|_| TcpCheck { target: a.to_string(), label: l.to_string(), ok: false, latency_ms: None, error: Some("denetim tamamlanamadı".into()) }))
+        .map(|(h, (a, l))| {
+            h.join().unwrap_or_else(|_| TcpCheck {
+                target: a.to_string(),
+                label: l.to_string(),
+                ok: false,
+                latency_ms: None,
+                error: Some("denetim tamamlanamadı".into()),
+            })
+        })
         .collect();
     let dns: Vec<DnsCheck> = dns_handles
         .into_iter()
         .zip(hosts.iter())
-        .map(|(h, host)| h.join().unwrap_or_else(|_| DnsCheck { host: host.to_string(), ok: false, address_count: 0, addresses: vec![], duration_ms: 0, error: Some("denetim tamamlanamadı".into()) }))
+        .map(|(h, host)| {
+            h.join().unwrap_or_else(|_| DnsCheck {
+                host: host.to_string(),
+                ok: false,
+                address_count: 0,
+                addresses: vec![],
+                duration_ms: 0,
+                error: Some("denetim tamamlanamadı".into()),
+            })
+        })
         .collect();
     let (status, summary) = summarize(&tcp, &dns);
     ConnectivityReport { tcp, dns, status: status.into(), summary: summary.into(), checked_at: crate::db::now_ts() }
@@ -432,7 +463,8 @@ pub fn parse_dns_cache(json: &str) -> AppResult<DnsCacheList> {
             data: str_of(v, "Data"),
         })
         .collect();
-    let total = root.get("Total").and_then(Value::as_u64).map(|n| n as usize).unwrap_or(entries.len()).max(entries.len());
+    let total =
+        root.get("Total").and_then(Value::as_u64).map(|n| n as usize).unwrap_or(entries.len()).max(entries.len());
     Ok(DnsCacheList { truncated: total > entries.len(), total, entries })
 }
 
@@ -482,7 +514,8 @@ mod tests {
     #[test]
     fn summaries() {
         let t = |ok| TcpCheck { target: "x".into(), label: "x".into(), ok, latency_ms: None, error: None };
-        let d = |ok| DnsCheck { host: "x".into(), ok, address_count: 0, addresses: vec![], duration_ms: 0, error: None };
+        let d =
+            |ok| DnsCheck { host: "x".into(), ok, address_count: 0, addresses: vec![], duration_ms: 0, error: None };
         assert_eq!(summarize(&[t(true), t(true)], &[d(true), d(true)]).0, "ok");
         assert_eq!(summarize(&[t(false), t(false)], &[d(false), d(false)]).0, "offline");
         assert_eq!(summarize(&[t(true), t(false)], &[d(false), d(false)]).0, "dns_failed");
@@ -501,7 +534,8 @@ mod tests {
         assert_eq!(l.entries[0].ttl_seconds, Some(42));
         assert_eq!(l.entries[1].record_type, "AAAA");
         assert_eq!(l.entries[1].status, "Ad mevcut değil");
-        let single = r#"{"Total":1,"Items":{"Entry":"a","RecordName":"a","Type":5,"Status":0,"TimeToLive":1,"Data":"b"}}"#;
+        let single =
+            r#"{"Total":1,"Items":{"Entry":"a","RecordName":"a","Type":5,"Status":0,"TimeToLive":1,"Data":"b"}}"#;
         assert_eq!(parse_dns_cache(single).unwrap().entries[0].record_type, "CNAME");
         let empty = r#"{"Total":0,"Items":[]}"#;
         assert_eq!(parse_dns_cache(empty).unwrap().entries.len(), 0);

@@ -51,7 +51,13 @@ where
             Ok((status, msg, summary)) => jobs::emit_done(&app, &ctl, &status, msg, summary),
             Err(_) => {
                 tracing::error!(job = %ctl.id, "iş beklenmedik şekilde sonlandı");
-                jobs::emit_done(&app, &ctl, "failed", Some("İşlem beklenmedik bir hata nedeniyle durdu.".into()), serde_json::Value::Null)
+                jobs::emit_done(
+                    &app,
+                    &ctl,
+                    "failed",
+                    Some("İşlem beklenmedik bir hata nedeniyle durdu.".into()),
+                    serde_json::Value::Null,
+                )
             }
         }
     });
@@ -189,7 +195,8 @@ pub async fn scan_node(st: St<'_>, id: u32) -> AppResult<NodeDetail> {
     let mut breadcrumb = Vec::new();
     let mut cur = id;
     while let Some(n) = s.nodes.get(cur as usize) {
-        breadcrumb.push((cur, if n.parent == u32::MAX { s.root.to_string_lossy().into_owned() } else { n.name.clone() }));
+        breadcrumb
+            .push((cur, if n.parent == u32::MAX { s.root.to_string_lossy().into_owned() } else { n.name.clone() }));
         if n.parent == u32::MAX {
             break;
         }
@@ -364,60 +371,61 @@ pub async fn files_remove(st: St<'_>, paths: Vec<String>, mode: String, source: 
     };
     let st2 = st.inner().clone();
     let mode2 = mode.clone();
-    let (res, quarantine_ids) = tauri::async_runtime::spawn_blocking(move || -> AppResult<(FileOpResult, Vec<String>)> {
-        let mut out = FileOpResult::default();
-        let mut qids = Vec::new();
-        let mut ok_paths = Vec::new();
-        for p in &paths {
-            let path = Path::new(p);
-            if !path.is_absolute() {
-                out.failed.push((p.clone(), "Geçersiz yol".into()));
-                continue;
-            }
-            if crate::cleanup::rules::is_protected_path(p) {
-                out.failed.push((p.clone(), "Korunan sistem konumu".into()));
-                continue;
-            }
-            match std::fs::symlink_metadata(path) {
-                Ok(m) if m.is_file() => ok_paths.push((p.clone(), m.len())),
-                Ok(_) => out.failed.push((p.clone(), "Dosya değil".into())),
-                Err(e) => out.failed.push((p.clone(), AppError::io(e, "dosya").to_string())),
-            }
-        }
-        match mode2.as_str() {
-            "quarantine" => {
-                let days = st2.settings.read().quarantine_retention_days;
-                let q = st2.quarantine();
-                for (p, len) in ok_paths {
-                    match q.add(Path::new(&p), &source, days) {
-                        Ok(item) => {
-                            qids.push(item.id);
-                            out.bytes += len;
-                            out.succeeded.push(p);
-                        }
-                        Err(e) => out.failed.push((p, e.to_string())),
-                    }
+    let (res, quarantine_ids) =
+        tauri::async_runtime::spawn_blocking(move || -> AppResult<(FileOpResult, Vec<String>)> {
+            let mut out = FileOpResult::default();
+            let mut qids = Vec::new();
+            let mut ok_paths = Vec::new();
+            for p in &paths {
+                let path = Path::new(p);
+                if !path.is_absolute() {
+                    out.failed.push((p.clone(), "Geçersiz yol".into()));
+                    continue;
+                }
+                if crate::cleanup::rules::is_protected_path(p) {
+                    out.failed.push((p.clone(), "Korunan sistem konumu".into()));
+                    continue;
+                }
+                match std::fs::symlink_metadata(path) {
+                    Ok(m) if m.is_file() => ok_paths.push((p.clone(), m.len())),
+                    Ok(_) => out.failed.push((p.clone(), "Dosya değil".into())),
+                    Err(e) => out.failed.push((p.clone(), AppError::io(e, "dosya").to_string())),
                 }
             }
-            "recycle" => {
-                // Her dosyayı ayrı taşı ki hangi dosyanın başarısız olduğu bilinsin.
-                for (p, len) in ok_paths {
-                    match crate::platform::move_to_recycle_bin(std::slice::from_ref(&p)) {
-                        Ok(()) if !Path::new(&p).exists() => {
-                            out.bytes += len;
-                            out.succeeded.push(p);
+            match mode2.as_str() {
+                "quarantine" => {
+                    let days = st2.settings.read().quarantine_retention_days;
+                    let q = st2.quarantine();
+                    for (p, len) in ok_paths {
+                        match q.add(Path::new(&p), &source, days) {
+                            Ok(item) => {
+                                qids.push(item.id);
+                                out.bytes += len;
+                                out.succeeded.push(p);
+                            }
+                            Err(e) => out.failed.push((p, e.to_string())),
                         }
-                        Ok(()) => out.failed.push((p, "Dosya taşınamadı".into())),
-                        Err(e) => out.failed.push((p, e.to_string())),
                     }
                 }
+                "recycle" => {
+                    // Her dosyayı ayrı taşı ki hangi dosyanın başarısız olduğu bilinsin.
+                    for (p, len) in ok_paths {
+                        match crate::platform::move_to_recycle_bin(std::slice::from_ref(&p)) {
+                            Ok(()) if !Path::new(&p).exists() => {
+                                out.bytes += len;
+                                out.succeeded.push(p);
+                            }
+                            Ok(()) => out.failed.push((p, "Dosya taşınamadı".into())),
+                            Err(e) => out.failed.push((p, e.to_string())),
+                        }
+                    }
+                }
+                _ => return Err(AppError::InvalidInput("geçersiz işlem türü".into())),
             }
-            _ => return Err(AppError::InvalidInput("geçersiz işlem türü".into())),
-        }
-        Ok((out, qids))
-    })
-    .await
-    .map_err(|e| AppError::System(e.to_string()))??;
+            Ok((out, qids))
+        })
+        .await
+        .map_err(|e| AppError::System(e.to_string()))??;
 
     let outcome = match (res.succeeded.is_empty(), res.failed.is_empty()) {
         (false, true) => Outcome::Success,

@@ -101,7 +101,12 @@ fn truncate_chars(s: &str, max: usize) -> String {
 }
 
 /// Seçilen sürümden sonucu üretir (saf işlev; testlerde kullanılır).
-pub fn build_result(releases: &[GhRelease], current: &str, include_prerelease: bool, checked_at: i64) -> UpdateCheckResult {
+pub fn build_result(
+    releases: &[GhRelease],
+    current: &str,
+    include_prerelease: bool,
+    checked_at: i64,
+) -> UpdateCheckResult {
     let cur = parse_version(current);
     let mut res = UpdateCheckResult {
         current_version: current.to_string(),
@@ -131,7 +136,8 @@ pub fn build_result(releases: &[GhRelease], current: &str, include_prerelease: b
             rel.assets.iter().any(|a| a.name.eq_ignore_ascii_case(&sig) && valid_asset_url(&a.browser_download_url))
         })
         .unwrap_or(false);
-    res.installer_asset = installer.map(|a| InstallerAsset { name: a.name.clone(), size: a.size, url: a.browser_download_url.clone() });
+    res.installer_asset =
+        installer.map(|a| InstallerAsset { name: a.name.clone(), size: a.size, url: a.browser_download_url.clone() });
     res.updater_manifest_url = rel
         .assets
         .iter()
@@ -190,8 +196,12 @@ fn fetch() -> AppResult<Option<String>> {
         Err(e) => {
             tracing::warn!(error = %e, "güncelleme denetimi bağlantı hatası");
             return Err(match e {
-                ureq::Error::Timeout(_) => AppError::Network("GitHub zamanında yanıt vermedi; lütfen daha sonra tekrar deneyin".into()),
-                ureq::Error::Tls(_) | ureq::Error::Rustls(_) => AppError::Network("GitHub ile güvenli bağlantı kurulamadı".into()),
+                ureq::Error::Timeout(_) => {
+                    AppError::Network("GitHub zamanında yanıt vermedi; lütfen daha sonra tekrar deneyin".into())
+                }
+                ureq::Error::Tls(_) | ureq::Error::Rustls(_) => {
+                    AppError::Network("GitHub ile güvenli bağlantı kurulamadı".into())
+                }
                 _ => AppError::Network("İnternet bağlantısı yok veya GitHub'a ulaşılamıyor".into()),
             });
         }
@@ -209,7 +219,11 @@ fn fetch() -> AppResult<Option<String>> {
             }
             return Err(AppError::Network("GitHub isteği reddetti (HTTP 403)".into()));
         }
-        s if s >= 500 => return Err(AppError::Network(format!("GitHub şu anda yanıt veremiyor (HTTP {s}); lütfen daha sonra tekrar deneyin"))),
+        s if s >= 500 => {
+            return Err(AppError::Network(format!(
+                "GitHub şu anda yanıt veremiyor (HTTP {s}); lütfen daha sonra tekrar deneyin"
+            )))
+        }
         s => return Err(AppError::Network(format!("GitHub beklenmeyen bir yanıt döndürdü (HTTP {s})"))),
     }
     resp.body_mut()
@@ -282,7 +296,7 @@ mod tests {
             rel("v0.3.0", false, true),        // taslak: atlanır
             rel("v0.2.0-beta.1", true, false), // ön sürüm
             rel("v0.1.5", false, false),
-            rel("sürüm-x", false, false), // ayrıştırılamaz: yok sayılır
+            rel("sürüm-x", false, false),    // ayrıştırılamaz: yok sayılır
             rel("0.2.0-rc.1", false, false), // prerelease bayrağı yok ama semver ön sürüm
         ]);
         assert_eq!(select_latest(&r, false).unwrap().1.to_string(), "0.1.5");

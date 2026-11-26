@@ -44,7 +44,9 @@ fn map_err(e: tauri_plugin_updater::Error) -> AppError {
         E::Minisign(_) | E::SignatureUtf8(_) | E::Base64(_) => {
             AppError::Protected("güncelleme dosyasının imzası doğrulanamadı; dosya kurulmadı".into())
         }
-        E::Reqwest(_) | E::Network(_) => AppError::Network("güncelleme indirilemedi; internet bağlantınızı denetleyin".into()),
+        E::Reqwest(_) | E::Network(_) => {
+            AppError::Network("güncelleme indirilemedi; internet bağlantınızı denetleyin".into())
+        }
         other => AppError::System(format!("güncelleme kurulamadı: {other}")),
     }
 }
@@ -86,7 +88,10 @@ pub async fn update_install(
             .download(
                 move |n, total| {
                     downloaded += n as u64;
-                    let _ = a.emit("update-progress", Progress { stage: "downloading", downloaded, total: total.unwrap_or(0) });
+                    let _ = a.emit(
+                        "update-progress",
+                        Progress { stage: "downloading", downloaded, total: total.unwrap_or(0) },
+                    );
                 },
                 || {},
             )
@@ -94,8 +99,18 @@ pub async fn update_install(
         let res = match res {
             Ok(bytes) => {
                 // download() imzayı zaten doğruladı; kullanıcıya aşamayı göster.
-                let _ = app2.emit("update-progress", Progress { stage: "verifying", downloaded: bytes.len() as u64, total: bytes.len() as u64 });
-                let _ = oplog::record(&db, "update", &format!("Güncelleme kuruluyor: {version}"), Outcome::Success, false, serde_json::json!({ "version": version }));
+                let _ = app2.emit(
+                    "update-progress",
+                    Progress { stage: "verifying", downloaded: bytes.len() as u64, total: bytes.len() as u64 },
+                );
+                let _ = oplog::record(
+                    &db,
+                    "update",
+                    &format!("Güncelleme kuruluyor: {version}"),
+                    Outcome::Success,
+                    false,
+                    serde_json::json!({ "version": version }),
+                );
                 let _ = app2.emit("update-progress", Progress { stage: "installing", downloaded: 0, total: 0 });
                 // Windows'ta install, yükleyiciyi başlattıktan sonra uygulamayı kapatır.
                 update.install(&bytes).map_err(map_err)
@@ -110,7 +125,14 @@ pub async fn update_install(
         .map_err(|e| AppError::System(e.to_string()))?;
     *TASK.lock() = None;
     if let Err(e) = &res {
-        let _ = oplog::record(&st.db, "update", "Güncelleme başarısız", Outcome::Failed, false, serde_json::json!({ "error": e.to_string() }));
+        let _ = oplog::record(
+            &st.db,
+            "update",
+            "Güncelleme başarısız",
+            Outcome::Failed,
+            false,
+            serde_json::json!({ "error": e.to_string() }),
+        );
     }
     res
 }
@@ -131,11 +153,21 @@ mod tests {
     use super::*;
     #[test]
     fn manifest_url_must_be_from_repo() {
-        assert!(validate_manifest_url("https://github.com/efecrtgl/ivily-optimizer/releases/download/v1.0.0/latest.json").is_ok());
-        assert!(validate_manifest_url("https://github.com/efecrtgl/ivily-optimizer/releases/latest/download/latest.json").is_ok());
+        assert!(validate_manifest_url(
+            "https://github.com/efecrtgl/ivily-optimizer/releases/download/v1.0.0/latest.json"
+        )
+        .is_ok());
+        assert!(validate_manifest_url(
+            "https://github.com/efecrtgl/ivily-optimizer/releases/latest/download/latest.json"
+        )
+        .is_ok());
         assert!(validate_manifest_url("https://evil.example/latest.json").is_err());
         assert!(validate_manifest_url("https://github.com/someone/else/releases/download/v1/latest.json").is_err());
-        assert!(validate_manifest_url("https://github.com/efecrtgl/ivily-optimizer/releases/download/../x/latest.json").is_err());
-        assert!(validate_manifest_url("http://github.com/efecrtgl/ivily-optimizer/releases/download/v1/latest.json").is_err());
+        assert!(validate_manifest_url(
+            "https://github.com/efecrtgl/ivily-optimizer/releases/download/../x/latest.json"
+        )
+        .is_err());
+        assert!(validate_manifest_url("http://github.com/efecrtgl/ivily-optimizer/releases/download/v1/latest.json")
+            .is_err());
     }
 }

@@ -108,7 +108,10 @@ pub fn restore_entry(db: &Db, qroot: &Path, id: i64) -> AppResult<RestoreResult>
     if e.restore_status != "available" {
         return Err(AppError::Conflict(match e.restore_status.as_str() {
             "restored" => "bu işlem zaten geri alındı".into(),
-            "failed" => "bu işlemin geri alınması daha önce başarısız oldu; değişikliği ilgili bölümden elle yapabilirsiniz".into(),
+            "failed" => {
+                "bu işlemin geri alınması daha önce başarısız oldu; değişikliği ilgili bölümden elle yapabilirsiniz"
+                    .into()
+            }
             _ => "bu işlem geri alınamaz".into(),
         }));
     }
@@ -127,7 +130,9 @@ fn restore_system(db: &Db, e: &OpEntry) -> AppResult<RestoreResult> {
     // Her çekirdek işlev değişikliği kendi kaydıyla geçmişe yazar.
     let res: AppResult<(String, Option<i64>)> = match e.kind.as_str() {
         "startup" => startup::set_enabled(db, str_of(d, "id"), prev_bool).map(|r| (r.message, r.oplog_id)),
-        "task" => tasks::set_enabled(db, str_of(d, "path"), str_of(d, "name"), prev_bool).map(|r| (r.message, r.oplog_id)),
+        "task" => {
+            tasks::set_enabled(db, str_of(d, "path"), str_of(d, "name"), prev_bool).map(|r| (r.message, r.oplog_id))
+        }
         "power" => power::set_active(db, str_of(d, "previousGuid")).map(|r| (r.message, r.oplog_id)),
         "service" => services::set_start_type(db, str_of(d, "name"), str_of(d, "previousStartType"))
             .map(|r| (r.message, r.oplog_id)),
@@ -169,7 +174,12 @@ fn restore_system(db: &Db, e: &OpEntry) -> AppResult<RestoreResult> {
                 json!({ "restoredFrom": e.id, "error": msg }),
             )?;
             oplog::mark_restore(db, e.id, "failed", Some(op), Some(&msg))?;
-            Ok(RestoreResult { ok: false, message: format!("Geri alınamadı: {msg}"), restore_op_id: Some(op), details: vec![] })
+            Ok(RestoreResult {
+                ok: false,
+                message: format!("Geri alınamadı: {msg}"),
+                restore_op_id: Some(op),
+                details: vec![],
+            })
         }
     }
 }
@@ -272,11 +282,8 @@ fn finish_bulk(
         // Geri alınacak bir şey kalmamıştı (hepsi zaten yerinde).
         (false, false) => Outcome::Success,
     };
-    let title = if outcome == Outcome::Failed {
-        format!("Geri alma başarısız: {}", e.title)
-    } else {
-        restored_title(e)
-    };
+    let title =
+        if outcome == Outcome::Failed { format!("Geri alma başarısız: {}", e.title) } else { restored_title(e) };
     let op = oplog::record(
         db,
         &e.kind,
@@ -361,13 +368,21 @@ mod tests {
         let t = tempfile::tempdir().unwrap();
         fs::create_dir_all(t.path().join("x/y/z")).unwrap();
         fs::create_dir_all(t.path().join("w")).unwrap();
-        let paths = vec![t.path().join("x").to_string_lossy().into_owned(), t.path().join("w").to_string_lossy().into_owned()];
+        let paths =
+            vec![t.path().join("x").to_string_lossy().into_owned(), t.path().join("w").to_string_lossy().into_owned()];
         let r = crate::files::remove_empty_folders(&paths);
         assert_eq!(r.removed.len(), 2);
         assert_eq!(r.all_removed.len(), 4);
         assert!(!t.path().join("x").exists());
-        let id = oplog::record(&db, "folders", "2 boş klasör silindi", Outcome::Success, true, json!({ "paths": r.all_removed }))
-            .unwrap();
+        let id = oplog::record(
+            &db,
+            "folders",
+            "2 boş klasör silindi",
+            Outcome::Success,
+            true,
+            json!({ "paths": r.all_removed }),
+        )
+        .unwrap();
         let res = restore_entry(&db, Path::new("unused"), id).unwrap();
         assert!(res.ok, "{res:?}");
         assert!(t.path().join("x/y/z").is_dir());

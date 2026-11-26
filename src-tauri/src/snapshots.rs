@@ -103,7 +103,8 @@ fn row_to_info(r: &rusqlite::Row) -> rusqlite::Result<SnapshotInfo> {
     })
 }
 
-const COLS: &str = "id, ts, root, status, total_size, file_count, dir_count, error_count, duration_ms, volume_total, volume_free";
+const COLS: &str =
+    "id, ts, root, status, total_size, file_count, dir_count, error_count, duration_ms, volume_total, volume_free";
 
 pub fn list(db: &Db, root: Option<&str>) -> AppResult<Vec<SnapshotInfo>> {
     db.with(|c| {
@@ -210,7 +211,9 @@ pub fn compare(db: &Db, a: i64, b: i64) -> AppResult<Comparison> {
         if s.status != "complete" {
             warnings.push(format!(
                 "{} tarihli tarama tamamlanmamış ({}); farklar eksik veriden kaynaklanabilir.",
-                chrono::DateTime::from_timestamp(s.ts, 0).map(|d| d.format("%d.%m.%Y %H:%M").to_string()).unwrap_or_default(),
+                chrono::DateTime::from_timestamp(s.ts, 0)
+                    .map(|d| d.format("%d.%m.%Y %H:%M").to_string())
+                    .unwrap_or_default(),
                 status_label(&s.status)
             ));
         }
@@ -328,10 +331,8 @@ pub struct GrowthReport {
 /// sınırı içinde) karşılaştırarak büyüyen klasörleri bulur.
 pub fn growth(db: &Db, root: &str, days: u32, limit: usize) -> AppResult<GrowthReport> {
     let since = now_ts() - days as i64 * 86_400;
-    let snaps: Vec<SnapshotInfo> = list(db, Some(root))?
-        .into_iter()
-        .filter(|s| s.status == "complete" && s.ts >= since)
-        .collect();
+    let snaps: Vec<SnapshotInfo> =
+        list(db, Some(root))?.into_iter().filter(|s| s.status == "complete" && s.ts >= since).collect();
     if snaps.len() < 2 {
         return Ok(GrowthReport {
             root: root.into(),

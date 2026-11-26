@@ -222,7 +222,14 @@ pub struct ProcessRestartResult {
 }
 
 /// Yeniden başlatılması desteklenmeyen tek örnekli kabuk süreçleri.
-const NO_RESTART: &[&str] = &["explorer.exe", "sihost.exe", "startmenuexperiencehost.exe", "shellexperiencehost.exe", "searchhost.exe", "textinputhost.exe"];
+const NO_RESTART: &[&str] = &[
+    "explorer.exe",
+    "sihost.exe",
+    "startmenuexperiencehost.exe",
+    "shellexperiencehost.exe",
+    "searchhost.exe",
+    "textinputhost.exe",
+];
 
 fn new_system() -> AppResult<System> {
     System::new().map_err(|e| AppError::System(format!("süreç bilgisi alınamadı ({e:?})")))
@@ -379,10 +386,13 @@ pub fn restart(db: &Db, pid: u32, expected_name: &str) -> AppResult<ProcessResta
     });
 
     if !p.kill() {
-        let e = AppError::PermissionDenied(format!("{name} sonlandırılamadı; süreç yönetici hakları gerektiriyor olabilir."));
+        let e = AppError::PermissionDenied(format!(
+            "{name} sonlandırılamadı; süreç yönetici hakları gerektiriyor olabilir."
+        ));
         let mut d = detail_base.clone();
         d["error"] = serde_json::Value::String(e.to_string());
-        let _ = oplog::record(db, "process", &format!("Süreç yeniden başlatılamadı: {name}"), Outcome::Failed, false, d);
+        let _ =
+            oplog::record(db, "process", &format!("Süreç yeniden başlatılamadı: {name}"), Outcome::Failed, false, d);
         return Err(e);
     }
     // Çıkışı en fazla 5 saniye bekle.
@@ -401,7 +411,8 @@ pub fn restart(db: &Db, pid: u32, expected_name: &str) -> AppResult<ProcessResta
         let e = AppError::System(format!("{name} 5 saniye içinde kapanmadı; yeniden başlatılmadı."));
         let mut d = detail_base.clone();
         d["error"] = serde_json::Value::String(e.to_string());
-        let _ = oplog::record(db, "process", &format!("Süreç yeniden başlatılamadı: {name}"), Outcome::Partial, false, d);
+        let _ =
+            oplog::record(db, "process", &format!("Süreç yeniden başlatılamadı: {name}"), Outcome::Partial, false, d);
         return Err(e);
     }
     let mut cmd = std::process::Command::new(&exe);
@@ -415,7 +426,8 @@ pub fn restart(db: &Db, pid: u32, expected_name: &str) -> AppResult<ProcessResta
             drop(child);
             let mut d = detail_base;
             d["newPid"] = serde_json::json!(new_pid);
-            let _ = oplog::record(db, "process", &format!("Süreç yeniden başlatıldı: {name}"), Outcome::Success, false, d);
+            let _ =
+                oplog::record(db, "process", &format!("Süreç yeniden başlatıldı: {name}"), Outcome::Success, false, d);
             Ok(ProcessRestartResult {
                 old_pid: pid,
                 new_pid,
@@ -426,7 +438,14 @@ pub fn restart(db: &Db, pid: u32, expected_name: &str) -> AppResult<ProcessResta
             let e = AppError::System(format!("{name} kapatıldı ancak yeniden başlatılamadı: {err}"));
             let mut d = detail_base;
             d["error"] = serde_json::Value::String(e.to_string());
-            let _ = oplog::record(db, "process", &format!("Süreç yeniden başlatılamadı: {name}"), Outcome::Partial, false, d);
+            let _ = oplog::record(
+                db,
+                "process",
+                &format!("Süreç yeniden başlatılamadı: {name}"),
+                Outcome::Partial,
+                false,
+                d,
+            );
             Err(e)
         }
     }

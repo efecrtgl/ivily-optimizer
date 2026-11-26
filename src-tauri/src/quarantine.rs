@@ -112,11 +112,8 @@ impl<'a> Quarantine<'a> {
             let _ = std::fs::remove_dir(&dir);
             return Err(e);
         }
-        let modified = md
-            .modified()
-            .ok()
-            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
-            .map(|d| d.as_secs() as i64);
+        let modified =
+            md.modified().ok().and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok()).map(|d| d.as_secs() as i64);
         let ts = now_ts();
         let item = QuarantineItem {
             id: id.clone(),
@@ -263,11 +260,9 @@ impl<'a> Quarantine<'a> {
 
     pub fn total_size(&self) -> AppResult<(u64, u64)> {
         self.db.with(|c| {
-            c.query_row(
-                "SELECT COUNT(*), COALESCE(SUM(size),0) FROM quarantine WHERE state = 'quarantined'",
-                [],
-                |r| Ok((r.get::<_, i64>(0)? as u64, r.get::<_, i64>(1)? as u64)),
-            )
+            c.query_row("SELECT COUNT(*), COALESCE(SUM(size),0) FROM quarantine WHERE state = 'quarantined'", [], |r| {
+                Ok((r.get::<_, i64>(0)? as u64, r.get::<_, i64>(1)? as u64))
+            })
         })
     }
 }
