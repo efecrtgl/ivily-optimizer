@@ -7,18 +7,26 @@
 //   durur; yalnızca uyanıp hiçbir şey yapmamak bile işlemciyi gereksiz yere
 //   uyandırır. Görünür olunca hemen bir tur çalışır ve devam eder.
 //   `runWhenHidden()` true dönerse gizliyken de çalışmaya devam eder.
+//   Görünürlük varsayılan olarak `visibility.js`'ten okunur (simge durumu dahil).
+
+import * as defaultVisibility from "./visibility.js";
 
 /**
  * @param {() => (void | Promise<void>)} task Her turda çalışacak iş. Hataları kendisi ele almalıdır.
- * @param {{ interval: () => number, runWhenHidden?: () => boolean, doc?: Document }} opts
+ * @param {{
+ *   interval: () => number,
+ *   runWhenHidden?: () => boolean,
+ *   visibility?: { isHidden: () => boolean, onVisibilityChange: (fn: () => void) => () => void },
+ * }} opts
  */
-export function createPoller(task, { interval, runWhenHidden = () => false, doc = document }) {
+export function createPoller(task, { interval, runWhenHidden = () => false, visibility = defaultVisibility }) {
   let timer = null;
   let active = false;
   let inFlight = false;
   let generation = 0;
 
-  const hidden = () => doc.visibilityState === "hidden";
+  const hidden = () => visibility.isHidden();
+  let unsubscribe = null;
 
   async function run(gen) {
     timer = null;
@@ -46,7 +54,7 @@ export function createPoller(task, { interval, runWhenHidden = () => false, doc 
       if (active) return;
       active = true;
       generation++;
-      doc.addEventListener("visibilitychange", onVisibility);
+      unsubscribe = visibility.onVisibilityChange(onVisibility);
       run(generation);
     },
     stop() {
@@ -55,7 +63,8 @@ export function createPoller(task, { interval, runWhenHidden = () => false, doc 
       generation++;
       if (timer) clearTimeout(timer);
       timer = null;
-      doc.removeEventListener("visibilitychange", onVisibility);
+      unsubscribe?.();
+      unsubscribe = null;
     },
     get active() {
       return active;

@@ -189,6 +189,13 @@ body {
   height: 100%;
 }
 
+/* Pencere gizliyken (simge durumu, arka plan) hiçbir animasyon çalışmaz. */
+:root[data-visibility="hidden"] *,
+:root[data-visibility="hidden"] *::before,
+:root[data-visibility="hidden"] *::after {
+  animation-play-state: paused !important;
+}
+
 :root[data-motion="reduce"] *,
 :root[data-motion="reduce"] *::before,
 :root[data-motion="reduce"] *::after {

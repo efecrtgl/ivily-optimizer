@@ -5,8 +5,13 @@ function fakeDoc(state = "visible") {
   const listeners = new Set();
   return {
     visibilityState: state,
-    addEventListener: (_t, fn) => listeners.add(fn),
-    removeEventListener: (_t, fn) => listeners.delete(fn),
+    isHidden() {
+      return this.visibilityState === "hidden";
+    },
+    onVisibilityChange: (fn) => {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    },
     set(state) {
       this.visibilityState = state;
       listeners.forEach((fn) => fn());
@@ -25,7 +30,7 @@ describe("createPoller", () => {
   it("hemen bir kez, sonra her aralıkta çalışır", async () => {
     const doc = fakeDoc();
     const task = vi.fn();
-    const p = createPoller(task, { interval: () => 1000, doc });
+    const p = createPoller(task, { interval: () => 1000, visibility: doc });
     p.start();
     await flush();
     expect(task).toHaveBeenCalledTimes(1);
@@ -41,7 +46,7 @@ describe("createPoller", () => {
     const doc = fakeDoc();
     let resolve;
     const task = vi.fn(() => new Promise((r) => (resolve = r)));
-    const p = createPoller(task, { interval: () => 1000, doc });
+    const p = createPoller(task, { interval: () => 1000, visibility: doc });
     p.start();
     await flush();
     p.stop(); // istek hâlâ sürüyor
@@ -54,7 +59,7 @@ describe("createPoller", () => {
     const doc = fakeDoc();
     const resolvers = [];
     const task = vi.fn(() => new Promise((r) => resolvers.push(r)));
-    const p = createPoller(task, { interval: () => 1000, doc });
+    const p = createPoller(task, { interval: () => 1000, visibility: doc });
     p.start();
     await flush();
     p.stop();
@@ -71,7 +76,7 @@ describe("createPoller", () => {
   it("gizliyken durur ve görünür olunca devam eder", async () => {
     const doc = fakeDoc();
     const task = vi.fn();
-    const p = createPoller(task, { interval: () => 1000, doc });
+    const p = createPoller(task, { interval: () => 1000, visibility: doc });
     p.start();
     await flush();
     doc.visibilityState = "hidden";
@@ -89,7 +94,7 @@ describe("createPoller", () => {
   it("runWhenHidden true ise gizliyken de çalışır", async () => {
     const doc = fakeDoc("hidden");
     const task = vi.fn();
-    const p = createPoller(task, { interval: () => 1000, runWhenHidden: () => true, doc });
+    const p = createPoller(task, { interval: () => 1000, runWhenHidden: () => true, visibility: doc });
     p.start();
     await vi.advanceTimersByTimeAsync(3000);
     expect(task).toHaveBeenCalledTimes(4);
@@ -99,7 +104,7 @@ describe("createPoller", () => {
   it("işteki hata yoklamayı durdurmaz", async () => {
     const doc = fakeDoc();
     const task = vi.fn(() => Promise.reject(new Error("x")));
-    const p = createPoller(task, { interval: () => 1000, doc });
+    const p = createPoller(task, { interval: () => 1000, visibility: doc });
     p.start();
     await vi.advanceTimersByTimeAsync(2000);
     expect(task).toHaveBeenCalledTimes(3);
