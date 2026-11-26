@@ -1,0 +1,32 @@
+name: Özellik önerisi / Feature request
+description: Yeni bir özellik veya iyileştirme önerin. / Suggest a new feature or improvement.
+labels: ["öneri"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ivily Optimizer kanıta dayalı ve geri alınabilir işlemleri hedefler. RAM "temizleme", kayıt defteri temizliği,
+        toplu servis kapatma veya agresif "debloat" gibi kanıtlanmamış optimizasyonlar kabul edilmez
+        ([CONTRIBUTING.md](https://github.com/efecrtgl/ivily-optimizer/blob/main/CONTRIBUTING.md)).
+  - type: textarea
+    id: problem
+    attributes:
+      label: Hangi sorunu çözüyor?
+      description: Bugün neyi yapamıyorsunuz veya neyi zor yapıyorsunuz?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Önerilen çözüm
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: Sistem üzerindeki etkisi
+      description: Öneri dosya siler, ayar değiştirir veya yönetici hakkı gerektirir mi? Nasıl geri alınabilir?
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Değerlendirilen alternatifler

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Güvenlik açığı bildir / Report a vulnerability
+    url: https://github.com/efecrtgl/ivily-optimizer/security/advisories/new
+    about: Güvenlik açıklarını herkese açık sorun olarak değil, özel bildirimle iletin.
+  - name: Sorun giderme rehberi / Troubleshooting
+    url: https://github.com/efecrtgl/ivily-optimizer/blob/main/docs/SORUN-GIDERME.md
+    about: Sık karşılaşılan sorunlar ve çözümleri.

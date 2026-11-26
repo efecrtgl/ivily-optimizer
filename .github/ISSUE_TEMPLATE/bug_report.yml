@@ -1,0 +1,84 @@
+name: Hata bildirimi / Bug report
+description: Beklendiği gibi çalışmayan bir şeyi bildirin. / Report something that does not work as expected.
+labels: ["hata"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Teşekkürler! Güvenlik açıklarını burada **bildirmeyin**; bunun için [özel güvenlik bildirimi](https://github.com/efecrtgl/ivily-optimizer/security/advisories/new) kullanın.
+        Günlük dosyası eklerken içindeki kullanıcı adı ve klasör yollarını gözden geçirin.
+  - type: input
+    id: version
+    attributes:
+      label: Ivily Optimizer sürümü
+      description: Ayarlar > Hakkında sayfasında görünür.
+      placeholder: "0.2.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: Kurulum türü
+      options:
+        - Yükleyici (setup.exe)
+        - Taşınabilir (zip)
+        - Kaynaktan derleme
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows sürümü
+      description: "`winver` komutunun gösterdiği sürüm ve yapı numarası."
+      placeholder: "Windows 11 24H2 (26100.xxxx)"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Etkilenen bölüm
+      options:
+        - Genel Bakış (pano)
+        - Disk Analizi / Akıllı Analiz
+        - Dosya Yönetimi
+        - Temizlik / Karantina
+        - Başlangıç
+        - İşlemler
+        - Servisler ve Görevler
+        - Performans ve Ağ
+        - Sistem Geçmişi / İşlem Geçmişi
+        - Güncellemeler
+        - Ayarlar
+        - Yükleyici / kaldırma
+        - Diğer
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: Ne oldu?
+      description: Gördüğünüz davranış ve varsa hata mesajının tam metni.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Ne olmasını bekliyordunuz?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Yeniden üretme adımları
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Günlük kayıtları (isteğe bağlı)
+      description: "Ayarlar > Gizlilik > Günlükleri dışa aktar. İlgili satırları yapıştırın; kişisel yolları maskeleyin."
+      render: text
