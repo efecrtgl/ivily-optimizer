@@ -59,7 +59,7 @@
 
 <aside class="sb glass-float" class:collapsed aria-label={t("nav.main")}>
   <button class="brand" onclick={() => go("overview")} aria-label={t("nav.home")}>
-    <CatMark size={24} blink />
+    <CatMark size={24} />
     {#if !collapsed}<Wordmark height={15} /><span class="edition">Optimizer</span>{/if}
   </button>
 

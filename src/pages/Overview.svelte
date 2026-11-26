@@ -416,12 +416,8 @@
     height: 6px;
     border-radius: 50%;
     background: currentColor;
-    animation: pulse 2s infinite;
-  }
-  @keyframes pulse {
-    50% {
-      opacity: 0.3;
-    }
+    /* Statik: sürekli yanıp sönen bir gösterge, pencere boştayken bile
+       WebView2'nin her karede yeniden çizim yapmasına yol açıyordu. */
   }
   .dash {
     display: grid;

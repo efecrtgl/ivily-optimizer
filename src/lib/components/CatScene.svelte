@@ -67,7 +67,7 @@
   .zz {
     fill: var(--text-3);
     font: 600 14px var(--font);
-    animation: float 3s ease-in-out infinite;
+    animation: float 3s ease-in-out 3;
   }
   .z2 {
     font-size: 11px;
@@ -77,10 +77,10 @@
     transform-origin: 106px 104px;
   }
   .watch .tail {
-    animation: wag 1.6s ease-in-out infinite;
+    animation: wag 1.6s ease-in-out 3;
   }
   .watch .eyes {
-    animation: look 4s ease-in-out infinite;
+    animation: look 4s ease-in-out 2;
   }
   .badge-bg {
     fill: var(--good-soft);
