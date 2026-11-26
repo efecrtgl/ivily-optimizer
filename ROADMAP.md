@@ -14,7 +14,7 @@ Kapsam ve gerekçeler: [docs/DENETIM.md](docs/DENETIM.md).
 | 4 | Güvenlik sertleştirmesi (yol doğrulama, kalıcı silme, süreç yeniden başlatma) | ✅ |
 | 5 | Yapılandırma ve veri güvenilirliği (göç yedeği, ayar içe aktarma) | ✅ |
 | 6 | Performans: yoklama düzeltmeleri, sayfaların tembel yüklenmesi, ölçümler | ✅ |
-| 7 | Arayüz: Türkçe/İngilizce dil desteği, durum gösterimleri, erişilebilirlik | ⏳ |
+| 7 | Arayüz: Türkçe/İngilizce dil desteği, durum gösterimleri, erişilebilirlik | 🟡 i18n altyapısı ve kabuk çevirisi; sayfa içerikleri Türkçe |
 | 8 | Ivily Ekosistem Protokolü (IEP) hazırlığı | ⏳ |
 | 9 | Yükleyici ve güncelleme doğrulaması | ⏳ |
 | 10 | Belgeler ve 0.3.0 sürüm hazırlığı | ⏳ |
@@ -44,5 +44,5 @@ Kapsam ve gerekçeler: [docs/DENETIM.md](docs/DENETIM.md).
 - ⏳ **Disk sağlığı (SMART):** Olay günlüğündeki disk uyarıları gösterilir; SMART verisi okunmaz.
 - ⏳ **Pano bileşenleri için sürükle-bırak:** Sıralama şu anda ok düğmeleriyle yapılır.
 - ⏳ **Arayüz uçtan uca testleri** (WebDriver).
-- ⏳ **Başka diller:** Arayüz yalnızca Türkçe.
+- 🟡 **İngilizce:** Dil altyapısı ve kabuk çevirisi 0.3.0'da eklendi; sayfa içeriklerinin çevirisi sürüyor.
 - ⏳ **Otomatik geri alma (rollback):** Başarısız güncellemede mevcut sürüm yerinde kalır; tam otomatik geri dönüş NSIS sınırları nedeniyle yok.

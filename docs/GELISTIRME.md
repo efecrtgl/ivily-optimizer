@@ -50,6 +50,16 @@ Ayrıntılı günlük için: `$env:IVILY_LOG = "debug"; npm run tauri dev`.
 - Arayüzde durumu yalnızca renkle anlatmayın; rozetlerde simge + metin kullanın.
 - Yıkıcı her işlem `confirm()` ile onay almalı; geri alınamayan işlemler bunu açıkça yazmalıdır.
 
+## Dil desteği (i18n)
+
+Arayüzün birincil dili Türkçedir; İngilizce ikinci dildir.
+
+- Metinler `src/lib/locales/tr.js` (kaynak) ve `src/lib/locales/en.js` dosyalarında düz anahtar–değer çiftleri olarak tutulur. Yeni bir metin önce `tr.js`'e, ardından aynı anahtarla `en.js`'e eklenir. `src/lib/i18n.test.js` iki dosyanın aynı anahtarları ve aynı `{yer tutucuları}` içerdiğini denetler.
+- Bileşenlerde `import { t } from "../lib/i18n.svelte.js"` ve `{t("nav.settings")}` / `t("app.startFailed", { error })` kullanılır. `t()` reaktiftir; dil değişince metinler sayfa durumu sıfırlanmadan güncellenir.
+- Sayı, tarih ve süre biçimleri `src/lib/format.js` üzerinden etkin dile göre yapılır; bileşenlerde doğrudan `"tr-TR"` kullanmayın.
+- Dil, Ayarlar > Görünüm > Dil bölümünden seçilir ve `language` ayarı olarak kaydedilir (`"tr"` veya `"en"`).
+- **Kapsam (0.3.0):** gezinme, uygulama kabuğu, ortak bileşenler (bildirimler, onay penceresi, canlı izleme uyarısı), güncelleme durumları ve tüm sayı/tarih/süre biçimleri. Sayfa içerikleri ve arka uçtan gelen hata mesajları henüz yalnızca Türkçedir; bu durum Ayarlar'daki dil açıklamasında da belirtilir. Sayfalar çevrildikçe anahtarlar aynı dosyalara eklenir.
+
 ## Commit biçimi
 
 0.3.0'dan itibaren commit mesajları İngilizce [Conventional Commits](https://www.conventionalcommits.org/) biçimindedir (daha eski commit'ler Türkçedir):

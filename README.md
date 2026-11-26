@@ -36,6 +36,7 @@ Sıradan bir "PC temizleyici" değildir; abartılı performans vaatlerinde bulun
 | **Performans ve Ağ** | Canlı geçmiş grafikleri, güç planları, bağdaştırıcılar, bağlantı testi, DNS araçları. |
 | **Güncellemeler** | GitHub Releases, kararlı/ön sürüm kanalı, imza doğrulamalı aşamalı kurulum. |
 | **Tasarım** | Tek renkli cam tasarım sistemi, koyu/açık/sistem tema, yenilenen kedi işareti. |
+| **Dil** | Türkçe (birincil). İngilizce: gezinme, ortak bileşenler, tarih/sayı biçimleri ve güncelleme durumları; sayfa içerikleri henüz Türkçe. |
 
 ## Güvenlik felsefesi
 

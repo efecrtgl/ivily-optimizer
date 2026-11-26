@@ -189,3 +189,11 @@ Bu bölüm her faz tamamlandıkça güncellenir.
 | P3 | ✅ Faz 6 | Gizli pencerede zamanlayıcı tamamen durur, görünür olunca devam eder. |
 | P4 | ✅ Faz 6 | Ivily Zekâsı 2 dakikalık önbellek; ilgili iş bitince geçersiz kılınır. Hesaplama hatasında yükleme durumu artık takılı kalmaz. |
 | P5 | ✅ Faz 6 | Sayfalar tembel yüklenir; açılış JS'i 394 KB → 144 KB. Ölçümler: `docs/PERFORMANS.md`. |
+| §4.3 `prerelease` | ❎ Geçersiz | Arka uç `prerelease` alanını gönderiyor; yalnızca eski TypeScript arayüzünde eksikti ve rozet çalışma zamanında doğruydu. JSDoc tanımı tamamlandı. |
+| §4.3 `oplog` sapması | ✅ Faz 7 | Yinelenen `api.oplog` kaldırıldı; Genel Bakış `fx.oplog` kullanır. |
+| §4.5–4.6 | ✅ Faz 7 | Ayar kayıtları sıraya alınır; yeni onay penceresi bekleyen öncekini "hayır" ile sonuçlandırır. |
+| §8 canlı izleme hatası | ✅ Faz 7 | Genel Bakış, Performans ve Ağ sayfalarında görünür uyarı (`LiveError`). |
+| §8 işlenmeyen söz reddi | ✅ Faz 7 | FileBrowser ve Temizlik sayfasında hata bildirimi. |
+| §3 İngilizce | 🟡 Faz 7 | i18n altyapısı, dil ayarı, kabuk ve biçim çevirisi; sayfa içerikleri Türkçe kalır. |
+| §8 sekme klavye gezinmesi, Donut erişilebilirliği, eksik yükleme durumları | ⏳ | Henüz yapılmadı. |
+| v0.2.0 `SHA256SUMS.txt` | ⚠️ Yeni bulgu | Yayımlanan özet dosyasında yükleyici boşluklu adla (`Ivily Optimizer_0.2.0_x64-setup.exe`) yer alıyor, yüklenen yapıt ise noktalı adda; `sha256sum -c` yükleyici için başarısız olur. İş akışı v0.2.0 sonrasında (`5d91dac`) düzeltildi; sonraki sürümlerde doğrulanacak. Taşınabilir zip özeti doğrulandı ve eşleşiyor. |
