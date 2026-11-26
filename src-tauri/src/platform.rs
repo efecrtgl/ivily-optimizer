@@ -297,6 +297,22 @@ pub fn set_launch_at_startup(_e: bool) -> AppResult<()> {
     Ok(())
 }
 
+/// Sistem sürücüsündeki boş alan (bayt).
+#[cfg(windows)]
+pub fn system_drive_free() -> Option<u64> {
+    use windows::core::PCWSTR;
+    use windows::Win32::Storage::FileSystem::GetDiskFreeSpaceExW;
+    let drive = std::env::var("SystemDrive").unwrap_or_else(|_| "C:".into());
+    let root = to_wide(&format!("{drive}\\"));
+    let mut free = 0u64;
+    unsafe { GetDiskFreeSpaceExW(PCWSTR(root.as_ptr()), Some(&mut free), None, None).ok()? };
+    Some(free)
+}
+#[cfg(not(windows))]
+pub fn system_drive_free() -> Option<u64> {
+    None
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -322,20 +338,4 @@ mod tests {
         assert_eq!(file_identity(&a), file_identity(&b));
         assert_ne!(file_identity(&a), file_identity(&c));
     }
-}
-
-/// Sistem sürücüsündeki boş alan (bayt).
-#[cfg(windows)]
-pub fn system_drive_free() -> Option<u64> {
-    use windows::core::PCWSTR;
-    use windows::Win32::Storage::FileSystem::GetDiskFreeSpaceExW;
-    let drive = std::env::var("SystemDrive").unwrap_or_else(|_| "C:".into());
-    let root = to_wide(&format!("{drive}\\"));
-    let mut free = 0u64;
-    unsafe { GetDiskFreeSpaceExW(PCWSTR(root.as_ptr()), Some(&mut free), None, None).ok()? };
-    Some(free)
-}
-#[cfg(not(windows))]
-pub fn system_drive_free() -> Option<u64> {
-    None
 }

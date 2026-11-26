@@ -474,7 +474,7 @@ pub fn find_empty_folders(scan: &DiskScan) -> AppResult<EmptyFolders> {
         }
         items.push(EmptyFolder { id: i as u32, path: ps, modified: nd.modified, nested_dirs: nd.dirs });
     }
-    items.sort_by(|a, b| a.path.to_lowercase().cmp(&b.path.to_lowercase()));
+    items.sort_by_key(|a| a.path.to_lowercase());
     let total = items.len() as u64;
     items.truncate(EMPTY_LIMIT);
     Ok(EmptyFolders { items, total })
@@ -1041,7 +1041,7 @@ pub fn insights(inp: InsightInputs) -> StorageInsights {
             });
         }
     }
-    app_storage.sort_by(|a, b| b.size.cmp(&a.size));
+    app_storage.sort_by_key(|e| std::cmp::Reverse(e.size));
     app_storage.truncate(40);
 
     // Geçici / önbellek / günlük klasörleri (en üst düzey olanlar)
@@ -1072,7 +1072,7 @@ pub fn insights(inp: InsightInputs) -> StorageInsights {
             kind: temp_kind(&nodes[i].name).unwrap_or("temp").into(),
         });
     }
-    temp_like.sort_by(|a, b| b.size.cmp(&a.size));
+    temp_like.sort_by_key(|e| std::cmp::Reverse(e.size));
     let temp_total: u64 = temp_like.iter().map(|t| t.size).sum();
     let temp_count = temp_like.len();
     temp_like.truncate(25);

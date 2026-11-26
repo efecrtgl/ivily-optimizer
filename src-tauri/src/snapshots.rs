@@ -296,7 +296,7 @@ pub fn diff_dirs(old: &HashMap<String, DirRow>, new: &HashMap<String, DirRow>) -
             });
         }
     }
-    out.sort_by(|a, b| b.delta.abs().cmp(&a.delta.abs()));
+    out.sort_by_key(|e| std::cmp::Reverse(e.delta.abs()));
     out
 }
 
@@ -374,7 +374,7 @@ pub fn growth(db: &Db, root: &str, days: u32, limit: usize) -> AppResult<GrowthR
         .collect();
     // Üst klasörler alt klasörlerinin büyümesini de içerir; en anlamlı
     // sonuçları göstermek için büyümeye göre sıralarız.
-    items.sort_by(|a, b| b.delta.cmp(&a.delta));
+    items.sort_by_key(|e| std::cmp::Reverse(e.delta));
     items.truncate(limit);
 
     // Zaman çizelgesi: listelenen klasörlerin her anlık görüntüdeki boyutu.

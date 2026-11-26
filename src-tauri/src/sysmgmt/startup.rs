@@ -478,7 +478,7 @@ fn items_of(source: Source) -> Vec<StartupItem> {
 #[cfg(windows)]
 pub fn list() -> Vec<StartupItem> {
     let mut v: Vec<StartupItem> = Source::ALL.into_iter().flat_map(items_of).collect();
-    v.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    v.sort_by_key(|a| a.name.to_lowercase());
     v
 }
 #[cfg(not(windows))]
@@ -847,9 +847,9 @@ pub fn parse_boot_history(json: &str) -> AppResult<BootHistory> {
             });
         }
     }
-    boots.sort_by(|a, b| b.ts.cmp(&a.ts));
+    boots.sort_by_key(|e| std::cmp::Reverse(e.ts));
     boots.truncate(15);
-    degradations.sort_by(|a, b| b.ts.cmp(&a.ts));
+    degradations.sort_by_key(|e| std::cmp::Reverse(e.ts));
     degradations.truncate(30);
     let note = if boots.is_empty() && degradations.is_empty() {
         "Windows henüz açılış performansı kaydı tutmamış.".to_string()

@@ -222,8 +222,7 @@ mod tests {
     #[test]
     fn persists_and_validates() {
         let db = Db::open_in_memory().unwrap();
-        let mut s = Settings::default();
-        s.monitor_interval_ms = 10;
+        let mut s = Settings { monitor_interval_ms: 10, ..Settings::default() };
         s.exclusions.extensions = vec![".LOG".into(), "  ".into(), "a b".into()];
         let s = s.validate().unwrap();
         assert_eq!(s.monitor_interval_ms, 1000);

@@ -193,7 +193,7 @@ pub fn parse_tasks(json: &str) -> AppResult<Vec<TaskInfo>> {
             name,
         });
     }
-    out.sort_by(|a, b| a.id.to_lowercase().cmp(&b.id.to_lowercase()));
+    out.sort_by_key(|a| a.id.to_lowercase());
     Ok(out)
 }
 
@@ -419,7 +419,7 @@ pub fn parse_history(json: &str) -> AppResult<TaskHistory> {
             })
         })
         .collect();
-    events.sort_by(|a, b| b.ts.cmp(&a.ts));
+    events.sort_by_key(|e| std::cmp::Reverse(e.ts));
     events.truncate(30);
     let note = if log_enabled == Some(false) {
         NOTE_DISABLED.to_string()

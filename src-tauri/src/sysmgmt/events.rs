@@ -314,7 +314,7 @@ pub fn parse_events(json: &str) -> AppResult<Vec<EventItem>> {
             category_label: category_label(category).to_string(),
         });
     }
-    out.sort_by(|a, b| b.ts.cmp(&a.ts));
+    out.sort_by_key(|e| std::cmp::Reverse(e.ts));
     Ok(out)
 }
 

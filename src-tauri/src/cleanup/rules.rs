@@ -359,7 +359,7 @@ pub fn categories(temp_min_age_hours: u64, user_rules: &[crate::settings::UserCl
 
     // --- Geliştirme ----------------------------------------------------------
     let home = dirs::home_dir();
-    let mut dev: Vec<(&str, &str, Option<PathBuf>, &'static str, &[&str])> = vec![
+    let mut dev: Vec<DevCache> = vec![
         ("npm", "npm önbelleği", local().map(|l| l.join("npm-cache\\_cacache")), "npm'in indirilen paketler için tuttuğu önbellek. Gerektiğinde yeniden indirilir. Önerilen yol `npm cache clean --force` komutudur.", &["node.exe"]),
         ("yarn", "Yarn önbelleği", local().map(|l| l.join("Yarn\\Cache")), "Yarn paket önbelleği. Gerektiğinde yeniden indirilir.", &["node.exe"]),
         ("pip", "pip önbelleği", local().map(|l| l.join("pip\\Cache")), "Python pip'in indirme ve derleme önbelleği. Gerektiğinde yeniden indirilir.", &["pip.exe", "python.exe"]),
@@ -424,6 +424,9 @@ fn is_allowed_windows_log(normalized: &str, windir: &str) -> bool {
     let w = paths::normalize(windir);
     parent == format!("{w}\\logs\\cbs") || parent == format!("{w}\\logs\\dism")
 }
+
+/// Geliştirme önbelleği tanımı: kimlik, ad, konum, açıklama, ilgili süreçler.
+type DevCache = (&'static str, &'static str, Option<PathBuf>, &'static str, &'static [&'static str]);
 
 /// Hiçbir koşulda silinmemesi, taşınmaması veya temizlik kuralına konu
 /// edilmemesi gereken konumlar.

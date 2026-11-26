@@ -435,7 +435,7 @@ mod imp {
             }
         }
         let mut v: Vec<ServiceInfo> = out.into_iter().map(|(n, d, sp)| make(&scm, n, d, &sp)).collect();
-        v.sort_by(|a, b| a.display_name.to_lowercase().cmp(&b.display_name.to_lowercase()));
+        v.sort_by_key(|a| a.display_name.to_lowercase());
         fill_dependents(&mut v);
         Ok(v)
     }

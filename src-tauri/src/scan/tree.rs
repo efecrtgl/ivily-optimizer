@@ -95,10 +95,13 @@ pub struct DiskScan {
 
 pub const TOP_FILES: usize = 1000;
 
+/// En büyük dosyalar yığınındaki öğe: boyut, yol, değişiklik zamanı, bulut yer tutucusu mu.
+type TopFile = (u64, String, i64, bool);
+
 struct Collector {
     nodes: Mutex<Vec<DirNode>>,
     exts: Mutex<HashMap<String, ExtStat>>,
-    heap: Mutex<BinaryHeap<Reverse<(u64, String, i64, bool)>>>,
+    heap: Mutex<BinaryHeap<Reverse<TopFile>>>,
     heap_min: AtomicU64,
     cloud_bytes: AtomicU64,
     small_threshold: u64,
@@ -136,7 +139,7 @@ pub fn scan(
             LargeFile { category: classify::category_of(&ext, size).to_string(), ext, path, size, modified, cloud }
         })
         .collect();
-    largest.sort_by(|a, b| b.size.cmp(&a.size));
+    largest.sort_by_key(|e| std::cmp::Reverse(e.size));
 
     let status = if outcome.cancelled {
         ScanStatus::Cancelled
@@ -345,7 +348,7 @@ impl DiskScan {
     pub fn children(&self, id: u32) -> Vec<NodeView> {
         let Some(n) = self.nodes.get(id as usize) else { return vec![] };
         let mut v: Vec<NodeView> = n.children.iter().filter_map(|&c| self.view(c)).collect();
-        v.sort_by(|a, b| b.size.cmp(&a.size));
+        v.sort_by_key(|e| std::cmp::Reverse(e.size));
         v
     }
 
@@ -378,11 +381,11 @@ impl DiskScan {
             .exts
             .values()
             .map(|e| ExtStat {
-                category: classify::category_of(&e.ext, if e.count > 0 { e.size / e.count } else { 0 }).to_string(),
+                category: classify::category_of(&e.ext, e.size.checked_div(e.count).unwrap_or(0)).to_string(),
                 ..e.clone()
             })
             .collect();
-        v.sort_by(|a, b| b.size.cmp(&a.size));
+        v.sort_by_key(|e| std::cmp::Reverse(e.size));
         v
     }
 
@@ -398,7 +401,7 @@ impl DiskScan {
             c.size += e.size;
         }
         let mut v: Vec<ExtStat> = m.into_values().collect();
-        v.sort_by(|a, b| b.size.cmp(&a.size));
+        v.sort_by_key(|e| std::cmp::Reverse(e.size));
         v
     }
 
@@ -500,7 +503,7 @@ pub fn small_file_hotspots(scan: &DiskScan, min_count: u64, limit: usize) -> Vec
         }
         let path = scan.path_of(i as u32).to_string_lossy().into_owned();
         let small_pct = if n.files > 0 { n.small_files as f64 * 100.0 / n.files as f64 } else { 0.0 };
-        let avg = if n.files > 0 { n.size / n.files } else { 0 };
+        let avg = n.size.checked_div(n.files).unwrap_or(0);
         let median_bucket = {
             let half = n.files.div_ceil(2);
             let mut acc = 0;
@@ -547,7 +550,7 @@ pub fn small_file_hotspots(scan: &DiskScan, min_count: u64, limit: usize) -> Vec
             suggestion,
         });
     }
-    out.sort_by(|a, b| b.small_files.cmp(&a.small_files));
+    out.sort_by_key(|e| std::cmp::Reverse(e.small_files));
     out.truncate(limit);
     out
 }

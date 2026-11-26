@@ -89,12 +89,14 @@ fn hash_full(p: &Path, ctl: Option<&JobCtl>) -> Option<[u8; 32]> {
     Some(*h.finalize().as_bytes())
 }
 
+/// Aday dosya: yol, boyut, değişiklik zamanı, oluşturma zamanı.
+type Candidate = (PathBuf, u64, i64, i64);
+
 fn group_by<K: std::hash::Hash + Eq + Send>(
-    items: Vec<(PathBuf, u64, i64, i64)>,
-    key: impl Fn(&(PathBuf, u64, i64, i64)) -> Option<K> + Sync,
-) -> Vec<(K, Vec<(PathBuf, u64, i64, i64)>)> {
-    let keyed: Vec<(K, (PathBuf, u64, i64, i64))> =
-        items.into_par_iter().filter_map(|it| key(&it).map(|k| (k, it))).collect();
+    items: Vec<Candidate>,
+    key: impl Fn(&Candidate) -> Option<K> + Sync,
+) -> Vec<(K, Vec<Candidate>)> {
+    let keyed: Vec<(K, Candidate)> = items.into_par_iter().filter_map(|it| key(&it).map(|k| (k, it))).collect();
     let mut m: HashMap<K, Vec<(PathBuf, u64, i64, i64)>> = HashMap::new();
     for (k, it) in keyed {
         m.entry(k).or_default().push(it);
@@ -198,7 +200,7 @@ pub fn find(root: &Path, opts: &WalkOptions, min_size: u64, ctl: &JobCtl) -> Dup
             verification: "Tüm içerik BLAKE3 ile doğrulandı".into(),
         });
     }
-    groups.sort_by(|a, b| b.wasted.cmp(&a.wasted));
+    groups.sort_by_key(|e| std::cmp::Reverse(e.wasted));
     for (i, g) in groups.iter_mut().enumerate() {
         g.id = i;
     }

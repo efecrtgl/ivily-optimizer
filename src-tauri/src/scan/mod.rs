@@ -69,7 +69,7 @@ pub fn cold_files(root: &Path, opts: &WalkOptions, days: u32, min_size: u64, ctl
             }
         })
         .collect();
-    files.sort_by(|a, b| b.size.cmp(&a.size));
+    files.sort_by_key(|e| std::cmp::Reverse(e.size));
     let truncated = files.len() > COLD_LIMIT;
     files.truncate(COLD_LIMIT);
     ColdReport {

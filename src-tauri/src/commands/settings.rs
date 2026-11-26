@@ -28,9 +28,8 @@ pub async fn settings_set(st: St<'_>, settings: Settings) -> AppResult<Settings>
 
 #[tauri::command]
 pub async fn settings_reset(st: St<'_>) -> AppResult<Settings> {
-    let mut def = Settings::default();
     // İlk kullanım rehberini yeniden göstermeyelim.
-    def.onboarding_done = true;
+    let def = Settings { onboarding_done: true, ..Settings::default() };
     if st.settings.read().launch_at_startup {
         crate::platform::set_launch_at_startup(false)?;
     }

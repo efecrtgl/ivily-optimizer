@@ -284,7 +284,7 @@ pub async fn list_dir_files(path: String, limit: Option<usize>) -> AppResult<Vec
                 .unwrap_or(0),
         });
     }
-    v.sort_by(|a, b| b.size.cmp(&a.size));
+    v.sort_by_key(|e| std::cmp::Reverse(e.size));
     v.truncate(limit.unwrap_or(300));
     Ok(v)
 }
