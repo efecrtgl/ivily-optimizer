@@ -4,6 +4,7 @@
   import Icon from "../lib/components/Icon.svelte";
   import FolderPicker from "../lib/components/FolderPicker.svelte";
   import { open as openDialog } from "@tauri-apps/plugin-dialog";
+  import { t, LOCALES } from "../lib/i18n.svelte.js";
   import RiskBadge from "../lib/components/RiskBadge.svelte";
   import { api } from "../lib/api.js";
   import { app, saveSettings, toast, confirm, applyTheme } from "../lib/state.svelte.js";
@@ -237,6 +238,14 @@
               <button aria-pressed={s.theme === "dark"} onclick={() => set("theme", "dark")}><Icon name="moon" size={12} /> Koyu</button>
               <button aria-pressed={s.theme === "light"} onclick={() => set("theme", "light")}><Icon name="sun" size={12} /> Açık</button>
               <button aria-pressed={s.theme === "system"} onclick={() => set("theme", "system")}><Icon name="monitor" size={12} /> Sistem</button>
+            </div>
+          </div>
+          <div class="opt">
+            <div><strong>{t("settings.language")}</strong><p>{t("settings.languageHelp")}</p></div>
+            <div class="segmented" role="group" aria-label={t("settings.language")}>
+              {#each LOCALES as l (l.id)}
+                <button aria-pressed={(s.language ?? "tr") === l.id} lang={l.id} onclick={() => set("language", l.id)}>{l.label}</button>
+              {/each}
             </div>
           </div>
           <div class="opt">

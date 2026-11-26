@@ -2,6 +2,7 @@
   import { nav, go, jobs, } from "../state.svelte.js";
   import { updater } from "../updater.svelte.js";
   import Icon from "./Icon.svelte";
+  import { t } from "../i18n.svelte.js";
   import CatMark from "./CatMark.svelte";
   import Wordmark from "./Wordmark.svelte";
 
@@ -10,44 +11,44 @@
   /**
    * @typedef {Object} Item
    * @property {Route} route
-   * @property {string} label
+   * @property {string} label Çeviri anahtarı
    * @property {string} icon
    * @property {string[]} [jobs]
    * @property {Route[]} [also]
    */
 
   const sections = [
-    { title: "", items: [{ route: "overview", label: "Genel Bakış", icon: "home" }] },
+    { title: "", items: [{ route: "overview", label: "nav.overview", icon: "home" }] },
     {
-      title: "Depolama",
+      title: "nav.section.storage",
       items: [
-        { route: "insights", label: "Akıllı Analiz", icon: "sparkle" },
-        { route: "disk", label: "Disk Analizi", icon: "disk", jobs: ["disk-scan"] },
-        { route: "files", label: "Dosya Yönetimi", icon: "files", jobs: ["cold", "dupes", "hash", "compare"] },
+        { route: "insights", label: "nav.insights", icon: "sparkle" },
+        { route: "disk", label: "nav.disk", icon: "disk", jobs: ["disk-scan"] },
+        { route: "files", label: "nav.files", icon: "files", jobs: ["cold", "dupes", "hash", "compare"] },
       ],
     },
     {
-      title: "Bakım",
+      title: "nav.section.maintenance",
       items: [
-        { route: "cleanup", label: "Temizlik", icon: "broom", jobs: ["cleanup-scan", "cleanup-run"] },
-        { route: "quarantine", label: "Karantina", icon: "shield" },
+        { route: "cleanup", label: "nav.cleanup", icon: "broom", jobs: ["cleanup-scan", "cleanup-run"] },
+        { route: "quarantine", label: "nav.quarantine", icon: "shield" },
       ],
     },
     {
-      title: "Sistem",
+      title: "nav.section.system",
       items: [
-        { route: "startup", label: "Başlangıç", icon: "rocket" },
-        { route: "processes", label: "İşlemler", icon: "cpu" },
-        { route: "services", label: "Servisler ve Görevler", icon: "gear", also: ["tasks"] },
-        { route: "performance", label: "Performans", icon: "gauge" },
-        { route: "network", label: "Ağ", icon: "wifi" },
+        { route: "startup", label: "nav.startup", icon: "rocket" },
+        { route: "processes", label: "nav.processes", icon: "cpu" },
+        { route: "services", label: "nav.services", icon: "gear", also: ["tasks"] },
+        { route: "performance", label: "nav.performance", icon: "gauge" },
+        { route: "network", label: "nav.network", icon: "wifi" },
       ],
     },
     {
-      title: "Kayıtlar",
+      title: "nav.section.records",
       items: [
-        { route: "events", label: "Sistem Geçmişi", icon: "activity" },
-        { route: "history", label: "İşlem Geçmişi", icon: "history" },
+        { route: "events", label: "nav.events", icon: "activity" },
+        { route: "history", label: "nav.history", icon: "history" },
       ],
     },
   ];
@@ -56,8 +57,8 @@
   const busy = (it) => (it.jobs ?? []).some((j) => jobs[j]);
 </script>
 
-<aside class="sb glass-float" class:collapsed aria-label="Ana gezinme">
-  <button class="brand" onclick={() => go("overview")} aria-label="Ivily Optimizer — Genel Bakış">
+<aside class="sb glass-float" class:collapsed aria-label={t("nav.main")}>
+  <button class="brand" onclick={() => go("overview")} aria-label={t("nav.home")}>
     <CatMark size={24} blink />
     {#if !collapsed}<Wordmark height={15} /><span class="edition">Optimizer</span>{/if}
   </button>
@@ -65,41 +66,41 @@
   <nav class="scroll">
     {#each sections as s}
       {#if s.title}
-        {#if collapsed}<div class="sep"></div>{:else}<div class="sec">{s.title}</div>{/if}
+        {#if collapsed}<div class="sep"></div>{:else}<div class="sec">{t(s.title)}</div>{/if}
       {/if}
       {#each s.items as it}
         <button
           class="item"
           aria-current={active(it) ? "page" : undefined}
           onclick={() => go(it.route)}
-          title={collapsed ? it.label : undefined}
-          aria-label={collapsed ? it.label : undefined}
+          title={collapsed ? t(it.label) : undefined}
+          aria-label={collapsed ? t(it.label) : undefined}
         >
           <Icon name={it.icon} size={17} />
-          {#if !collapsed}<span class="ellipsis">{it.label}</span>{/if}
-          {#if busy(it)}<span class="pulse" aria-label="İşlem sürüyor"></span>{/if}
+          {#if !collapsed}<span class="ellipsis">{t(it.label)}</span>{/if}
+          {#if busy(it)}<span class="pulse" aria-label={t("nav.busy")}></span>{/if}
         </button>
       {/each}
     {/each}
   </nav>
 
   <div class="bottom">
-    <button class="item" aria-current={nav.route === "updates" ? "page" : undefined} onclick={() => go("updates")} title={collapsed ? "Güncellemeler" : undefined} aria-label={collapsed ? "Güncellemeler" : undefined}>
+    <button class="item" aria-current={nav.route === "updates" ? "page" : undefined} onclick={() => go("updates")} title={collapsed ? t("nav.updates") : undefined} aria-label={collapsed ? t("nav.updates") : undefined}>
       <Icon name="download" size={17} />
-      {#if !collapsed}<span>Güncellemeler</span>{/if}
-      {#if updater.info?.updateAvailable}<span class="dot" aria-label="Yeni sürüm var"></span>{/if}
+      {#if !collapsed}<span>{t("nav.updates")}</span>{/if}
+      {#if updater.info?.updateAvailable}<span class="dot" aria-label={t("nav.updateAvailable")}></span>{/if}
     </button>
-    <button class="item" aria-current={nav.route === "settings" ? "page" : undefined} onclick={() => go("settings")} title={collapsed ? "Ayarlar" : undefined} aria-label={collapsed ? "Ayarlar" : undefined}>
+    <button class="item" aria-current={nav.route === "settings" ? "page" : undefined} onclick={() => go("settings")} title={collapsed ? t("nav.settings") : undefined} aria-label={collapsed ? t("nav.settings") : undefined}>
       <Icon name="gear" size={17} />
-      {#if !collapsed}<span>Ayarlar</span>{/if}
+      {#if !collapsed}<span>{t("nav.settings")}</span>{/if}
     </button>
-    <button class="item" aria-current={nav.route === "about" ? "page" : undefined} onclick={() => go("about")} title={collapsed ? "Hakkında" : undefined} aria-label={collapsed ? "Hakkında" : undefined}>
+    <button class="item" aria-current={nav.route === "about" ? "page" : undefined} onclick={() => go("about")} title={collapsed ? t("nav.about") : undefined} aria-label={collapsed ? t("nav.about") : undefined}>
       <Icon name="info" size={17} />
-      {#if !collapsed}<span>Hakkında</span>{/if}
+      {#if !collapsed}<span>{t("nav.about")}</span>{/if}
     </button>
-    <button class="item toggle" onclick={() => (collapsed = !collapsed)} aria-label={collapsed ? "Kenar çubuğunu genişlet" : "Kenar çubuğunu daralt"} title={collapsed ? "Genişlet" : "Daralt"}>
+    <button class="item toggle" onclick={() => (collapsed = !collapsed)} aria-label={collapsed ? t("nav.expand") : t("nav.collapse")} title={collapsed ? t("nav.expandShort") : t("nav.collapseShort")}>
       <Icon name="sidebar" size={16} />
-      {#if !collapsed}<span class="faint">Daralt</span>{/if}
+      {#if !collapsed}<span class="faint">{t("nav.collapseShort")}</span>{/if}
     </button>
   </div>
 </aside>

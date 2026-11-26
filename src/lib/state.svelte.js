@@ -6,6 +6,7 @@ import { api } from "./api.js";
 import { errMsg } from "./format.js";
 import { pushNotification } from "./notify.svelte.js";
 import { createPoller } from "./poller.js";
+import { setLocale } from "./i18n.svelte.js";
 
 /** @typedef {"overview" | "insights" | "disk" | "files" | "cleanup" | "quarantine" | "startup" | "processes" | "services" | "tasks" | "performance" | "network" | "history" | "events" | "updates" | "settings" | "about"} Route */
 
@@ -34,8 +35,10 @@ export const app = $state({
 
 const media = window.matchMedia("(prefers-color-scheme: dark)");
 
+/** Görünüm ayarlarını (tema, hareket, yoğunluk, cam efekti ve dil) uygular. */
 export function applyTheme() {
   const s = app.settings;
+  setLocale(s?.language ?? "tr");
   const theme = s?.theme ?? "dark";
   const resolved = theme === "system" ? (media.matches ? "dark" : "light") : theme;
   document.documentElement.dataset.theme = resolved;

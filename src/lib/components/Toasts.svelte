@@ -1,10 +1,11 @@
 <script>
+  import { t } from "../i18n.svelte.js";
   import { toasts, dismissToast } from "../state.svelte.js";
   import Icon from "./Icon.svelte";
   const icon = { success: "checkCircle", error: "xCircle", info: "info", warning: "alert" } ;
 </script>
 
-<div class="toasts" role="region" aria-label="Bildirimler" aria-live="polite">
+<div class="toasts" role="region" aria-label={t("toasts.region")} aria-live="polite">
   {#each toasts as t (t.id)}
     <div class="toast glass-float {t.kind}" role={t.kind === "error" ? "alert" : "status"}>
       <span class="ic"><Icon name={icon[t.kind]} size={18} /></span>
@@ -12,7 +13,7 @@
         <strong>{t.title}</strong>
         {#if t.body}<p>{t.body}</p>{/if}
       </div>
-      <button class="btn ghost sm icon" onclick={() => dismissToast(t.id)} aria-label="Bildirimi kapat">
+      <button class="btn ghost sm icon" onclick={() => dismissToast(t.id)} aria-label={t("toasts.close")}>
         <Icon name="x" size={14} />
       </button>
     </div>

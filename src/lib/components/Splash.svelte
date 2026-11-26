@@ -1,4 +1,5 @@
 <script>
+  import { t } from "../i18n.svelte.js";
   // Açılış ekranı: işaretin çevresinde dönen ince bir tarama halkası.
   import CatMark from "./CatMark.svelte";
   import Wordmark from "./Wordmark.svelte";
@@ -15,7 +16,7 @@
   </div>
   <div class="name"><Wordmark height={22} /><span>Optimizer</span></div>
   <p class:err={!!error}>{error ?? status}</p>
-  {#if error}<button class="btn" onclick={() => location.reload()}>Yeniden dene</button>{/if}
+  {#if error}<button class="btn" onclick={() => location.reload()}>{t("app.retry")}</button>{/if}
 </div>
 
 <style>

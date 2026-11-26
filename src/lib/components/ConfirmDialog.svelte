@@ -1,4 +1,5 @@
 <script>
+  import { t } from "../i18n.svelte.js";
   import { confirmState, closeConfirm } from "../state.svelte.js";
   import Dialog from "./Dialog.svelte";
 
@@ -28,11 +29,11 @@
       </label>
     {/if}
     {#snippet footer()}
-      <button class="btn" onclick={() => closeConfirm(false)} data-autofocus>{o.cancelLabel ?? "Vazgeç"}</button>
+      <button class="btn" onclick={() => closeConfirm(false)} data-autofocus>{o.cancelLabel ?? t("confirm.cancel")}</button>
       <button
         class="btn {o.danger ? 'danger' : 'primary'}"
         disabled={!!o.acknowledge && !ack}
-        onclick={() => closeConfirm(true)}>{o.confirmLabel ?? "Onayla"}</button
+        onclick={() => closeConfirm(true)}>{o.confirmLabel ?? t("confirm.ok")}</button
       >
     {/snippet}
   </Dialog>

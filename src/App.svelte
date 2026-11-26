@@ -7,6 +7,7 @@
   import Splash from "./lib/components/Splash.svelte";
   import { app, nav, loadSettings, initJobs, loadSystemInfo, toast } from "./lib/state.svelte.js";
   import { api } from "./lib/api.js";
+  import { t } from "./lib/i18n.svelte.js";
   import { startupUpdateCheck } from "./lib/updater.svelte.js";
 
   // Açılışta yalnızca ilk ekran (Genel Bakış) yüklenir; diğer sayfalar ilk
@@ -60,7 +61,7 @@
       startupUpdateCheck();
       api
         .storageStatus()
-        .then((n) => n && toast("warning", "Veri deposu uyarısı", n, 15000))
+        .then((n) => n && toast("warning", t("app.storageNotice"), n, 15000))
         .catch(() => {});
     } catch (e) {
       failed = String(e?.message ?? e);
@@ -71,11 +72,11 @@
 </script>
 
 {#if failed}
-  <Splash error={`Ivily Optimizer başlatılamadı: ${failed}`} />
+  <Splash error={t("app.startFailed", { error: failed })} />
 {:else if !ready}
-  <Splash status="Ayarlar ve son bilinen sistem durumu yükleniyor…" />
+  <Splash status={t("app.loading")} />
 {:else}
-  <a class="skip" href="#main">İçeriğe atla</a>
+  <a class="skip" href="#main">{t("app.skip")}</a>
   <div class="shell">
     <Sidebar bind:collapsed />
     <main id="main" tabindex="-1">
@@ -84,9 +85,9 @@
           {#if Page}
             <Page />
           {:else if loadError}
-            <p class="muted" role="alert">Sayfa yüklenemedi: {loadError}</p>
+            <p class="muted" role="alert">{t("app.pageLoadFailed", { error: loadError })}</p>
           {:else}
-            <div class="page-loading" aria-busy="true" aria-label="Sayfa yükleniyor"></div>
+            <div class="page-loading" aria-busy="true" aria-label={t("app.pageLoading")}></div>
           {/if}
         {/key}
       </div>

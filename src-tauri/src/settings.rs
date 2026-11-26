@@ -39,6 +39,8 @@ impl Default for UserCleanupRule {
 pub struct Settings {
     // Görünüm
     pub theme: String,
+    /// Arayüz dili: "tr" (birincil) veya "en".
+    pub language: String,
     pub reduce_motion: bool,
     pub compact_mode: bool,
     /// Cam (saydamlık + bulanıklık) efektleri. Kapalıyken düz yüzeyler kullanılır.
@@ -105,6 +107,7 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             theme: "dark".into(),
+            language: "tr".into(),
             reduce_motion: false,
             compact_mode: false,
             glass_effects: true,
@@ -143,6 +146,9 @@ impl Settings {
     pub fn validate(mut self) -> AppResult<Self> {
         if !matches!(self.theme.as_str(), "dark" | "light" | "system") {
             return Err(AppError::InvalidInput("tema 'dark', 'light' veya 'system' olmalı".into()));
+        }
+        if !matches!(self.language.as_str(), "tr" | "en") {
+            return Err(AppError::InvalidInput("dil 'tr' veya 'en' olmalı".into()));
         }
         self.monitor_interval_ms = self.monitor_interval_ms.clamp(1000, 30_000);
         self.scan_threads = self.scan_threads.clamp(1, 8);
@@ -199,6 +205,10 @@ impl Settings {
         if !matches!(self.theme.as_str(), "dark" | "light" | "system") {
             notes.push(format!("Geçersiz tema (\"{}\") varsayılana döndürüldü.", self.theme));
             self.theme = Settings::default().theme;
+        }
+        if !matches!(self.language.as_str(), "tr" | "en") {
+            notes.push(format!("Geçersiz dil (\"{}\") Türkçeye döndürüldü.", self.language));
+            self.language = Settings::default().language;
         }
         let rules = std::mem::take(&mut self.user_rules);
         for r in rules {
@@ -354,6 +364,19 @@ mod tests {
         assert_eq!(s.user_rules[0].name, "iyi");
         assert_eq!(notes.len(), 1);
         assert!(notes[0].contains("kötü"), "{notes:?}");
+    }
+
+    #[test]
+    fn language_defaults_to_turkish_and_is_validated() {
+        assert_eq!(Settings::default().language, "tr");
+        assert!(Settings { language: "en".into(), ..Default::default() }.validate().is_ok());
+        assert!(Settings { language: "de".into(), ..Default::default() }.validate().is_err());
+        let (s, notes) = Settings { language: "de".into(), theme: "light".into(), ..Default::default() }.sanitize();
+        assert_eq!((s.language.as_str(), s.theme.as_str(), notes.len()), ("tr", "light", 1));
+        // 0.2.0'da kaydedilmiş ayarlarda alan yoktur: varsayılan kullanılır.
+        let db = Db::open_in_memory().unwrap();
+        db.kv_set(KEY, r#"{"theme":"light","dashboardWide":[]}"#).unwrap();
+        assert_eq!(load(&db).language, "tr");
     }
 
     #[test]

@@ -1,7 +1,20 @@
-// Türkçe biçimlendirme yardımcıları.
+// Biçimlendirme yardımcıları. Sayılar, tarihler ve süreler etkin arayüz
+// diline göre biçimlendirilir (bkz. i18n.svelte.js); varsayılan Türkçedir.
 
-const nf = new Intl.NumberFormat("tr-TR");
-const pf = new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 1, minimumFractionDigits: 0 });
+import { intlLocale, t } from "./i18n.svelte.js";
+
+const cache = new Map();
+/** Dil başına önbelleğe alınmış Intl biçimlendiricisi. */
+function intl(Ctor, key, opts) {
+  const loc = intlLocale();
+  const k = `${Ctor.name}|${loc}|${key}`;
+  let f = cache.get(k);
+  if (!f) {
+    f = new Ctor(loc, opts);
+    cache.set(k, f);
+  }
+  return f;
+}
 
 /** Bayt değerini 1024 tabanında okunabilir hale getirir (Windows ile tutarlı). */
 export function bytes(n, digits = 1) {
@@ -14,10 +27,8 @@ export function bytes(n, digits = 1) {
     v /= 1024;
     i++;
   }
-  const s =
-    i === 0
-      ? nf.format(v)
-      : new Intl.NumberFormat("tr-TR", { maximumFractionDigits: v >= 100 ? 0 : digits }).format(v);
+  const frac = i === 0 ? 0 : v >= 100 ? 0 : digits;
+  const s = intl(Intl.NumberFormat, `b${frac}`, { maximumFractionDigits: frac }).format(v);
   return `${neg ? "−" : ""}${s} ${units[i]}`;
 }
 
@@ -28,41 +39,40 @@ export function signedBytes(n) {
 
 export function rate(n) {
   if (n == null) return "—";
-  return `${bytes(n)}/sn`;
+  return t("unit.perSecond", { value: bytes(n) });
 }
 
 export function num(n) {
   if (n == null || !isFinite(n)) return "—";
-  return nf.format(n);
+  return intl(Intl.NumberFormat, "n").format(n);
 }
 
+/** Yüzde (0–100). İşaretin konumu dile göredir: "%12,3" / "12.3%". */
 export function pct(n) {
   if (n == null || !isFinite(n)) return "—";
-  return `%${pf.format(n)}`;
+  return intl(Intl.NumberFormat, "p", { style: "percent", maximumFractionDigits: 1, minimumFractionDigits: 0 }).format(
+    n / 100,
+  );
 }
-
-const dtf = new Intl.DateTimeFormat("tr-TR", { dateStyle: "medium", timeStyle: "short" });
-const df = new Intl.DateTimeFormat("tr-TR", { dateStyle: "medium" });
 
 /** Unix saniyesi → tarih + saat. */
 export function dateTime(sec) {
   if (!sec || sec <= 0) return "—";
-  return dtf.format(new Date(sec * 1000));
+  return intl(Intl.DateTimeFormat, "dt", { dateStyle: "medium", timeStyle: "short" }).format(new Date(sec * 1000));
 }
 
 export function date(sec) {
   if (!sec || sec <= 0) return "—";
-  return df.format(new Date(sec * 1000));
+  return intl(Intl.DateTimeFormat, "d", { dateStyle: "medium" }).format(new Date(sec * 1000));
 }
-
-const rtf = new Intl.RelativeTimeFormat("tr-TR", { numeric: "auto" });
 
 /** "3 dakika önce" biçiminde göreli zaman. */
 export function ago(sec) {
   if (!sec || sec <= 0) return "—";
   const diff = sec - Date.now() / 1000;
   const abs = Math.abs(diff);
-  if (abs < 45) return "az önce";
+  if (abs < 45) return t("time.justNow");
+  const rtf = intl(Intl.RelativeTimeFormat, "r", { numeric: "auto" });
   if (abs < 3600) return rtf.format(Math.round(diff / 60), "minute");
   if (abs < 86400) return rtf.format(Math.round(diff / 3600), "hour");
   if (abs < 86400 * 30) return rtf.format(Math.round(diff / 86400), "day");
@@ -72,20 +82,20 @@ export function ago(sec) {
 
 export function duration(ms) {
   const s = Math.round(ms / 1000);
-  if (s < 60) return `${s} sn`;
+  if (s < 60) return t("time.s", { s });
   const m = Math.floor(s / 60);
-  if (m < 60) return `${m} dk ${s % 60} sn`;
+  if (m < 60) return t("time.ms", { m, s: s % 60 });
   const h = Math.floor(m / 60);
-  return `${h} sa ${m % 60} dk`;
+  return t("time.hm", { h, m: m % 60 });
 }
 
 export function uptime(sec) {
   const d = Math.floor(sec / 86400);
   const h = Math.floor((sec % 86400) / 3600);
   const m = Math.floor((sec % 3600) / 60);
-  if (d > 0) return `${d} gün ${h} sa`;
-  if (h > 0) return `${h} sa ${m} dk`;
-  return `${m} dk`;
+  if (d > 0) return t("time.dh", { d, h });
+  if (h > 0) return t("time.hm", { h, m });
+  return t("time.m", { m });
 }
 
 export function fileName(path) {
@@ -130,7 +140,7 @@ export function categoryLabel(c) {
 export function errMsg(e) {
   if (e && typeof e === "object" && "message" in e) return String(e.message);
   if (typeof e === "string") return e;
-  return "Beklenmeyen bir hata oluştu.";
+  return t("error.unexpected");
 }
 
 export function errCode(e) {

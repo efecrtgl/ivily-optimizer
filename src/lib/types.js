@@ -451,6 +451,7 @@
 /**
  * @typedef {Object} Settings
  * @property {"dark" | "light" | "system"} theme
+ * @property {"tr" | "en"} language Arayüz dili
  * @property {boolean} reduceMotion
  * @property {boolean} compactMode
  * @property {boolean} glassEffects

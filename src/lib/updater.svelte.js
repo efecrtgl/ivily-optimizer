@@ -9,6 +9,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { app, toast } from "./state.svelte.js";
 import { errCode, errMsg } from "./format.js";
+import { t } from "./i18n.svelte.js";
 
 /**
  * @typedef {Object} UpdateInfo
@@ -29,20 +30,12 @@ import { errCode, errMsg } from "./format.js";
 
 /** @typedef {"idle" | "checking" | "none" | "available" | "preparing" | "downloading" | "verifying" | "installing" | "restarting" | "failed" | "offline" | "cancelled"} UpdateStatus */
 
-export const STATUS_LABEL = {
-  idle: "Henüz denetlenmedi",
-  checking: "Güncellemeler kontrol ediliyor…",
-  none: "Güncelleme bulunamadı. En son sürümü kullanıyorsunuz.",
-  available: "Yeni sürüm bulundu",
-  preparing: "İndirme hazırlanıyor…",
-  downloading: "İndiriliyor…",
-  verifying: "Dosyalar doğrulanıyor…",
-  installing: "Güncelleme hazırlanıyor…",
-  restarting: "Uygulama yeniden başlatılıyor…",
-  failed: "Güncelleme başarısız",
-  offline: "İnternet bağlantısı yok",
-  cancelled: "Güncelleme iptal edildi",
-};
+/**
+ * Durumların etkin dildeki açıklamaları. Bir Proxy olduğu için mevcut
+ * `STATUS_LABEL[durum]` kullanımları değişmeden dile duyarlı hale gelir.
+ * @type {Record<UpdateStatus, string>}
+ */
+export const STATUS_LABEL = new Proxy({}, { get: (_, status) => t(`update.status.${String(status)}`) });
 
 export const updater = $state({
   status: "idle" ,
