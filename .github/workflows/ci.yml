@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     runs-on: windows-latest
@@ -18,6 +22,8 @@ jobs:
           node-version: 22
           cache: npm
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
@@ -25,10 +31,34 @@ jobs:
         shell: pwsh
         run: ./scripts/check-version.ps1
       - run: npm ci
-      - name: Arayüz tür denetimi
+      - name: Arayüz denetimi
         run: npm run check
       - name: Arayüz derlemesi
         run: npm run build
+      - name: Rust biçim denetimi
+        working-directory: src-tauri
+        run: cargo fmt --check
+      - name: Clippy
+        working-directory: src-tauri
+        run: cargo clippy --all-targets --locked -- -D warnings
       - name: Rust testleri
         working-directory: src-tauri
         run: cargo test --locked
+
+  audit:
+    # Bağımlılık güvenlik taraması. Bilinen bir güvenlik açığı derlemeyi
+    # durdurur; "bakımsız" gibi uyarılar yalnızca raporlanır.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: npm audit
+        run: npm audit --omit=dev --audit-level=high
+      - uses: dtolnay/rust-toolchain@stable
+      - name: cargo audit
+        working-directory: src-tauri
+        run: |
+          cargo install cargo-audit --locked
+          cargo audit

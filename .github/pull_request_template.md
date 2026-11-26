@@ -19,12 +19,10 @@
 ## Doğrulama
 
 - [ ] `npm run check` hatasız ve uyarısız
-- [ ] `npm test` başarılı
 - [ ] `npm run build` başarılı
-- [ ] `cargo test --locked` başarılı (`src-tauri/` içinde)
-- [ ] `cargo clippy --all-targets -- -D warnings` uyarısız
+- [ ] `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` ve `cargo test --locked` başarılı (`src-tauri/` içinde)
 - [ ] Sistemi değiştiren yollar testlerde **çalıştırılmadı**; yalnızca geçici klasörlerde veya taklitlerle sınandı
-- [ ] Kullanıcıya görünen metinler Türkçe ve İngilizce dil dosyalarına eklendi
+- [ ] Kullanıcıya görünen metinler doğal Türkçe
 - [ ] Gerekiyorsa `CHANGELOG.md` ve `docs/` güncellendi
 
 ## Ekran görüntüleri
