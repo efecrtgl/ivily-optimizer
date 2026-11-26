@@ -61,7 +61,7 @@ Ivily ekosisteminin ortak kuralı arayüzlerde **TypeScript kullanılmaması** v
 | `quarantine\<kimlik>\` | Karantinadaki dosyalar |
 | `logs\ivily.log.YYYY-MM-DD` | Günlük olarak dönen yapılandırılmış günlükler (14 gün saklanır) |
 
-Şema sürümü `PRAGMA user_version` ile izlenir; 1 → 2 geçişi eski kayıtların türetilmiş alanlarını otomatik doldurur. Veritabanı açılamazsa bozuk dosya yedeklenir ve yenisi oluşturulur; uygulama yine açılır.
+Şema sürümü `PRAGMA user_version` ile izlenir; 1 → 2 geçişi eski kayıtların türetilmiş alanlarını otomatik doldurur. Her yükseltmeden önce `VACUUM INTO` ile yedek alınır. Veritabanı açılamazsa bozuk dosya eşleriyle birlikte kenara alınır ve yenisi oluşturulur; daha yeni bir sürüme ait veritabanına dokunulmaz. Ayrıntılar: [VERI-VE-KURTARMA.md](VERI-VE-KURTARMA.md).
 
 ## Önbellek ve tazelik
 

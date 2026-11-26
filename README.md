@@ -100,6 +100,7 @@ Uygulama GitHub Releases'teki sürümleri denetler, sürümleri anlamsal sürüm
 | [docs/TARAMA-MOTORU.md](docs/TARAMA-MOTORU.md) | Tarama motoru |
 | [docs/ANLIK-GORUNTULER.md](docs/ANLIK-GORUNTULER.md) | Anlık görüntüler ve büyüme analizi |
 | [docs/KARANTINA.md](docs/KARANTINA.md) | Karantina ve geri yükleme |
+| [docs/VERI-VE-KURTARMA.md](docs/VERI-VE-KURTARMA.md) | Veri konumları, yedekler, ayar içe/dışa aktarma ve kurtarma |
 | [docs/GUNCELLEME.md](docs/GUNCELLEME.md) | Güncelleme sistemi |
 | [docs/SURUM-YAYINLAMA.md](docs/SURUM-YAYINLAMA.md) | Sürüm yayımlama süreci |
 | [docs/SORUN-GIDERME.md](docs/SORUN-GIDERME.md) | Sorun giderme |

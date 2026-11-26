@@ -7,7 +7,7 @@
 
 ## "Veritabanı açılamadı" / ayarlar sıfırlandı
 
-Veritabanı bozulursa Ivily bozuk dosyayı `ivily.bozuk-<zaman>.db` adıyla yedekler ve yenisini oluşturur. Ayarlar varsayılana döner; karantinadaki dosyalar klasörde kalır.
+Veritabanı açılamazsa Ivily bozuk dosyayı `-wal`/`-shm` eşleriyle birlikte `ivily.db.bozuk-<zaman>` adıyla kenara alır, yenisini oluşturur ve açılışta bir uyarı gösterir. Ayarlar varsayılana döner; karantinadaki dosyalar klasörde kalır. Veritabanı daha yeni bir sürüme aitse dosyaya dokunulmaz. Kayıtlı ayarların yalnızca bir parçası geçersizse yalnızca o parça atılır. Ayrıntılar ve kurtarma adımları: [VERI-VE-KURTARMA.md](VERI-VE-KURTARMA.md).
 
 ## Disk taramasında çok sayıda "erişim reddedildi"
 

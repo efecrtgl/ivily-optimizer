@@ -179,3 +179,8 @@ Bu bölüm her faz tamamlandıkça güncellenir.
 | G10 | ✅ Faz 4 | `updater:default`, `process:allow-restart` ve kullanılmayan `core:window:allow-set-title` yetenekleri, `tauri-plugin-process` crate'i ve iki kullanılmayan npm paketi kaldırıldı. Yetenekler: `core:default`, `dialog:allow-open`. |
 | G11 | ✅ Faz 4 | Yükseltilmiş araç için 5 dakikalık zaman aşımı. |
 | G12 | ✅ Faz 4 | Temizlik, silmeden hemen önce dosyanın gerçek üst klasörünün gerçek kökün içinde olduğunu doğrular. |
+| V1 | ✅ Faz 5 | `Settings::sanitize`: yalnızca geçersiz parçalar atılır ve açılışta bildirilir; okunamayan ayar metni `settings_corrupt_backup` anahtarında saklanır. |
+| V2 | ✅ Faz 5 | Bozuk veritabanı `-wal`/`-shm` eşleriyle birlikte kenara alınır. |
+| V3 | ✅ Faz 5 | Daha yeni şemalı veritabanına dokunulmaz; oturum bellek içi çalışır ve kullanıcı uyarılır. |
+| V4 | ✅ Faz 5 | Yükseltme öncesi `VACUUM INTO` yedeği; yedek alınamazsa göç yapılmaz. |
+| V5 | ✅ Faz 5 | `settings_import`: yalnızca ayarlar, doğrulanarak ve onayla içe aktarılır. |

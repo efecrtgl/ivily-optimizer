@@ -12,7 +12,7 @@ Kapsam ve gerekçeler: [docs/DENETIM.md](docs/DENETIM.md).
 | 2 | Depo altyapısı, topluluk dosyaları, CI statik analizi | ✅ |
 | 3 | Arayüzün TypeScript'ten düz JavaScript'e dönüşümü, ESLint, Vitest | ✅ |
 | 4 | Güvenlik sertleştirmesi (yol doğrulama, kalıcı silme, süreç yeniden başlatma) | ✅ |
-| 5 | Yapılandırma ve veri güvenilirliği (göç yedeği, ayar içe aktarma) | ⏳ |
+| 5 | Yapılandırma ve veri güvenilirliği (göç yedeği, ayar içe aktarma) | ✅ |
 | 6 | Performans: yoklama düzeltmeleri, sayfaların tembel yüklenmesi, ölçümler | ⏳ |
 | 7 | Arayüz: Türkçe/İngilizce dil desteği, durum gösterimleri, erişilebilirlik | ⏳ |
 | 8 | Ivily Ekosistem Protokolü (IEP) hazırlığı | ⏳ |
