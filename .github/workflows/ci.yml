@@ -45,7 +45,20 @@ jobs:
         run: cargo clippy --all-targets --locked -- -D warnings
       - name: Rust testleri
         working-directory: src-tauri
-        run: cargo test --locked
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo test --locked 2>&1 | tee ../rust-test.log
+      # İş günlükleri yalnızca depo yöneticilerine açıktır; başarısız testlerin
+      # özeti herkesin görebildiği bir hata açıklaması (annotation) olarak
+      # yayımlanır. Günlükte yalnızca test çıktısı bulunur.
+      - name: Başarısız Rust testlerini özetle
+        if: failure()
+        shell: bash
+        run: |
+          [ -f rust-test.log ] || exit 0
+          summary=$(grep -E "^---- |panicked at|assertion|left:|right:|kabul|korunan|Error|error\[" rust-test.log | head -60 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+          echo "::error title=Başarısız Rust testleri::${summary}"
 
   audit:
     # Bağımlılık güvenlik taraması. Bilinen bir güvenlik açığı derlemeyi
