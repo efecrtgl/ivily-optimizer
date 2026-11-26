@@ -197,3 +197,7 @@ Bu bölüm her faz tamamlandıkça güncellenir.
 | §3 İngilizce | 🟡 Faz 7 | i18n altyapısı, dil ayarı, kabuk ve biçim çevirisi; sayfa içerikleri Türkçe kalır. |
 | §8 sekme klavye gezinmesi, Donut erişilebilirliği, eksik yükleme durumları | ⏳ | Henüz yapılmadı. |
 | v0.2.0 `SHA256SUMS.txt` | ⚠️ Yeni bulgu | Yayımlanan özet dosyasında yükleyici boşluklu adla (`Ivily Optimizer_0.2.0_x64-setup.exe`) yer alıyor, yüklenen yapıt ise noktalı adda; `sha256sum -c` yükleyici için başarısız olur. İş akışı v0.2.0 sonrasında (`5d91dac`) düzeltildi; sonraki sürümlerde doğrulanacak. Taşınabilir zip özeti doğrulandı ve eşleşiyor. |
+| P6 (yeni) | ✅ Faz 7 | Ölçüm sırasında bulundu: kenar çubuğundaki göz kırpma ve "Canlı" göstergesi sonsuz animasyonları, cam yüzeylerle birlikte WebView2'yi sürekli yeniden çizime zorluyordu (0.2.0 boşta ~%28 tek çekirdek). Animasyonlar kaldırıldı; görünür boşta işlemci −%74. |
+| P7 (yeni) | ✅ Faz 7 | WebView2 simge durumundaki pencere için `visibilityState` bildirmiyor; P3 düzeltmesi simge durumunda devreye girmiyordu. `visibility.js` simge durumunu pencere olaylarından algılar; simge durumunda işlemci −%98. Ayrıntılar: `docs/PERFORMANS.md`. |
+| Ölçüm hatası | ✅ Düzeltildi | `9a25470`'teki performans belgesi, gömülü arayüzü kullanmayan (`cargo build`) ikililerle ölçülmüştü ve geçersizdi; belge gerçek derlemelerle yeniden yazıldı. |
+| §10 IEP | ✅ Faz 8 | `ecosystem.rs`: `--iep describe` / `--iep request`, salt okunur yetenekler, istek doğrulama, semver uyumluluğu; `docs/IEP.md`. |

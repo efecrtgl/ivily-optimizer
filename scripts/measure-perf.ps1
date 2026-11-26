@@ -10,6 +10,10 @@
 #   ./scripts/measure-perf.ps1 -Exe ... -IdleSeconds 60 -Runs 3
 #
 # Notlar:
+# - İkili `npx tauri build --no-bundle` ile derlenmelidir. `cargo build --release`
+#   gömülü arayüzü kullanmaz; uygulama geliştirme sunucusunu arar ve yalnızca
+#   bir hata sayfası gösterir (ölçüm anlamsız olur).
+# - Açılıştaki ilk yüklemeyi dışarıda bırakmak için -SettleSeconds 40 önerilir.
 # - Ölçüm, uygulamanın açılışta gösterdiği sayfa (Genel Bakış) içindir.
 # - "Pencere görünür" anı, ana pencere tutamacının oluştuğu andır; WebView2'nin
 #   ilk çizimi biraz sonra olabilir.

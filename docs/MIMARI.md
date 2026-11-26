@@ -40,6 +40,7 @@ Ivily ekosisteminin ortak kuralı arayüzlerde **TypeScript kullanılmaması** v
 │             events (olay günlüğü) · signature (Authenticode) ·                  │
 │             procinfo (süreç ayrıntıları, bağlantılar) · indicators              │
 │ monitor.rs · jobs.rs · db.rs · settings.rs · platform.rs · paths.rs · error.rs  │
+│ ecosystem.rs  Ivily Ekosistem Protokolü (IEP): --iep describe / request         │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
