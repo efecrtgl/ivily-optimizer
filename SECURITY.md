@@ -21,7 +21,10 @@ Bildirimleri en kısa sürede yanıtlamaya ve doğrulanan açıkları bir düzel
 - Uygulama standart kullanıcı olarak çalışır; yönetici hakkı yalnızca tek bir işlem için UAC onayıyla istenir.
 - Dış programlar kabuk üzerinden çağrılmaz; bağımsız değişkenler ayrı ayrı aktarılır, araçlar System32'deki tam yollarıyla çalıştırılır. PowerShell yalnızca sabit betiklerle kullanılır.
 - Arayüzden gelen tüm tanımlayıcılar (servis adı, görev yolu, GUID, ana bilgisayar adı, dosya yolu) doğrulanır.
-- Silme, taşıma ve kural işlemleri korunan sistem konumlarını reddeder ([docs/TEMIZLIK-GUVENLIGI.md](docs/TEMIZLIK-GUVENLIGI.md)).
+- Silme, taşıma ve kural işlemleri korunan sistem konumlarını reddeder ([docs/TEMIZLIK-GUVENLIGI.md](docs/TEMIZLIK-GUVENLIGI.md)). Yollar yalnızca yerel sürücü yolu olarak kabul edilir (ağ/aygıt yolları, `..` bölümleri ve alternatif veri akışları reddedilir); kullanıcı girdisiyle yapılan işlemlerde junction ve kısa adlar çözülerek yeniden denetlenir.
+- Kullanıcının tanımladığı temizlik kuralları hiçbir zaman kalıcı silme yapmaz; eşleşen dosyalar karantinaya taşınır.
+- Karantina taşıma ve geri yükleme işlemleri hedefte var olan bir dosyanın üzerine hiçbir koşulda yazmaz.
+- Arayüze yalnızca `core:default` ve klasör seçme (`dialog:allow-open`) yetenekleri verilir.
 - Güncellemeler, uygulamaya gömülü minisign genel anahtarıyla doğrulanır; adresler yalnızca bu deponun GitHub sürümlerinden kabul edilir ([docs/GUNCELLEME.md](docs/GUNCELLEME.md)).
 - Arayüz sıkı bir İçerik Güvenliği Politikası ile çalışır; uzak içerik yüklenmez.
 - Telemetri yoktur; yerel veriler dışarı gönderilmez.

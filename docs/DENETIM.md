@@ -160,3 +160,22 @@ Her faz test edilir, commit'lenir ve bir sonraki faza geçmeden önce GitHub'a g
 - Sistem durumunu değiştiren yollar denetim sırasında çalıştırılmadı; değerlendirmeler kod okumasına dayanır.
 - `power.rs`, `files.rs` ve `sysmgmt/mod.rs` içindeki tekil `unsafe` blokları ayrıntılı incelenmedi.
 - WebView2'nin simge durumuna küçültülmüş pencerede `visibilityState = "hidden"` bildirip bildirmediği doğrulanmadı.
+
+## 13. Bulguların durumu
+
+Bu bölüm her faz tamamlandıkça güncellenir.
+
+| Bulgu | Durum | Not |
+|---|---|---|
+| G1 | ✅ Faz 4 | `paths::check_local`: yalnızca yerel sürücü yolları; `..`/`.` bölümleri, UNC, aygıt yolları ve alternatif veri akışları reddedilir. `is_protected_path` bu denetimden geçmeyen her yolu korunan sayar; kullanıcı girdisiyle silme/taşıma yapan yerlerde `is_protected_resolved` junction ve kısa adları `canonicalize` ile çözer. |
+| G2 | ✅ Faz 4 | Kullanıcı kuralı kategorileri ayardan bağımsız olarak her zaman karantinaya alınır; tarama sonucu bunu "geri yüklenebilir" olarak gösterir. |
+| G3 | ✅ Faz 4 | Uygulama yönetici olarak çalışırken süreç yeniden başlatma reddedilir. |
+| G4 | ✅ Faz 4 | İşlem Geçmişi'ne komut satırı yerine yalnızca bağımsız değişken sayısı yazılır. |
+| G5 | ✅ Faz 4 | Klasör/dosya alan tüm komutlar (`fs_list`, `fs_metadata`, `list_dir_files`, tarama başlatıcıları, `file_hash_start`, `folder_compare_start`, `inventory_export`, `reveal_path`, `signature_check`, `exclusion_add_path`) `check_local` kullanır; ağ yollarına hiç erişilmez. |
+| G6 | ✅ Faz 4 | Taşıma `MoveFileExW` (değiştirmesiz) ve `CopyFileW` (`bFailIfExists`) ile yapılır; hedefte dosya belirirse işlem atomik olarak reddedilir ve hedefe dokunulmaz. |
+| G7 | ✅ Faz 4 | Bayt dilimleme yerine güvenli karşılaştırma; çok baytlı girdi testlerle sınandı. |
+| G8 | ✅ Faz 4 | `open_url` önek yanında karakter kümesini, `..` ve ikinci `//`'yi denetler. |
+| G9 | ❎ Geçersiz | Yeniden incelemede uygulamanın veri klasörünün zaten korunduğu görüldü (`is_protected_path` sonu; mevcut test `db_path` için doğruluyordu). Bulgu hatalıydı. |
+| G10 | ✅ Faz 4 | `updater:default`, `process:allow-restart` ve kullanılmayan `core:window:allow-set-title` yetenekleri, `tauri-plugin-process` crate'i ve iki kullanılmayan npm paketi kaldırıldı. Yetenekler: `core:default`, `dialog:allow-open`. |
+| G11 | ✅ Faz 4 | Yükseltilmiş araç için 5 dakikalık zaman aşımı. |
+| G12 | ✅ Faz 4 | Temizlik, silmeden hemen önce dosyanın gerçek üst klasörünün gerçek kökün içinde olduğunu doğrular. |
