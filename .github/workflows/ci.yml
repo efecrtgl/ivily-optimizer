@@ -31,8 +31,10 @@ jobs:
         shell: pwsh
         run: ./scripts/check-version.ps1
       - run: npm ci
-      - name: Arayüz denetimi
+      - name: Arayüz denetimi (ESLint)
         run: npm run check
+      - name: Arayüz testleri
+        run: npm test
       - name: Arayüz derlemesi
         run: npm run build
       - name: Rust biçim denetimi
