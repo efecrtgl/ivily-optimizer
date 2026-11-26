@@ -5,6 +5,7 @@
 pub mod cleanup;
 pub mod commands;
 pub mod db;
+pub mod ecosystem;
 pub mod error;
 pub mod files;
 pub mod jobs;
