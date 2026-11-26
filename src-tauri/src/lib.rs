@@ -68,17 +68,8 @@ pub fn run() {
     if let Err(e) = paths::ensure_dirs() {
         tracing::error!(error = %e, "veri klasörleri oluşturulamadı");
     }
-    let db = match db::Db::open(&paths::db_path()) {
-        Ok(db) => db,
-        Err(e) => {
-            // Bozuk veritabanı: yedekleyip yeniden oluştur, uygulama yine açılsın.
-            tracing::error!(error = %e, "veritabanı açılamadı, yedeklenip yeniden oluşturuluyor");
-            let bak = paths::db_path().with_extension(format!("bozuk-{}.db", chrono::Utc::now().timestamp()));
-            let _ = std::fs::rename(paths::db_path(), bak);
-            db::Db::open(&paths::db_path()).unwrap_or_else(|_| db::Db::open_in_memory().expect("bellek içi veritabanı"))
-        }
-    };
-    let state = Arc::new(AppState::new(db));
+    let (db, storage_notice) = db::open_or_recover(&paths::db_path());
+    let state = Arc::new(AppState::new(db, storage_notice));
 
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
@@ -140,6 +131,8 @@ pub fn run() {
             commands::settings::settings_get,
             commands::settings::settings_set,
             commands::settings::settings_reset,
+            commands::settings::settings_import,
+            commands::settings::storage_status,
             commands::settings::data_export,
             commands::settings::data_clear_history,
             commands::settings::data_usage,

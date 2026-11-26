@@ -183,6 +183,14 @@ export const api = {
   settingsReset: () => call("settings_reset"),
   /** @returns {Promise<string>} */
   dataExport: () => call("data_export"),
+  /**
+   * Bir JSON dosyasındaki ayarları içe aktarır; geçersiz bölümler atlanır.
+   * @param {string} path
+   * @returns {Promise<{ settings: import("./types.js").Settings; notes: string[] }>}
+   */
+  settingsImport: (path) => call("settings_import", { path }),
+  /** @returns {Promise<string | null>} Açılışta oluşan veri deposu uyarısı. */
+  storageStatus: () => call("storage_status"),
   /** @returns {Promise<void>} */
   dataClearHistory: () => call("data_clear_history"),
   /** @returns {Promise<any>} */

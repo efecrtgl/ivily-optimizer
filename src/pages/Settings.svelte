@@ -3,6 +3,7 @@
   import PageHeader from "../lib/components/PageHeader.svelte";
   import Icon from "../lib/components/Icon.svelte";
   import FolderPicker from "../lib/components/FolderPicker.svelte";
+  import { open as openDialog } from "@tauri-apps/plugin-dialog";
   import RiskBadge from "../lib/components/RiskBadge.svelte";
   import { api } from "../lib/api.js";
   import { app, saveSettings, toast, confirm, applyTheme } from "../lib/state.svelte.js";
@@ -123,6 +124,36 @@
       api.reveal(p);
     } catch (e) {
       toast("error", "Dışa aktarılamadı", errMsg(e));
+    }
+  }
+  async function importSettings() {
+    let path;
+    try {
+      path = await openDialog({
+        multiple: false,
+        directory: false,
+        title: "Ayar dosyasını seçin",
+        filters: [{ name: "JSON", extensions: ["json"] }],
+      });
+    } catch (e) {
+      toast("error", "Dosya seçilemedi", errMsg(e));
+      return;
+    }
+    if (!path) return;
+    const ok = await confirm({
+      title: "Ayarlar içe aktarılsın mı?",
+      body: "Seçilen dosyadaki ayarlar mevcut ayarlarınızın yerini alır. Yalnızca ayarlar alınır; işlem geçmişi, anlık görüntüler ve karantina etkilenmez. Geçersiz bölümler (ör. artık korunan bir konumu hedefleyen kurallar) atlanır.",
+      confirmLabel: "İçe aktar",
+    });
+    if (!ok) return;
+    try {
+      const r = await api.settingsImport(path);
+      app.settings = r.settings;
+      applyTheme();
+      if (r.notes.length) toast("warning", "Ayarlar kısmen içe aktarıldı", r.notes.join(" "), 10000);
+      else toast("success", "Ayarlar içe aktarıldı");
+    } catch (e) {
+      toast("error", "İçe aktarılamadı", errMsg(e));
     }
   }
   async function exportLogs() {
@@ -431,6 +462,7 @@
           <div class="row wrap" style="margin-top:12px">
             <button class="btn" onclick={() => usage && api.reveal(usage.dataDir)}><Icon name="folderOpen" size={13} /> Veri klasörünü aç</button>
             <button class="btn" onclick={exportData}><Icon name="download" size={13} /> Verileri dışa aktar (JSON)</button>
+            <button class="btn" onclick={importSettings}><Icon name="upload" size={13} /> Ayarları içe aktar</button>
             <button class="btn" onclick={exportLogs}><Icon name="file" size={13} /> Günlükleri dışa aktar</button>
             <button class="btn danger" onclick={clearHistory}><Icon name="trash" size={13} /> Geçmişi ve anlık görüntüleri sil</button>
           </div>

@@ -20,11 +20,19 @@ pub struct AppState {
     pub cleanup_scan: Mutex<Option<Arc<CleanupScan>>>,
     pub dupes: RwLock<Option<Arc<DupReport>>>,
     pub cold: RwLock<Option<Arc<ColdReport>>>,
+    /// Açılışta veri deposuyla ilgili kullanıcıya gösterilecek uyarı
+    /// (ör. bozuk veritabanı yedeklendi, ayarların bir kısmı geçersizdi).
+    pub storage_notice: Option<String>,
 }
 
 impl AppState {
-    pub fn new(db: Db) -> Self {
-        let settings = crate::settings::load(&db);
+    pub fn new(db: Db, storage_notice: Option<String>) -> Self {
+        let (settings, notes) = crate::settings::load_with_notes(&db);
+        let storage_notice = match (storage_notice, notes.is_empty()) {
+            (n, true) => n,
+            (None, false) => Some(notes.join(" ")),
+            (Some(n), false) => Some(format!("{n} {}", notes.join(" "))),
+        };
         Self {
             db: Arc::new(db),
             settings: RwLock::new(settings),
@@ -34,6 +42,7 @@ impl AppState {
             cleanup_scan: Mutex::new(None),
             dupes: RwLock::new(None),
             cold: RwLock::new(None),
+            storage_notice,
         }
     }
 

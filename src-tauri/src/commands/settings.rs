@@ -13,17 +13,61 @@ pub async fn settings_get(st: St<'_>) -> AppResult<Settings> {
     Ok(st.settings())
 }
 
-#[tauri::command]
-pub async fn settings_set(st: St<'_>, settings: Settings) -> AppResult<Settings> {
-    let new = settings.validate()?;
+/// Doğrulanmış ayarları uygular: gerekiyorsa Windows başlangıç kaydını
+/// günceller, kaydeder ve bellekteki kopyayı değiştirir.
+fn apply(st: &AppState, new: Settings) -> AppResult<Settings> {
     let old = st.settings();
     if new.launch_at_startup != old.launch_at_startup {
         crate::platform::set_launch_at_startup(new.launch_at_startup)?;
     }
     settings::save(&st.db, &new)?;
     *st.settings.write() = new.clone();
+    Ok(new)
+}
+
+#[tauri::command]
+pub async fn settings_set(st: St<'_>, settings: Settings) -> AppResult<Settings> {
+    let new = apply(&st, settings.validate()?)?;
     tracing::info!("ayarlar kaydedildi");
     Ok(new)
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportResult {
+    pub settings: Settings,
+    /// İçe aktarılamayan (atlanan) parçaların açıklamaları.
+    pub notes: Vec<String>,
+}
+
+/// İçe aktarılacak dosya için üst sınır. Ayar dosyaları birkaç KB'tır; tam
+/// veri dışa aktarımı işlem geçmişi nedeniyle daha büyük olabilir.
+const IMPORT_MAX_BYTES: u64 = 32 * 1024 * 1024;
+
+/// Bir JSON dosyasındaki ayarları içe aktarır (Ayarlar > Gizlilik > Verileri
+/// dışa aktar çıktısı veya yalnızca ayar nesnesi). Yalnızca ayarlar alınır;
+/// geçersiz parçalar atlanır ve bildirilir.
+#[tauri::command]
+pub async fn settings_import(st: St<'_>, path: String) -> AppResult<ImportResult> {
+    let p = crate::paths::check_local(&path)?;
+    let md = std::fs::metadata(&p).map_err(|e| AppError::io(e, &path))?;
+    if !md.is_file() {
+        return Err(AppError::InvalidInput("bir dosya seçin".into()));
+    }
+    if md.len() > IMPORT_MAX_BYTES {
+        return Err(AppError::InvalidInput("dosya çok büyük; bir ayar dosyası olmadığı anlaşılıyor".into()));
+    }
+    let text = std::fs::read_to_string(&p).map_err(|e| AppError::io(e, &path))?;
+    let (imported, notes) = settings::parse_import(text.trim_start_matches('\u{feff}'))?;
+    let settings = apply(&st, imported)?;
+    tracing::info!(skipped = notes.len(), "ayarlar içe aktarıldı");
+    Ok(ImportResult { settings, notes })
+}
+
+/// Açılışta oluşan veri deposu uyarısı (varsa). Arayüz bunu bir kez gösterir.
+#[tauri::command]
+pub async fn storage_status(st: St<'_>) -> AppResult<Option<String>> {
+    Ok(st.storage_notice.clone())
 }
 
 #[tauri::command]

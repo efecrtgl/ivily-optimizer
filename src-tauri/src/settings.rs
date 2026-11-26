@@ -189,9 +189,45 @@ impl Settings {
     }
 }
 
+impl Settings {
+    /// Kayıtlı veya içe aktarılan ayarları, yalnızca geçersiz parçaları
+    /// atarak kabul eder. `validate` tek bir hatada tüm nesneyi reddeder; bu
+    /// işlev ise ör. artık korunan bir konumu hedefleyen tek bir kuralı atar
+    /// ve diğer tercihleri korur. Atılan her parça için bir açıklama döner.
+    pub fn sanitize(mut self) -> (Settings, Vec<String>) {
+        let mut notes = Vec::new();
+        if !matches!(self.theme.as_str(), "dark" | "light" | "system") {
+            notes.push(format!("Geçersiz tema (\"{}\") varsayılana döndürüldü.", self.theme));
+            self.theme = Settings::default().theme;
+        }
+        let rules = std::mem::take(&mut self.user_rules);
+        for r in rules {
+            let one = Settings { user_rules: vec![r.clone()], ..Settings::default() };
+            match one.validate() {
+                Ok(mut v) => self.user_rules.append(&mut v.user_rules),
+                Err(e) => notes.push(format!("\"{}\" temizlik kuralı devre dışı bırakıldı: {e}.", r.name.trim())),
+            }
+        }
+        match self.validate() {
+            Ok(s) => (s, notes),
+            Err(e) => {
+                notes.push(format!("Ayarlar doğrulanamadı ({e}); varsayılanlar kullanılıyor."));
+                (Settings::default(), notes)
+            }
+        }
+    }
+}
+
 const KEY: &str = "settings";
+/// Ayrıştırılamayan son ayar metninin saklandığı anahtar (elle kurtarma için).
+const CORRUPT_BACKUP_KEY: &str = "settings_corrupt_backup";
 
 pub fn load(db: &Db) -> Settings {
+    load_with_notes(db).0
+}
+
+/// Ayarları yükler; kullanıcıya bildirilmesi gereken düzeltmeleri de döndürür.
+pub fn load_with_notes(db: &Db) -> (Settings, Vec<String>) {
     match db.kv_get(KEY) {
         Ok(Some(json)) => match serde_json::from_str::<Settings>(&json) {
             Ok(mut s) => {
@@ -200,15 +236,47 @@ pub fn load(db: &Db) -> Settings {
                     s.dashboard_widgets = DEFAULT_WIDGETS.iter().map(|w| w.to_string()).collect();
                     s.dashboard_wide = Settings::default().dashboard_wide;
                 }
-                s.validate().unwrap_or_default()
+                let (s, notes) = s.sanitize();
+                for n in &notes {
+                    tracing::warn!(note = %n, "kayıtlı ayar düzeltildi");
+                }
+                (s, notes)
             }
             Err(e) => {
-                tracing::warn!(error = %e, "ayarlar bozuk, varsayılanlar kullanılıyor");
-                Settings::default()
+                tracing::warn!(error = %e, "ayarlar bozuk, varsayılanlar kullanılıyor; özgün metin yedeklendi");
+                let _ = db.kv_set(CORRUPT_BACKUP_KEY, &json);
+                (Settings::default(), vec!["Kayıtlı ayarlar okunamadı; varsayılan ayarlar kullanılıyor.".into()])
             }
         },
-        _ => Settings::default(),
+        _ => (Settings::default(), vec![]),
     }
+}
+
+/// Bir dosyadan içe aktarılacak ayarları ayrıştırır. Hem Ayarlar > Gizlilik
+/// bölümündeki tam veri dışa aktarımını (`"ayarlar"` alanı) hem de yalnızca
+/// ayar nesnesini kabul eder. İşlem geçmişi, anlık görüntü veya karantina
+/// kayıtları **hiçbir zaman** içe aktarılmaz.
+pub fn parse_import(text: &str) -> AppResult<(Settings, Vec<String>)> {
+    let v: serde_json::Value =
+        serde_json::from_str(text).map_err(|e| AppError::InvalidInput(format!("dosya geçerli bir JSON değil: {e}")))?;
+    let obj = v.as_object().ok_or_else(|| AppError::InvalidInput("dosya bir JSON nesnesi içermiyor".into()))?;
+    let settings_value = if let Some(app) = obj.get("uygulama") {
+        if app.as_str() != Some("Ivily Optimizer") {
+            return Err(AppError::InvalidInput("dosya Ivily Optimizer'a ait değil".into()));
+        }
+        obj.get("ayarlar").ok_or_else(|| AppError::InvalidInput("dosyada ayar bulunamadı".into()))?.clone()
+    } else {
+        v.clone()
+    };
+    if !settings_value.is_object() {
+        return Err(AppError::InvalidInput("ayarlar bir JSON nesnesi olmalı".into()));
+    }
+    let s: Settings = serde_json::from_value(settings_value)
+        .map_err(|e| AppError::InvalidInput(format!("ayarlar okunamadı: {e}")))?;
+    let (mut s, notes) = s.sanitize();
+    // İlk kullanım rehberi içe aktarmayla yeniden açılmasın.
+    s.onboarding_done = true;
+    Ok((s, notes))
 }
 
 pub fn save(db: &Db, s: &Settings) -> AppResult<()> {
@@ -255,7 +323,77 @@ mod tests {
     fn corrupt_settings_fall_back() {
         let db = Db::open_in_memory().unwrap();
         db.kv_set(KEY, "{not json").unwrap();
-        assert_eq!(load(&db), Settings::default());
+        let (s, notes) = load_with_notes(&db);
+        assert_eq!(s, Settings::default());
+        assert_eq!(notes.len(), 1);
+        // Özgün metin elle kurtarma için saklanır.
+        assert_eq!(db.kv_get(CORRUPT_BACKUP_KEY).unwrap().as_deref(), Some("{not json"));
+    }
+
+    fn rule(name: &str, path: &str) -> UserCleanupRule {
+        UserCleanupRule { id: name.into(), name: name.into(), path: path.into(), ..Default::default() }
+    }
+
+    #[test]
+    fn one_invalid_rule_does_not_reset_other_preferences() {
+        let db = Db::open_in_memory().unwrap();
+        let good = tempfile::tempdir().unwrap();
+        // Doğrulamadan geçmeyen bir kural doğrudan veritabanına yazılmış olsun
+        // (ör. sonraki bir sürümde korunan konum listesi genişlemiş).
+        let stored = Settings {
+            theme: "light".into(),
+            monitor_interval_ms: 5000,
+            user_rules: vec![rule("iyi", &good.path().to_string_lossy()), rule("kötü", r"C:\Windows\System32")],
+            ..Default::default()
+        };
+        db.kv_set(KEY, &serde_json::to_string(&stored).unwrap()).unwrap();
+        let (s, notes) = load_with_notes(&db);
+        assert_eq!(s.theme, "light");
+        assert_eq!(s.monitor_interval_ms, 5000);
+        assert_eq!(s.user_rules.len(), 1);
+        assert_eq!(s.user_rules[0].name, "iyi");
+        assert_eq!(notes.len(), 1);
+        assert!(notes[0].contains("kötü"), "{notes:?}");
+    }
+
+    #[test]
+    fn invalid_theme_is_repaired_not_reset() {
+        let (s, notes) = Settings { theme: "pembe".into(), scan_threads: 4, ..Default::default() }.sanitize();
+        assert_eq!(s.theme, "dark");
+        assert_eq!(s.scan_threads, 4);
+        assert_eq!(notes.len(), 1);
+    }
+
+    #[test]
+    fn import_accepts_full_export_and_bare_settings() {
+        let export = serde_json::json!({
+            "uygulama": "Ivily Optimizer",
+            "surum": "0.2.0",
+            "ayarlar": { "theme": "light", "scanThreads": 3, "onboardingDone": false },
+            "islemGecmisi": [{ "id": 1 }],
+        });
+        let (s, notes) = parse_import(&export.to_string()).unwrap();
+        assert_eq!((s.theme.as_str(), s.scan_threads, s.onboarding_done), ("light", 3, true));
+        assert!(notes.is_empty());
+        let (s, _) = parse_import(r#"{"theme":"system","monitorIntervalMs":10}"#).unwrap();
+        assert_eq!(s.theme, "system");
+        assert_eq!(s.monitor_interval_ms, 1000, "değerler sınırlara sıkıştırılır");
+    }
+
+    #[test]
+    fn import_rejects_foreign_or_malformed_files() {
+        for bad in [
+            "",
+            "{yarım",
+            "[1,2]",
+            "42",
+            r#"{"uygulama":"Başka Uygulama","ayarlar":{}}"#,
+            r#"{"uygulama":"Ivily Optimizer"}"#,
+            r#"{"uygulama":"Ivily Optimizer","ayarlar":"metin"}"#,
+            r#"{"theme": 5}"#,
+        ] {
+            assert!(parse_import(bad).is_err(), "kabul edilmemeliydi: {bad}");
+        }
     }
 
     #[test]

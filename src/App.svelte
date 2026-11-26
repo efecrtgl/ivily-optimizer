@@ -5,7 +5,8 @@
   import ConfirmDialog from "./lib/components/ConfirmDialog.svelte";
   import Onboarding from "./lib/components/Onboarding.svelte";
   import Splash from "./lib/components/Splash.svelte";
-  import { app, nav, loadSettings, initJobs, loadSystemInfo } from "./lib/state.svelte.js";
+  import { app, nav, loadSettings, initJobs, loadSystemInfo, toast } from "./lib/state.svelte.js";
+  import { api } from "./lib/api.js";
   import { startupUpdateCheck } from "./lib/updater.svelte.js";
 
   import Overview from "./pages/Overview.svelte";
@@ -57,6 +58,10 @@
       ready = true;
       loadSystemInfo();
       startupUpdateCheck();
+      api
+        .storageStatus()
+        .then((n) => n && toast("warning", "Veri deposu uyarısı", n, 15000))
+        .catch(() => {});
     } catch (e) {
       failed = String(e?.message ?? e);
     }

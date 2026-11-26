@@ -10,7 +10,7 @@ pub struct Db {
     conn: Mutex<Connection>,
 }
 
-const SCHEMA_VERSION: i64 = 2;
+pub const SCHEMA_VERSION: i64 = 2;
 
 const MIGRATION_1: &str = r#"
 CREATE TABLE IF NOT EXISTS kv (
@@ -78,23 +78,77 @@ ALTER TABLE oplog ADD COLUMN error TEXT;
 CREATE INDEX IF NOT EXISTS oplog_kind ON oplog(kind);
 "#;
 
+/// Veritabanı açılırken oluşabilecek durumlar. Daha yeni bir sürümün
+/// oluşturduğu veritabanı bozuk değildir; ayrı ele alınır ve yerinde bırakılır.
+#[derive(Debug)]
+pub enum OpenError {
+    /// Dosya bu sürümün tanımadığı daha yeni bir şemaya sahip.
+    NewerSchema(i64),
+    Other(AppError),
+}
+
+impl From<rusqlite::Error> for OpenError {
+    fn from(e: rusqlite::Error) -> Self {
+        OpenError::Other(e.into())
+    }
+}
+
+impl From<AppError> for OpenError {
+    fn from(e: AppError) -> Self {
+        OpenError::Other(e)
+    }
+}
+
+impl std::fmt::Display for OpenError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OpenError::NewerSchema(v) => write!(f, "veritabanı daha yeni bir sürüm tarafından oluşturulmuş (şema {v})"),
+            OpenError::Other(e) => write!(f, "{e}"),
+        }
+    }
+}
+
 impl Db {
-    pub fn open(path: &Path) -> AppResult<Self> {
+    /// Dosyadaki veritabanını açar ve gerekirse şemayı yükseltir. Var olan bir
+    /// veritabanı yükseltilmeden önce `<ad>.v<eski>-<zaman>.bak` adıyla
+    /// tutarlı bir yedeği alınır.
+    pub fn open(path: &Path) -> Result<Self, OpenError> {
         let conn = Connection::open(path)?;
-        Self::init(conn)
+        Self::init(conn, Some(path))
     }
 
     pub fn open_in_memory() -> AppResult<Self> {
-        Self::init(Connection::open_in_memory()?)
+        Self::init(Connection::open_in_memory()?, None).map_err(|e| match e {
+            OpenError::Other(e) => e,
+            OpenError::NewerSchema(_) => AppError::Storage("beklenmeyen şema".into()),
+        })
     }
 
-    fn init(conn: Connection) -> AppResult<Self> {
+    /// Göç öncesi yedeğin yolu.
+    pub fn backup_path(path: &Path, from_version: i64) -> std::path::PathBuf {
+        let stamp = chrono::Local::now().format("%Y%m%d-%H%M%S");
+        let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| "ivily.db".into());
+        path.with_file_name(format!("{name}.v{from_version}-{stamp}.bak"))
+    }
+
+    fn init(conn: Connection, path: Option<&Path>) -> Result<Self, OpenError> {
         conn.pragma_update(None, "journal_mode", "WAL")?;
         conn.pragma_update(None, "synchronous", "NORMAL")?;
         conn.pragma_update(None, "foreign_keys", "ON")?;
         let version: i64 = conn.pragma_query_value(None, "user_version", |r| r.get(0))?;
         if version > SCHEMA_VERSION {
-            return Err(AppError::Storage("veritabanı daha yeni bir sürüm tarafından oluşturulmuş".into()));
+            return Err(OpenError::NewerSchema(version));
+        }
+        // Var olan bir veritabanı yükseltilecekse önce yedekle. `VACUUM INTO`
+        // WAL içeriği dahil tutarlı tek bir dosya üretir. Yedek alınamazsa
+        // göç yapılmaz.
+        if let Some(path) = path {
+            if (1..SCHEMA_VERSION).contains(&version) {
+                let bak = Self::backup_path(path, version);
+                conn.execute("VACUUM INTO ?1", [bak.to_string_lossy()])
+                    .map_err(|e| AppError::Storage(format!("göç öncesi yedek alınamadı: {e}")))?;
+                tracing::info!(backup = %bak.display(), from = version, to = SCHEMA_VERSION, "şema yükseltmesi öncesi yedek alındı");
+            }
         }
         if version < 1 {
             conn.execute_batch(MIGRATION_1)?;
@@ -134,6 +188,60 @@ impl Db {
             )
             .map(|_| ())
         })
+    }
+}
+
+/// Veritabanını açar; açılamazsa uygulamanın yine de başlayabilmesi için
+/// kurtarma yapar ve kullanıcıya gösterilecek bir bildirim döndürür.
+///
+/// - Daha yeni bir sürümün veritabanı: dosyaya **dokunulmaz**; oturum bellek
+///   içi veritabanıyla çalışır (değişiklikler kaydedilmez).
+/// - Açılamayan/bozuk veritabanı: dosya, `-wal` ve `-shm` eşleriyle birlikte
+///   `<ad>.bozuk-<zaman>` adıyla kenara alınır ve yeni bir veritabanı oluşturulur.
+pub fn open_or_recover(path: &Path) -> (Db, Option<String>) {
+    let err = match Db::open(path) {
+        Ok(db) => return (db, None),
+        Err(e) => e,
+    };
+    let memory = || Db::open_in_memory().expect("bellek içi veritabanı");
+    if let OpenError::NewerSchema(v) = err {
+        tracing::warn!(schema = v, "veritabanı daha yeni bir sürüme ait; dosyaya dokunulmadı");
+        return (
+            memory(),
+            Some(
+                "Verileriniz Ivily Optimizer'ın daha yeni bir sürümü tarafından kaydedilmiş. Veriler korunuyor, ancak bu \
+                 oturumdaki değişiklikler kaydedilmeyecek. Lütfen en son sürümü yeniden kurun."
+                    .into(),
+            ),
+        );
+    }
+    tracing::error!(error = %err, "veritabanı açılamadı, kenara alınıp yeniden oluşturuluyor");
+    let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| "ivily.db".into());
+    let bak = path.with_file_name(format!("{name}.bozuk-{}", chrono::Local::now().format("%Y%m%d-%H%M%S")));
+    // SQLite eş dosyaları `<ad>-wal` ve `<ad>-shm` adlarını kullanır; yedek
+    // aynı düzende taşınır ki gerekirse WAL içeriğiyle birlikte açılabilsin.
+    for suffix in ["", "-wal", "-shm"] {
+        let from = path.with_file_name(format!("{name}{suffix}"));
+        if from.exists() {
+            let to = bak.with_file_name(format!("{}{suffix}", bak.file_name().unwrap_or_default().to_string_lossy()));
+            if let Err(e) = std::fs::rename(&from, &to) {
+                tracing::error!(error = %e, file = %from.display(), "bozuk veritabanı dosyası taşınamadı");
+            }
+        }
+    }
+    match Db::open(path) {
+        Ok(db) => (
+            db,
+            Some(format!(
+                "Veritabanı açılamadı; eski dosya \"{}\" olarak yedeklendi ve yeni bir veritabanı oluşturuldu. Ayarlar \
+                 varsayılana döndü ve işlem geçmişi boş başlıyor.",
+                bak.display()
+            )),
+        ),
+        Err(e) => {
+            tracing::error!(error = %e, "yeni veritabanı da oluşturulamadı; bellek içi çalışılıyor");
+            (memory(), Some("Veritabanı oluşturulamadı; bu oturumdaki değişiklikler kaydedilmeyecek.".into()))
+        }
     }
 }
 
@@ -189,5 +297,75 @@ mod tests {
         // İkinci açılış göçü tekrar çalıştırmamalı.
         let db = Db::open(&path).unwrap();
         assert_eq!(db.with(|c| c.query_row("SELECT COUNT(*) FROM oplog", [], |r| r.get::<_, i64>(0))).unwrap(), 2);
+        drop(db);
+
+        // Göç öncesi tutarlı bir yedek alınmış olmalı ve eski şemayı taşımalı.
+        let backups: Vec<_> = std::fs::read_dir(dir.path())
+            .unwrap()
+            .flatten()
+            .map(|e| e.path())
+            .filter(|p| p.file_name().unwrap().to_string_lossy().starts_with("eski.db.v1-"))
+            .collect();
+        assert_eq!(backups.len(), 1, "{backups:?}");
+        let c = Connection::open(&backups[0]).unwrap();
+        let v: i64 = c.pragma_query_value(None, "user_version", |r| r.get(0)).unwrap();
+        assert_eq!(v, 1);
+        assert_eq!(c.query_row("SELECT COUNT(*) FROM oplog", [], |r| r.get::<_, i64>(0)).unwrap(), 2);
+    }
+
+    #[test]
+    fn fresh_database_is_not_backed_up() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("yeni.db");
+        drop(Db::open(&path).unwrap());
+        let names: Vec<String> =
+            std::fs::read_dir(dir.path()).unwrap().flatten().map(|e| e.file_name().to_string_lossy().into()).collect();
+        assert!(names.iter().all(|n| !n.contains(".bak")), "{names:?}");
+    }
+
+    #[test]
+    fn newer_schema_is_left_untouched() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("ivily.db");
+        {
+            let c = Connection::open(&path).unwrap();
+            c.execute_batch("CREATE TABLE gelecek(x); INSERT INTO gelecek VALUES (42);").unwrap();
+            c.pragma_update(None, "user_version", SCHEMA_VERSION + 1).unwrap();
+        }
+        assert!(matches!(Db::open(&path), Err(OpenError::NewerSchema(v)) if v == SCHEMA_VERSION + 1));
+        let (db, notice) = open_or_recover(&path);
+        assert!(notice.unwrap().contains("daha yeni"));
+        // Oturum bellek içi çalışır; dosya ve verisi yerinde kalır.
+        db.kv_set("a", "1").unwrap();
+        drop(db);
+        let c = Connection::open(&path).unwrap();
+        assert_eq!(c.query_row("SELECT x FROM gelecek", [], |r| r.get::<_, i64>(0)).unwrap(), 42);
+        let names: Vec<String> =
+            std::fs::read_dir(dir.path()).unwrap().flatten().map(|e| e.file_name().to_string_lossy().into()).collect();
+        assert!(names.iter().all(|n| !n.contains("bozuk")), "{names:?}");
+    }
+
+    #[test]
+    fn corrupt_database_is_moved_aside_with_companions() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("ivily.db");
+        std::fs::write(&path, b"bu bir sqlite veritabani degil, yalnizca bozuk bir dosya").unwrap();
+        std::fs::write(dir.path().join("ivily.db-wal"), b"eski wal").unwrap();
+        std::fs::write(dir.path().join("ivily.db-shm"), b"eski shm").unwrap();
+        let (db, notice) = open_or_recover(&path);
+        assert!(notice.unwrap().contains("yedeklendi"));
+        db.kv_set("a", "1").unwrap();
+        assert_eq!(db.kv_get("a").unwrap().as_deref(), Some("1"));
+        drop(db);
+        let names: Vec<String> =
+            std::fs::read_dir(dir.path()).unwrap().flatten().map(|e| e.file_name().to_string_lossy().into()).collect();
+        // Bozuk dosya silinmez, kenara alınır. (Geçersiz -wal/-shm eşlerini
+        // SQLite başarısız açılışta kendisi atabilir; varsa onlar da taşınır.)
+        let moved: Vec<&String> = names.iter().filter(|n| n.starts_with("ivily.db.bozuk-")).collect();
+        assert!(moved.iter().any(|n| !n.ends_with("-wal") && !n.ends_with("-shm")), "{names:?}");
+        let kept = dir.path().join(moved.iter().find(|n| !n.ends_with("-wal") && !n.ends_with("-shm")).unwrap());
+        assert!(std::fs::read(kept).unwrap().starts_with(b"bu bir sqlite"));
+        // Eski WAL yeni veritabanına karışmamış olmalı.
+        assert_ne!(std::fs::read(dir.path().join("ivily.db-wal")).ok().as_deref(), Some(&b"eski wal"[..]));
     }
 }
