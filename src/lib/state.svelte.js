@@ -5,6 +5,7 @@ import { api } from "./api.js";
 
 import { errMsg } from "./format.js";
 import { pushNotification } from "./notify.svelte.js";
+import { createPoller } from "./poller.js";
 
 /** @typedef {"overview" | "insights" | "disk" | "files" | "cleanup" | "quarantine" | "startup" | "processes" | "services" | "tasks" | "performance" | "network" | "history" | "events" | "updates" | "settings" | "about"} Route */
 
@@ -179,39 +180,39 @@ export async function initJobs() {
 // ---------------------------------------------------------------------------
 
 export const live = $state({ stats: null, error: null });
-let pollTimer = null;
 let subscribers = 0;
 
-async function tick() {
-  pollTimer = null;
-  const hidden = document.visibilityState === "hidden";
-  if (!hidden || app.settings?.monitorInBackground) {
+const livePoller = createPoller(
+  async () => {
     try {
       live.stats = await api.liveStats();
       live.error = null;
     } catch (e) {
       live.error = errMsg(e);
     }
-  }
-  if (subscribers > 0) pollTimer = setTimeout(tick, app.settings?.monitorIntervalMs ?? 2000);
-}
+  },
+  {
+    interval: () => app.settings?.monitorIntervalMs ?? 2000,
+    runWhenHidden: () => !!app.settings?.monitorInBackground,
+  },
+);
 
-/** Canlı izlemeye abone olur; dönen işlev aboneliği bırakır. */
+/**
+ * Canlı izlemeye abone olur; dönen işlev aboneliği bırakır. Abone kalmayınca
+ * ve pencere gizliyken yoklama tamamen durur.
+ * @returns {() => void}
+ */
 export function useLive() {
   subscribers++;
-  if (subscribers === 1 && !pollTimer) tick();
+  livePoller.start();
+  let released = false;
   return () => {
+    if (released) return;
+    released = true;
     subscribers = Math.max(0, subscribers - 1);
-    if (subscribers === 0 && pollTimer) {
-      clearTimeout(pollTimer);
-      pollTimer = null;
-    }
+    if (subscribers === 0) livePoller.stop();
   };
 }
-
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible" && subscribers > 0 && !pollTimer) tick();
-});
 
 // ---------------------------------------------------------------------------
 // Sistem bilgisi

@@ -9,6 +9,7 @@
   import { toast, confirm, app } from "../lib/state.svelte.js";
   import { bytes, num, rate, dateTime, errMsg, errCode, uptime } from "../lib/format.js";
   import { sortBy, matches } from "../lib/util.js";
+  import { createPoller } from "../lib/poller.js";
 
   let procs = $state([]);
   let q = $state("");
@@ -26,13 +27,11 @@
   let error = $state(null);
 
   onMount(() => {
-    let timer;
-    const loop = async () => {
-      if (!paused && document.visibilityState === "visible") await load();
-      timer = setTimeout(loop, Math.max(2000, app.settings?.monitorIntervalMs ?? 2000));
-    };
-    loop();
-    return () => clearTimeout(timer);
+    const poller = createPoller(() => (paused ? undefined : load()), {
+      interval: () => Math.max(2000, app.settings?.monitorIntervalMs ?? 2000),
+    });
+    poller.start();
+    return () => poller.stop();
   });
 
   async function load() {
