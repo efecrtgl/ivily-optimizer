@@ -119,7 +119,8 @@ const PROTECTED_REASON: &str =
     "Bu bir Windows bakım görevidir; sistemin düzgün çalışması için Windows tarafından yönetilir ve yalnızca görüntülenebilir.";
 
 pub fn is_protected_path(path: &str) -> bool {
-    path.len() >= PROTECTED_PREFIX.len() && path[..PROTECTED_PREFIX.len()].eq_ignore_ascii_case(PROTECTED_PREFIX)
+    // Bayt düzeyinde karşılaştırma: çok baytlı karakterlerde dilimleme paniği olmaz.
+    path.as_bytes().get(..PROTECTED_PREFIX.len()).is_some_and(|b| b.eq_ignore_ascii_case(PROTECTED_PREFIX.as_bytes()))
 }
 
 fn s(v: &Value, k: &str) -> Option<String> {

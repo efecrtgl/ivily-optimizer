@@ -373,6 +373,14 @@ pub fn restart(db: &Db, pid: u32, expected_name: &str) -> AppResult<ProcessResta
         return Err(AppError::Conflict(format!("PID {pid} artık başka bir sürece ({name}) ait; liste yenilendi")));
     }
     restart_check(&sys, pid).map_err(AppError::Protected)?;
+    // Komut satırı hedef sürecin kendi belleğinden okunur ve o süreç
+    // tarafından değiştirilebilir. Ivily yönetici olarak çalışıyorsa bu komut
+    // satırı yükseltilmiş haklarla yeniden çalıştırılmış olurdu.
+    if crate::platform::is_elevated() {
+        return Err(AppError::Protected(
+            "Ivily Optimizer yönetici olarak çalışırken süreçler yeniden başlatılamaz; uygulamayı normal kullanıcı olarak açın.".into(),
+        ));
+    }
     let exe = p.exe().map(|e| e.to_path_buf()).ok_or_else(|| AppError::System("program yolu okunamadı".into()))?;
     let args: Vec<std::ffi::OsString> = p.cmd().iter().skip(1).cloned().collect();
     let cwd = p.cwd().map(|c| c.to_path_buf()).filter(|c| c.is_dir());
@@ -381,7 +389,9 @@ pub fn restart(db: &Db, pid: u32, expected_name: &str) -> AppResult<ProcessResta
         "pid": pid,
         "name": name,
         "exe": exe.to_string_lossy(),
-        "args": args.iter().map(|a| a.to_string_lossy().into_owned()).collect::<Vec<_>>(),
+        // Komut satırı bağımsız değişkenleri parola veya belirteç içerebilir;
+        // geçmişe yalnızca sayıları yazılır.
+        "argCount": args.len(),
         "cwd": cwd.as_ref().map(|c| c.to_string_lossy().into_owned()),
     });
 

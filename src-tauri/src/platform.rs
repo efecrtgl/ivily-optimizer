@@ -66,7 +66,8 @@ fn to_wide(s: &str) -> Vec<u16> {
 
 /// Dosyayı Explorer'da seçili olarak gösterir; klasörse klasörü açar.
 pub fn reveal_in_explorer(path: &str) -> AppResult<()> {
-    let p = Path::new(path);
+    // Ağ yollarına `exists()` bile dışarıya SMB bağlantısı açar.
+    let p = &crate::paths::check_local(path)?;
     if !p.exists() {
         return Err(AppError::NotFound(path.to_string()));
     }
@@ -86,11 +87,25 @@ pub fn reveal_in_explorer(path: &str) -> AppResult<()> {
 
 /// Yalnızca izin verilen sabit adreslerin varsayılan tarayıcıda açılması.
 pub fn open_url(url: &str) -> AppResult<()> {
-    const ALLOWED: &[&str] = &["https://github.com/efecrtgl"];
-    if !ALLOWED.iter().any(|a| url == *a || url.starts_with(&format!("{a}/"))) {
+    if !is_allowed_url(url) {
         return Err(AppError::InvalidInput("bu adres açılamaz".into()));
     }
     shell_open(url)
+}
+
+/// Adres izin verilen önekle başlamalı ve yalnızca URL'de güvenli karakterler
+/// içermeli. Tırnak, boşluk ve denetim karakterleri, ShellExecute'un
+/// tarayıcıya ilettiği komut satırına ek bağımsız değişken sokabileceği için
+/// reddedilir.
+fn is_allowed_url(url: &str) -> bool {
+    const ALLOWED: &[&str] = &["https://github.com/efecrtgl"];
+    let prefix_ok = ALLOWED.iter().any(|a| url == *a || url.starts_with(&format!("{a}/")));
+    let chars_ok = url.len() <= 2048
+        && url.chars().all(|c| c.is_ascii_alphanumeric() || "-._~/:?#=&%+@!,;".contains(c))
+        && !url.contains("..")
+        // Yalnızca şemadaki `//`; yol içinde ikinci bir ana bilgisayar yok.
+        && url.matches("//").count() == 1;
+    prefix_ok && chars_ok
 }
 
 #[cfg(windows)]
@@ -113,6 +128,10 @@ fn shell_open(_t: &str) -> AppResult<()> {
     Err(AppError::Unsupported("yalnızca Windows".into()))
 }
 
+/// Yükseltilmiş bir aracın tamamlanması için beklenecek en uzun süre.
+#[cfg(windows)]
+const ELEVATED_TIMEOUT_MS: u32 = 5 * 60 * 1000;
+
 /// Tek bir sistem aracını, UAC onayıyla yönetici olarak çalıştırır ve
 /// bitmesini bekler. Dönen değer çıkış kodudur.
 ///
@@ -121,7 +140,8 @@ fn shell_open(_t: &str) -> AppResult<()> {
 pub fn run_elevated(tool: &str, args: &[String]) -> AppResult<u32> {
     use windows::core::PCWSTR;
     use windows::Win32::Foundation::CloseHandle;
-    use windows::Win32::System::Threading::{GetExitCodeProcess, WaitForSingleObject, INFINITE};
+    use windows::Win32::Foundation::WAIT_TIMEOUT;
+    use windows::Win32::System::Threading::{GetExitCodeProcess, WaitForSingleObject};
     use windows::Win32::UI::Shell::{ShellExecuteExW, SEE_MASK_NOCLOSEPROCESS, SHELLEXECUTEINFOW};
     use windows::Win32::UI::WindowsAndMessaging::SW_HIDE;
 
@@ -148,7 +168,15 @@ pub fn run_elevated(tool: &str, args: &[String]) -> AppResult<u32> {
         if info.hProcess.is_invalid() {
             return Err(AppError::System("yükseltilmiş süreç başlatılamadı".into()));
         }
-        WaitForSingleObject(info.hProcess, INFINITE);
+        // UAC onayı ShellExecuteExW içinde alınır; burada yalnızca yükseltilmiş
+        // aracın (sc.exe, schtasks, reg, powershell) bitmesi beklenir.
+        if WaitForSingleObject(info.hProcess, ELEVATED_TIMEOUT_MS) == WAIT_TIMEOUT {
+            let _ = CloseHandle(info.hProcess);
+            return Err(AppError::System(
+                "yönetici işlemi 5 dakika içinde tamamlanmadı; sonucu doğrulanamadı. Durumu listeyi yenileyerek denetleyin."
+                    .into(),
+            ));
+        }
         let mut code = 0u32;
         let _ = GetExitCodeProcess(info.hProcess, &mut code);
         let _ = CloseHandle(info.hProcess);
@@ -323,6 +351,26 @@ mod tests {
         assert_eq!(quote_arg("a\"b"), "\"a\\\"b\"");
         assert_eq!(quote_arg("C:\\x y\\"), "\"C:\\x y\\\\\"");
         assert_eq!(quote_arg(""), "\"\"");
+    }
+
+    #[test]
+    fn url_allow_list() {
+        assert!(is_allowed_url("https://github.com/efecrtgl"));
+        assert!(is_allowed_url("https://github.com/efecrtgl/ivily-optimizer/releases/tag/v0.2.0"));
+        assert!(is_allowed_url("https://github.com/efecrtgl/ivily-optimizer/issues?q=is%3Aopen#x"));
+        for bad in [
+            "https://github.com/efecrtglx",
+            "http://github.com/efecrtgl/x",
+            "https://github.com/efecrtgl/x\" --disable-web-security",
+            "https://github.com/efecrtgl/x y",
+            "https://github.com/efecrtgl/../../başka",
+            "https://github.com/efecrtgl//evil.example",
+            "https://github.com/efecrtgl/x\n",
+            "file:///C:/Windows",
+            "",
+        ] {
+            assert!(!is_allowed_url(bad), "kabul edilmemeliydi: {bad:?}");
+        }
     }
 
     #[cfg(windows)]
