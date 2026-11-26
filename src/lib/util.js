@@ -18,6 +18,3 @@ export function matches(text, q) {
   return (text ?? "").toLocaleLowerCase("tr").includes(q.toLocaleLowerCase("tr"));
 }
 
-export function clamp(v, a, b) {
-  return Math.min(b, Math.max(a, v));
-}

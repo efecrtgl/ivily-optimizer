@@ -141,13 +141,7 @@ export const api = {
    */
   quarantinePurge: (ids) => call("quarantine_purge", { ids }),
 
-  // Geçmiş
-  /**
-   * @param {string} [kind]
-   * @param {number} [limit]
-   * @returns {Promise<import("./types.js").OpEntry[]>}
-   */
-  oplog: (kind, limit) => call("oplog_list", { kind, limit }),
+  // Geçmiş (işlem geçmişi için bkz. fx.oplog)
   /**
    * @param {string} [root]
    * @returns {Promise<import("./types.js").SnapshotInfo[]>}

@@ -1,7 +1,6 @@
 // Türkçe biçimlendirme yardımcıları.
 
 const nf = new Intl.NumberFormat("tr-TR");
-const nf1 = new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 1, minimumFractionDigits: 0 });
 const pf = new Intl.NumberFormat("tr-TR", { maximumFractionDigits: 1, minimumFractionDigits: 0 });
 
 /** Bayt değerini 1024 tabanında okunabilir hale getirir (Windows ile tutarlı). */
@@ -35,10 +34,6 @@ export function rate(n) {
 export function num(n) {
   if (n == null || !isFinite(n)) return "—";
   return nf.format(n);
-}
-
-export function num1(n) {
-  return nf1.format(n);
 }
 
 export function pct(n) {

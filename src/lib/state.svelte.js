@@ -50,16 +50,30 @@ export async function loadSettings() {
   applyTheme();
 }
 
-export async function saveSettings(patch) {
-  if (!app.settings) return false;
-  try {
-    app.settings = await api.settingsSet({ ...app.settings, ...patch });
-    applyTheme();
-    return true;
-  } catch (e) {
-    toast("error", "Ayarlar kaydedilemedi", errMsg(e));
-    return false;
-  }
+let saveChain = Promise.resolve();
+
+/**
+ * Ayarların bir bölümünü kaydeder. Kayıtlar sıraya alınır: her kayıt bir
+ * öncekinin sonucundan başlar, böylece hızlı ardışık değişiklikler birbirini
+ * ezmez.
+ * @param {Partial<import("./types.js").Settings>} patch
+ * @returns {Promise<boolean>}
+ */
+export function saveSettings(patch) {
+  const run = async () => {
+    if (!app.settings) return false;
+    try {
+      app.settings = await api.settingsSet({ ...app.settings, ...patch });
+      applyTheme();
+      return true;
+    } catch (e) {
+      toast("error", "Ayarlar kaydedilemedi", errMsg(e));
+      return false;
+    }
+  };
+  const p = saveChain.then(run);
+  saveChain = p.catch(() => {});
+  return p;
 }
 
 // ---------------------------------------------------------------------------
@@ -113,6 +127,9 @@ export const confirmState = $state({
 });
 
 export function confirm(opts) {
+  // Açık bir onay penceresi varken yenisi istenirse, öncekini "hayır" ile
+  // sonuçlandır; aksi halde bekleyen çağıran hiç devam edemezdi.
+  confirmState.resolve?.(false);
   return new Promise((resolve) => {
     confirmState.opts = opts;
     confirmState.resolve = resolve;

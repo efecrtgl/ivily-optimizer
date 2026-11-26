@@ -34,11 +34,15 @@
   const hashJob = $derived(jobs["hash"]);
 
   onMount(() => {
-    fx.roots().then((r) => {
-      roots = r;
-      if (!path && r.length) open(r.find((x) => x.label === "İndirilenler")?.path ?? r[0].path);
-    });
-    fx.hashResult().then((r) => (hash = r));
+    fx.roots()
+      .then((r) => {
+        roots = r;
+        if (!path && r.length) open(r.find((x) => x.label === "İndirilenler")?.path ?? r[0].path);
+      })
+      .catch((e) => toast("error", "Sürücüler listelenemedi", errMsg(e)));
+    fx.hashResult()
+      .then((r) => (hash = r))
+      .catch(() => {});
     return onJobDone("hash", async (d) => {
       if (d.status === "complete") {
         hash = await fx.hashResult();

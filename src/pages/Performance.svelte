@@ -1,5 +1,6 @@
 <script>
   import { onMount } from "svelte";
+  import LiveError from "../lib/components/LiveError.svelte";
   import PageHeader from "../lib/components/PageHeader.svelte";
   import Icon from "../lib/components/Icon.svelte";
   import AreaChart from "../lib/components/AreaChart.svelte";
@@ -57,6 +58,8 @@
     <button class="btn" onclick={() => go("processes")}><Icon name="cpu" size={14} /> İşlemler</button>
   {/snippet}
 </PageHeader>
+
+<LiveError />
 
 <div class="grid cols-2">
   <section class="card">

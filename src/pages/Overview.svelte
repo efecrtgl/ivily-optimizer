@@ -1,10 +1,11 @@
 <script>
+  import LiveError from "../lib/components/LiveError.svelte";
   import { onMount } from "svelte";
   import Icon from "../lib/components/Icon.svelte";
   import AreaChart from "../lib/components/AreaChart.svelte";
   import BarList from "../lib/components/BarList.svelte";
   import CatMark from "../lib/components/CatMark.svelte";
-  import { api } from "../lib/api.js";
+  import { api, fx } from "../lib/api.js";
   import { app, live, useLive, go, saveSettings, loadSystemInfo, jobs, registerJob, toast, } from "../lib/state.svelte.js";
   import { updater, STATUS_LABEL, checkForUpdates } from "../lib/updater.svelte.js";
   import { intelState, refreshIntelligence, } from "../lib/intelligence.svelte.js";
@@ -57,8 +58,7 @@
     // önbellek; ilgili bir iş bitince önbellek zaten geçersiz kılınır.
     refreshIntelligence({ maxAgeSec: 120 });
     try {
-      recent = (await api.oplog(undefined, 6)) ;
-      if (!Array.isArray(recent)) recent = recent.items ?? [];
+      recent = (await fx.oplog({ limit: 6 })).items;
     } catch {
       recent = [];
     }
@@ -146,6 +146,8 @@
     </button>
   </div>
 </header>
+
+<LiveError />
 
 {#if editing}
   <section class="card editor" aria-label="Pano düzeni">

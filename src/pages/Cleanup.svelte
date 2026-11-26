@@ -33,7 +33,10 @@
   const runJob = $derived(jobs["cleanup-run"]);
 
   onMount(() => {
-    api.cleanupScanResult().then(apply);
+    api
+      .cleanupScanResult()
+      .then(apply)
+      .catch((e) => toast("error", "Son temizlik taraması okunamadı", errMsg(e)));
     const a = onJobDone("cleanup-scan", async (d) => {
       if (d.status === "failed") toast("error", "Tarama başarısız", d.message ?? undefined);
       apply(await api.cleanupScanResult());

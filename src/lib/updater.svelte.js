@@ -23,6 +23,8 @@ import { errCode, errMsg } from "./format.js";
  * @property {boolean} hasSignature
  * @property {string | null} updaterManifestUrl
  * @property {number} checkedAt
+ * @property {boolean} prerelease Bulunan sürüm bir ön sürüm mü?
+ * @property {boolean} includePrerelease Denetimde ön sürümler dahil edildi mi?
  */
 
 /** @typedef {"idle" | "checking" | "none" | "available" | "preparing" | "downloading" | "verifying" | "installing" | "restarting" | "failed" | "offline" | "cancelled"} UpdateStatus */

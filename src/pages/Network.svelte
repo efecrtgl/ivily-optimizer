@@ -1,5 +1,6 @@
 <script>
   import { onMount } from "svelte";
+  import LiveError from "../lib/components/LiveError.svelte";
   import PageHeader from "../lib/components/PageHeader.svelte";
   import Icon from "../lib/components/Icon.svelte";
   import AreaChart from "../lib/components/AreaChart.svelte";
@@ -101,6 +102,8 @@
     <button class="btn" onclick={loadAdapters}><Icon name="refresh" size={14} /> Yenile</button>
   {/snippet}
 </PageHeader>
+
+<LiveError />
 
 <section class="card">
   <div class="card-head">
