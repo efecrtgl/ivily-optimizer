@@ -180,7 +180,7 @@ impl Settings {
             if r.path.is_empty() || !std::path::Path::new(&r.path).is_absolute() {
                 return Err(AppError::InvalidInput(format!("'{}' kuralının yolu mutlak bir yol olmalı", r.name)));
             }
-            if crate::cleanup::rules::is_protected_path(&r.path) {
+            if crate::cleanup::rules::is_protected_resolved(&r.path) {
                 return Err(AppError::Protected(format!("'{}' korunan bir sistem konumu", r.path)));
             }
             r.extensions = r.extensions.iter().map(|e| clean_ext(e)).filter(|e| !e.is_empty()).collect();

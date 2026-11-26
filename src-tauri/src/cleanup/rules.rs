@@ -389,15 +389,15 @@ pub fn categories(temp_min_age_hours: u64, user_rules: &[crate::settings::UserCl
     // --- Kullanıcı kuralları -------------------------------------------------
     for r in user_rules {
         let p = PathBuf::from(&r.path);
-        if !p.is_absolute() || is_protected_path(&r.path) {
+        if !p.is_absolute() || is_protected_resolved(&r.path) {
             continue;
         }
         out.push(Category {
             id: format!("user-{}", r.id),
-            group: "Özel kurallar",
+            group: USER_RULE_GROUP,
             name: r.name.clone(),
             description: "Sizin tanımladığınız bir temizlik kuralı. Ivily Optimizer bu konumun içeriğini tanımaz; seçmeden önce gözden geçirin.",
-            consequence: "Bu konumdaki eşleşen dosyalar silinir. Etkisi, klasörü hangi uygulamanın kullandığına bağlıdır.",
+            consequence: "Bu konumdaki eşleşen dosyalar her zaman karantinaya taşınır (kalıcı silinmez) ve karantina süresi boyunca geri yüklenebilir. Etkisi, klasörü hangi uygulamanın kullandığına bağlıdır.",
             risk: Risk::Review,
             kind: Kind::Files,
             targets: vec![Target {
@@ -428,9 +428,21 @@ fn is_allowed_windows_log(normalized: &str, windir: &str) -> bool {
 /// Geliştirme önbelleği tanımı: kimlik, ad, konum, açıklama, ilgili süreçler.
 type DevCache = (&'static str, &'static str, Option<PathBuf>, &'static str, &'static [&'static str]);
 
+/// Kullanıcı tanımlı temizlik kurallarının grubu. Bu gruptaki öğeler, ayardan
+/// bağımsız olarak her zaman karantinaya taşınır.
+pub const USER_RULE_GROUP: &str = "Özel kurallar";
+
 /// Hiçbir koşulda silinmemesi, taşınmaması veya temizlik kuralına konu
 /// edilmemesi gereken konumlar.
+///
+/// Yalnızca metin üzerinde çalışır (taramalarda dosya başına çağrıldığı için
+/// hızlıdır). Yerel bir sürücü yolu olmayan veya `..` içeren her yol korunan
+/// sayılır. Kullanıcı girdisini kabul eden işlemler ayrıca
+/// [`is_protected_resolved`] kullanmalıdır.
 pub fn is_protected_path(path: &str) -> bool {
+    if paths::check_local(path).is_err() {
+        return true;
+    }
     let p = paths::normalize(path);
     if p.is_empty() {
         return true;
@@ -457,7 +469,7 @@ pub fn is_protected_path(path: &str) -> bool {
             }
         }
     }
-    let drive = &p[..2.min(p.len())];
+    let drive = p.get(..2).unwrap_or(&p);
     for sys in
         ["system volume information", "$recycle.bin", "recovery", "boot", "$windows.~bt", "$windows.~ws", "$winreagent"]
     {
@@ -507,6 +519,21 @@ pub fn is_protected_path(path: &str) -> bool {
     false
 }
 
+/// [`is_protected_path`] denetimini, yolun gerçek hedefine de uygular:
+/// junction ve sembolik bağlantılar ile 8.3 kısa adları (`PROGRA~1`)
+/// `canonicalize` ile çözülür. Yol yoksa yalnızca metin denetimi yapılır.
+/// Kullanıcı girdisiyle dosya silen, taşıyan veya kural oluşturan işlemler
+/// bu işlevi kullanır.
+pub fn is_protected_resolved(path: &str) -> bool {
+    if is_protected_path(path) {
+        return true;
+    }
+    match std::fs::canonicalize(path.trim()) {
+        Ok(real) => is_protected_path(&real.to_string_lossy()),
+        Err(_) => false,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -526,6 +553,48 @@ mod tests {
         assert!(!is_protected_path(&dirs::home_dir().unwrap().join("Downloads\\a.zip").to_string_lossy()));
         assert!(is_protected_path(&crate::paths::db_path().to_string_lossy()));
         assert!(is_protected_path(""));
+    }
+
+    #[test]
+    fn traversal_and_network_paths_cannot_bypass_protection() {
+        let home = dirs::home_dir().unwrap();
+        let windir = std::env::var("SystemRoot").unwrap_or_else(|_| "C:\\Windows".into());
+        // Ev klasörünün kendisine `..` ile ulaşmak.
+        assert!(is_protected_path(&format!("{}\\Desktop\\..", home.display())));
+        // Windows klasörüne `..` ile ulaşmak.
+        assert!(is_protected_path(&format!("{}\\..\\..\\Windows\\System32\\x.dll", home.display())));
+        assert!(is_protected_path(r"\\localhost\C$\Users\x\a.txt"));
+        assert!(is_protected_path(r"\\.\C:\Users\x\a.txt"));
+        assert!(is_protected_path(&format!("{windir}\\Temp\\a.tmp:akış")));
+        // Çok baytlı karakterle başlayan girdi panik oluşturmamalı.
+        assert!(is_protected_path("€€€"));
+        assert!(is_protected_path(r"\\?\€\x"));
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn resolved_check_follows_junctions() {
+        let t = tempfile::tempdir().unwrap();
+        let link = t.path().join("baglanti");
+        let windir = std::env::var("SystemRoot").unwrap_or_else(|_| "C:\\Windows".into());
+        let ok = std::process::Command::new("cmd")
+            .args(["/C", "mklink", "/J"])
+            .arg(&link)
+            .arg(&windir)
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false);
+        if !ok {
+            eprintln!("junction oluşturulamadı; test atlandı");
+            return;
+        }
+        let inside = link.join("System32");
+        // Metin denetimi junction'ı göremez; çözümlenmiş denetim görür.
+        assert!(!is_protected_path(&inside.to_string_lossy()));
+        assert!(is_protected_resolved(&inside.to_string_lossy()));
+        // Var olmayan, korunmayan yol yine serbest.
+        assert!(!is_protected_resolved(&t.path().join("yok.txt").to_string_lossy()));
+        std::fs::remove_dir(&link).unwrap();
     }
 
     #[test]

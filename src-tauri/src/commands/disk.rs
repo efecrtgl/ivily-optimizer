@@ -16,10 +16,7 @@ use tauri::{AppHandle, Manager, State};
 type St<'a> = State<'a, Arc<AppState>>;
 
 fn validate_dir(root: &str) -> AppResult<PathBuf> {
-    let p = PathBuf::from(root.trim());
-    if !p.is_absolute() {
-        return Err(AppError::InvalidInput("tam bir klasör yolu girin (ör. C:\\Users)".into()));
-    }
+    let p = crate::paths::check_local(root)?;
     if !p.is_dir() {
         return Err(AppError::NotFound(format!("{} klasörü bulunamadı", p.display())));
     }
@@ -382,7 +379,7 @@ pub async fn files_remove(st: St<'_>, paths: Vec<String>, mode: String, source: 
                     out.failed.push((p.clone(), "Geçersiz yol".into()));
                     continue;
                 }
-                if crate::cleanup::rules::is_protected_path(p) {
+                if crate::cleanup::rules::is_protected_resolved(p) {
                     out.failed.push((p.clone(), "Korunan sistem konumu".into()));
                     continue;
                 }
@@ -459,7 +456,7 @@ pub async fn files_remove(st: St<'_>, paths: Vec<String>, mode: String, source: 
 #[tauri::command]
 pub async fn exclusion_add_path(st: St<'_>, path: String) -> AppResult<()> {
     let path = path.trim().to_string();
-    if !Path::new(&path).is_absolute() {
+    if crate::paths::check_local(&path).is_err() {
         return Err(AppError::InvalidInput("tam bir yol gerekli".into()));
     }
     let mut s = st.settings();

@@ -101,16 +101,31 @@ pub async fn cleanup_run(app: AppHandle, st: St<'_>, ids: Vec<String>) -> AppRes
                 }
             }
         };
+        // Kullanıcı kuralları her zaman karantinaya alınır; diğer öğeler
+        // ayara göre karantinaya alınır veya kalıcı silinir.
+        let is_user_rule =
+            |id: &String| scan.items.iter().any(|i| &i.id == id && i.group == cleanup::rules::USER_RULE_GROUP);
+        let (user_ids, other_ids): (Vec<String>, Vec<String>) = ids.iter().cloned().partition(is_user_rule);
         let mut quarantine_ids: Vec<String> = Vec::new();
-        let mut report: CleanupReport = if s.cleanup_use_quarantine {
+        let mut report = CleanupReport::default();
+        let mut used_quarantine = false;
+        if !other_ids.is_empty() {
+            if s.cleanup_use_quarantine {
+                let rem = QuarantineRemover::new(st.quarantine(), s.quarantine_retention_days);
+                report.merge(cleanup::execute(&scan, &other_ids, &rem, &ctl.cancel, &on_progress));
+                quarantine_ids.extend(rem.ids.into_inner());
+                used_quarantine = true;
+            } else {
+                report.merge(cleanup::execute(&scan, &other_ids, &DeleteRemover, &ctl.cancel, &on_progress));
+            }
+        }
+        if !user_ids.is_empty() && !report.cancelled {
             let rem = QuarantineRemover::new(st.quarantine(), s.quarantine_retention_days);
-            let r = cleanup::execute(&scan, &ids, &rem, &ctl.cancel, &on_progress);
-            quarantine_ids = rem.ids.into_inner();
-            r
-        } else {
-            cleanup::execute(&scan, &ids, &DeleteRemover, &ctl.cancel, &on_progress)
-        };
-        report.used_quarantine = s.cleanup_use_quarantine;
+            report.merge(cleanup::execute(&scan, &user_ids, &rem, &ctl.cancel, &on_progress));
+            quarantine_ids.extend(rem.ids.into_inner());
+            used_quarantine = true;
+        }
+        report.used_quarantine = used_quarantine;
         report.free_before = free_before;
         report.free_after = crate::platform::system_drive_free();
         stop.store(true, Ordering::Relaxed);

@@ -242,7 +242,7 @@ fn restore_folders(db: &Db, e: &OpEntry) -> AppResult<RestoreResult> {
     let mut skipped = 0usize;
     for p in paths {
         let path = PathBuf::from(&p);
-        if !path.is_absolute() || crate::cleanup::rules::is_protected_path(&p) {
+        if !path.is_absolute() || crate::cleanup::rules::is_protected_resolved(&p) {
             problems += 1;
             details.push(format!("{p}: korunan veya geçersiz konum; oluşturulmadı."));
             continue;

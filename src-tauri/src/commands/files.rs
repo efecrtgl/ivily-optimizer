@@ -94,8 +94,8 @@ pub async fn empty_folders_remove(st: St<'_>, paths: Vec<String>) -> AppResult<E
 
 #[tauri::command]
 pub async fn file_hash_start(app: AppHandle, st: St<'_>, path: String) -> AppResult<String> {
-    let p = PathBuf::from(path.trim());
-    if !p.is_absolute() || !p.is_file() {
+    let p = crate::paths::check_local(&path)?;
+    if !p.is_file() {
         return Err(AppError::InvalidInput("geçerli bir dosya seçin".into()));
     }
     let ctl = st.jobs.start("hash")?;
@@ -120,10 +120,7 @@ pub async fn file_hash_result() -> AppResult<Option<HashResult>> {
 // --- Klasör karşılaştırma --------------------------------------------------
 
 fn validate_dir(p: &str) -> AppResult<PathBuf> {
-    let path = PathBuf::from(p.trim());
-    if !path.is_absolute() {
-        return Err(AppError::InvalidInput("tam bir klasör yolu girin (ör. C:\\Users)".into()));
-    }
+    let path = crate::paths::check_local(p)?;
     if !path.is_dir() {
         return Err(AppError::NotFound(format!("{} klasörü bulunamadı", path.display())));
     }

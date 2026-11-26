@@ -98,10 +98,7 @@ pub fn stamp() -> String {
 }
 
 fn validate_abs_dir(p: &str) -> AppResult<PathBuf> {
-    let path = PathBuf::from(p.trim());
-    if !path.is_absolute() {
-        return Err(AppError::InvalidInput("tam bir klasör yolu girin (ör. C:\\Users)".into()));
-    }
+    let path = crate::paths::check_local(p)?;
     if !path.is_dir() {
         return Err(AppError::NotFound(format!("{} klasörü bulunamadı", path.display())));
     }
@@ -304,10 +301,7 @@ pub fn attribute_labels(attrs: u32) -> Vec<String> {
 }
 
 pub fn metadata(path: &str, scan: Option<&DiskScan>) -> AppResult<FsMetadata> {
-    let p = PathBuf::from(path.trim());
-    if !p.is_absolute() {
-        return Err(AppError::InvalidInput("tam bir yol gerekli".into()));
-    }
+    let p = crate::paths::check_local(path)?;
     let md = std::fs::symlink_metadata(&p).map_err(|e| AppError::io(e, &p.to_string_lossy()))?;
     let attrs = attrs_of(&md);
     let is_dir = md.is_dir();
@@ -465,7 +459,7 @@ pub fn find_empty_folders(scan: &DiskScan) -> AppResult<EmptyFolders> {
         }
         let path = scan.path_of(i as u32);
         let ps = path.to_string_lossy().into_owned();
-        if is_protected_path(&ps) {
+        if crate::cleanup::rules::is_protected_resolved(&ps) {
             continue;
         }
         eligible[i] = true;
@@ -507,7 +501,7 @@ pub fn remove_empty_tree(path: &str) -> Result<Vec<String>, String> {
     if !p.is_absolute() {
         return Err("Geçersiz yol".into());
     }
-    if is_protected_path(&p.to_string_lossy()) {
+    if crate::cleanup::rules::is_protected_resolved(&p.to_string_lossy()) {
         return Err("Korunan sistem konumu".into());
     }
     let md = std::fs::symlink_metadata(&p).map_err(|e| AppError::io(e, &p.to_string_lossy()).to_string())?;

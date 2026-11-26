@@ -49,13 +49,77 @@ fn new_id() -> String {
     format!("{:x}-{:x}-{n:x}", chrono::Utc::now().timestamp_millis(), std::process::id())
 }
 
-/// Aynı birimde değilse kopyala + doğrula + sil.
+/// Hedef zaten varsa Windows'un döndürdüğü hata kodları.
+const ERROR_FILE_EXISTS: i32 = 80;
+const ERROR_ALREADY_EXISTS: i32 = 183;
+/// Kaynak ve hedef farklı birimlerde.
+const ERROR_NOT_SAME_DEVICE: i32 = 17;
+
+fn exists_conflict(to: &Path) -> AppError {
+    AppError::Conflict(format!("{} konumunda zaten bir dosya var. Üzerine yazılmayacak.", to.display()))
+}
+
+fn is_exists_error(e: &std::io::Error) -> bool {
+    e.kind() == std::io::ErrorKind::AlreadyExists
+        || matches!(e.raw_os_error(), Some(ERROR_FILE_EXISTS) | Some(ERROR_ALREADY_EXISTS))
+}
+
+/// Hedefin üzerine asla yazmayan yeniden adlandırma. `std::fs::rename`
+/// Windows'ta var olan hedefi değiştirir; bu yüzden `MoveFileExW`
+/// `MOVEFILE_REPLACE_EXISTING` olmadan çağrılır. Denetim ile taşıma arasında
+/// hedefte bir dosya belirse bile işlem atomik olarak reddedilir.
+#[cfg(windows)]
+fn rename_no_replace(from: &Path, to: &Path) -> std::io::Result<()> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows::core::PCWSTR;
+    use windows::Win32::Storage::FileSystem::{MoveFileExW, MOVE_FILE_FLAGS};
+    let f: Vec<u16> = from.as_os_str().encode_wide().chain([0]).collect();
+    let t: Vec<u16> = to.as_os_str().encode_wide().chain([0]).collect();
+    unsafe { MoveFileExW(PCWSTR(f.as_ptr()), PCWSTR(t.as_ptr()), MOVE_FILE_FLAGS(0)) }
+        .map_err(|e| std::io::Error::from_raw_os_error(e.code().0 & 0xFFFF))
+}
+#[cfg(not(windows))]
+fn rename_no_replace(from: &Path, to: &Path) -> std::io::Result<()> {
+    if to.exists() {
+        return Err(std::io::ErrorKind::AlreadyExists.into());
+    }
+    std::fs::rename(from, to)
+}
+
+/// Hedef varsa başarısız olan kopyalama (`CopyFileW`, `bFailIfExists`).
+/// Zaman damgaları ve öznitelikler korunur.
+#[cfg(windows)]
+fn copy_no_replace(from: &Path, to: &Path) -> std::io::Result<u64> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows::core::PCWSTR;
+    use windows::Win32::Storage::FileSystem::CopyFileW;
+    let f: Vec<u16> = from.as_os_str().encode_wide().chain([0]).collect();
+    let t: Vec<u16> = to.as_os_str().encode_wide().chain([0]).collect();
+    unsafe { CopyFileW(PCWSTR(f.as_ptr()), PCWSTR(t.as_ptr()), true) }
+        .map_err(|e| std::io::Error::from_raw_os_error(e.code().0 & 0xFFFF))?;
+    Ok(std::fs::metadata(to)?.len())
+}
+#[cfg(not(windows))]
+fn copy_no_replace(from: &Path, to: &Path) -> std::io::Result<u64> {
+    let mut src = std::fs::File::open(from)?;
+    let mut dst = std::fs::OpenOptions::new().write(true).create_new(true).open(to)?;
+    std::io::copy(&mut src, &mut dst)
+}
+
+/// Dosyayı taşır; hedefte bir dosya varsa asla üzerine yazmaz. Aynı birimde
+/// değilse kopyala + doğrula + sil.
 pub fn move_file(from: &Path, to: &Path) -> AppResult<()> {
-    match std::fs::rename(from, to) {
+    match rename_no_replace(from, to) {
         Ok(()) => Ok(()),
-        Err(e) if e.raw_os_error() == Some(17) || e.kind() == std::io::ErrorKind::CrossesDevices => {
+        Err(e) if is_exists_error(&e) => Err(exists_conflict(to)),
+        Err(e) if e.raw_os_error() == Some(ERROR_NOT_SAME_DEVICE) || e.kind() == std::io::ErrorKind::CrossesDevices => {
             let src_len = std::fs::metadata(from).map_err(|e| AppError::io(e, &from.to_string_lossy()))?.len();
-            let copied = std::fs::copy(from, to).map_err(|e| AppError::io(e, &to.to_string_lossy()))?;
+            let copied = match copy_no_replace(from, to) {
+                Ok(n) => n,
+                // Hedefteki dosya bizim değil: dokunma.
+                Err(e) if is_exists_error(&e) => return Err(exists_conflict(to)),
+                Err(e) => return Err(AppError::io(e, &to.to_string_lossy())),
+            };
             if copied != src_len {
                 let _ = std::fs::remove_file(to);
                 return Err(AppError::System("kopya doğrulanamadı; özgün dosyaya dokunulmadı".into()));
@@ -100,7 +164,7 @@ impl<'a> Quarantine<'a> {
             return Err(AppError::InvalidInput(format!("{} bir dosya değil", path.display())));
         }
         let path_str = path.to_string_lossy().into_owned();
-        if crate::cleanup::rules::is_protected_path(&path_str) {
+        if crate::cleanup::rules::is_protected_resolved(&path_str) {
             return Err(AppError::Protected(path_str));
         }
         let id = new_id();
@@ -285,6 +349,24 @@ pub fn alternative_name(p: &Path) -> PathBuf {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn move_file_never_overwrites_existing_target() {
+        let t = tempfile::tempdir().unwrap();
+        let a = t.path().join("a.txt");
+        let b = t.path().join("b.txt");
+        std::fs::write(&a, b"kaynak").unwrap();
+        std::fs::write(&b, b"hedef").unwrap();
+        let err = move_file(&a, &b).unwrap_err();
+        assert!(matches!(err, AppError::Conflict(_)), "{err:?}");
+        assert_eq!(std::fs::read(&a).unwrap(), b"kaynak");
+        assert_eq!(std::fs::read(&b).unwrap(), b"hedef");
+        // Hedef yoksa taşıma normal çalışır.
+        let c = t.path().join("c.txt");
+        move_file(&a, &c).unwrap();
+        assert!(!a.exists());
+        assert_eq!(std::fs::read(&c).unwrap(), b"kaynak");
+    }
 
     fn setup() -> (Db, tempfile::TempDir, tempfile::TempDir) {
         (Db::open_in_memory().unwrap(), tempfile::tempdir().unwrap(), tempfile::tempdir().unwrap())

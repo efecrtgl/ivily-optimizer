@@ -138,6 +138,9 @@ pub fn scan_categories(
             .iter()
             .find(|p| running.contains(&p.to_lowercase()))
             .map(|p| format!("{} çalışıyor; temizlemek için önce uygulamayı kapatın", p));
+        // Kullanıcı kuralları, Ivily'nin tanımadığı konumları hedeflediği için
+        // ayardan bağımsız olarak her zaman karantinaya alınır.
+        let use_quarantine = use_quarantine || cat.group == rules::USER_RULE_GROUP;
 
         let permanent_note = if cat.kind == Kind::RecycleBin {
             "Kalıcı olarak silinir, geri alınamaz.".to_string()
@@ -289,6 +292,17 @@ pub struct CleanupReport {
     pub used_quarantine: bool,
 }
 
+impl CleanupReport {
+    /// Aynı temizlik çalıştırmasının ayrı yürütülen bir bölümünü ekler.
+    pub fn merge(&mut self, other: CleanupReport) {
+        self.items.extend(other.items);
+        self.total_bytes += other.total_bytes;
+        self.total_files += other.total_files;
+        self.total_problems += other.total_problems;
+        self.cancelled |= other.cancelled;
+    }
+}
+
 pub trait Remover {
     fn remove(&self, c: &Candidate) -> AppResult<bool>;
 }
@@ -325,6 +339,21 @@ fn file_mtime(p: &Path) -> Option<(i64, u64, bool)> {
     let md = std::fs::symlink_metadata(p).ok()?;
     let m = md.modified().ok()?.duration_since(std::time::UNIX_EPOCH).ok()?.as_secs() as i64;
     Some((m, md.len(), md.is_file()))
+}
+
+/// Dosyanın bulunduğu klasörün gerçek (junction'ları çözülmüş) yolu, kökün
+/// gerçek yolunun içinde mi? Kökler bir kez çözülüp önbelleğe alınır.
+/// Çözülemeyen yollar güvenli tarafta kalmak için "içinde değil" sayılır.
+fn resolved_within(file: &Path, root: &Path, cache: &mut HashMap<PathBuf, Option<String>>) -> bool {
+    let real_root = cache
+        .entry(root.to_path_buf())
+        .or_insert_with(|| std::fs::canonicalize(root).ok().map(|p| p.to_string_lossy().into_owned()));
+    let Some(real_root) = real_root.as_deref() else { return false };
+    let Some(parent) = file.parent() else { return false };
+    match std::fs::canonicalize(parent) {
+        Ok(real_parent) => crate::paths::is_within(&real_parent.to_string_lossy(), real_root),
+        Err(_) => false,
+    }
 }
 
 /// Seçilen öğeleri temizler.
@@ -366,6 +395,7 @@ pub fn execute(
         }
         let cands = scan.files.get(id).map(Vec::as_slice).unwrap_or(&[]);
         let mut roots: HashSet<PathBuf> = HashSet::new();
+        let mut real_roots: HashMap<PathBuf, Option<String>> = HashMap::new();
         for c in cands {
             if cancel.load(Ordering::Relaxed) {
                 report.cancelled = true;
@@ -394,6 +424,13 @@ pub fn execute(
                         continue;
                     }
                 }
+            }
+            // Taramadan sonra üst klasörlerden biri bir junction ile
+            // değiştirilmiş olabilir: dosyanın gerçek konumu hâlâ gerçek kökün
+            // içinde olmalı.
+            if !resolved_within(&c.path, &c.root, &mut real_roots) {
+                r.protected += 1;
+                continue;
             }
             match remover.remove(c) {
                 Ok(q) => {

@@ -321,7 +321,7 @@
         </section>
         <section class="card">
           <h2>Özel temizlik kuralları</h2>
-          <p class="small muted">Belirli bir klasördeki eski dosyaları temizlik taramasına ekleyin. Korunan sistem konumları için kural eklenemez. Özel kurallar her zaman "İncelenmeli" olarak sınıflandırılır ve varsayılan olarak seçilmez.</p>
+          <p class="small muted">Belirli bir klasördeki eski dosyaları temizlik taramasına ekleyin. Korunan sistem konumları için kural eklenemez. Özel kurallar her zaman "İncelenmeli" olarak sınıflandırılır, varsayılan olarak seçilmez ve eşleşen dosyalar karantina ayarından bağımsız olarak her zaman karantinaya taşınır (kalıcı silinmez).</p>
           <ul class="chips-list">
             {#each s.userRules as r (r.id)}
               <li>

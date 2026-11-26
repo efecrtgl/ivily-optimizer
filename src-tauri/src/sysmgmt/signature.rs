@@ -363,9 +363,7 @@ pub fn check_many(paths: Vec<String>) -> crate::error::AppResult<Vec<SignatureRe
         return Err(AppError::InvalidInput("tek seferde en fazla 200 dosya denetlenebilir".into()));
     }
     for p in &paths {
-        if p.is_empty() || p.len() > 32_767 || p.chars().any(|c| c.is_control()) || !Path::new(p).is_absolute() {
-            return Err(AppError::InvalidInput("dosya yolu geçersiz; tam (mutlak) yol gerekli".into()));
-        }
+        crate::paths::check_local(p)?;
     }
     Ok(paths
         .into_iter()
