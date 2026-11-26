@@ -286,6 +286,15 @@ fn restart_check(sys: &System, pid: u32) -> Result<(), String> {
     if p.cmd().is_empty() {
         return Err("Sürecin komut satırı okunamadı.".into());
     }
+    // Komut satırı hedef sürecin kendi belleğinden okunur ve o süreç
+    // tarafından değiştirilebilir. Ivily yönetici olarak çalışıyorsa bu komut
+    // satırı yükseltilmiş haklarla yeniden çalıştırılmış olurdu.
+    if crate::platform::is_elevated() {
+        return Err(
+            "Ivily Optimizer yönetici olarak çalışırken süreçler yeniden başlatılamaz; uygulamayı normal kullanıcı olarak açın."
+                .into(),
+        );
+    }
     Ok(())
 }
 
@@ -373,14 +382,6 @@ pub fn restart(db: &Db, pid: u32, expected_name: &str) -> AppResult<ProcessResta
         return Err(AppError::Conflict(format!("PID {pid} artık başka bir sürece ({name}) ait; liste yenilendi")));
     }
     restart_check(&sys, pid).map_err(AppError::Protected)?;
-    // Komut satırı hedef sürecin kendi belleğinden okunur ve o süreç
-    // tarafından değiştirilebilir. Ivily yönetici olarak çalışıyorsa bu komut
-    // satırı yükseltilmiş haklarla yeniden çalıştırılmış olurdu.
-    if crate::platform::is_elevated() {
-        return Err(AppError::Protected(
-            "Ivily Optimizer yönetici olarak çalışırken süreçler yeniden başlatılamaz; uygulamayı normal kullanıcı olarak açın.".into(),
-        ));
-    }
     let exe = p.exe().map(|e| e.to_path_buf()).ok_or_else(|| AppError::System("program yolu okunamadı".into()))?;
     let args: Vec<std::ffi::OsString> = p.cmd().iter().skip(1).cloned().collect();
     let cwd = p.cwd().map(|c| c.to_path_buf()).filter(|c| c.is_dir());
@@ -553,6 +554,17 @@ mod tests {
         std::thread::sleep(std::time::Duration::from_millis(500));
         let d2 = details(pid2).unwrap();
         println!("dummy ayrıntı: canRestart={} note={:?} sig={:?}", d2.can_restart, d2.restart_note, d2.signature);
+        if crate::platform::is_elevated() {
+            // Yönetici olarak çalışırken (ör. GitHub Actions koşucuları)
+            // yeniden başlatma, komut satırı güvenilmez olduğu için reddedilir.
+            assert!(!d2.can_restart);
+            assert!(matches!(restart(&db, pid2, "ivilytestping.exe"), Err(AppError::Protected(_))));
+            let _ = c2.kill();
+            let _ = c2.wait();
+            let _ = child.kill();
+            let _ = child.wait();
+            return;
+        }
         assert!(d2.can_restart, "{:?}", d2.restart_note);
         let r = restart(&db, pid2, "ivilytestping.exe").unwrap();
         assert_eq!(r.old_pid, pid2);
