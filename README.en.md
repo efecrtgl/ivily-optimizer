@@ -1,36 +1,42 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/ivily-logo-white.svg" />
-    <img src="assets/brand/ivily-logo-black.svg" width="260" alt="Ivily Optimizer" />
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/banners/ivily-optimizer-readme-banner-dark.svg">
+    <img src="assets/brand/banners/ivily-optimizer-readme-banner-light.svg" width="100%" alt="Ivily Optimizer — transparent system intelligence, storage analysis and safe maintenance">
   </picture>
 </p>
 
 <p align="center">
-  A local, privacy-focused and transparent system insight, storage analysis and maintenance app for Windows.
+  <a href="README.md">Türkçe</a> · <b>English</b>
+  &nbsp;|&nbsp;
+  <a href="https://github.com/efecrtgl/ivily-optimizer/releases/latest">Download</a> ·
+  <a href="#features">Features</a> ·
+  <a href="#safety-and-privacy">Safety</a> ·
+  <a href="ROADMAP.md">Roadmap</a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/efecrtgl/ivily-optimizer/actions/workflows/ci.yml"><img src="https://github.com/efecrtgl/ivily-optimizer/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
-  <a href="https://github.com/efecrtgl/ivily-optimizer/releases/latest"><img src="https://img.shields.io/github/v/release/efecrtgl/ivily-optimizer" alt="Latest release" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/efecrtgl/ivily-optimizer" alt="License: MIT" /></a>
-  <img src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011%20x64-informational" alt="Platform: Windows 10 | 11 x64" />
+  <a href="https://github.com/efecrtgl/ivily-optimizer/actions/workflows/ci.yml"><img src="https://github.com/efecrtgl/ivily-optimizer/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
+  <a href="https://github.com/efecrtgl/ivily-optimizer/releases/latest"><img src="https://img.shields.io/github/v/release/efecrtgl/ivily-optimizer?color=A15F00" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-111113" alt="License: MIT"></a>
 </p>
 
-<p align="center"><a href="README.md">Türkçe</a> · <b>English</b></p>
+**Ivily Optimizer** helps you understand, **based on real measurements**, what takes up space on your PC, which folders keep growing, what runs in the background, what Windows recorded in its event logs, and what can be cleaned up safely. Measurements, explanations, suggested actions and an undoable activity history are connected across modules.
 
----
+> [!IMPORTANT]
+> **It is not a generic "PC cleaner"** and makes no exaggerated performance claims. RAM "cleaning", registry cleaning, bulk service disabling and fake scores are deliberately **not** included.
 
-Ivily Optimizer helps you understand, **based on real measurements**, what takes up space on your PC, which folders keep growing, what runs in the background, what Windows recorded in its event logs, and what can be cleaned up safely. Measurements, explanations, suggested actions and an undoable activity history are connected across modules.
-
-It is not a generic "PC cleaner" and makes no exaggerated performance claims. RAM "cleaning", registry cleaning, bulk service disabling and fake scores are deliberately **not** included.
-
-> **Status:** the latest release is **0.2.0**. The `main` branch is the **0.3.0** development version (not yet released). See [CHANGELOG.md](CHANGELOG.md) and the audit in [docs/DENETIM.md](docs/DENETIM.md).
+> [!NOTE]
+> **Status:** the latest release is **[0.2.0](https://github.com/efecrtgl/ivily-optimizer/releases/tag/v0.2.0)**. The `main` branch is the **0.3.0** development version (not yet released). See [CHANGELOG.md](CHANGELOG.md) and the audit in [docs/DENETIM.md](docs/DENETIM.md).
 >
 > **Language:** Turkish is the primary language. English covers navigation, common components, number/date formats and update states; page content and backend messages are currently Turkish only. The detailed documentation in `docs/` is in Turkish.
 
-## Screenshots
-
-> Screenshots will be added to `assets/screenshots/`.
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/illustrations/ivily-optimizer-product-visual-dark.svg">
+    <img src="assets/brand/illustrations/ivily-optimizer-product-visual-light.svg" width="88%" alt="Illustration of the Ivily Optimizer disk analysis view (not a screenshot)">
+  </picture>
+  <br><sub><i>Illustration, not a screenshot. Real screenshots will be added to <code>assets/screenshots/</code>.</i></sub>
+</p>
 
 ## Features
 
@@ -61,23 +67,29 @@ Details: [SECURITY.md](SECURITY.md).
 
 ## Performance
 
-There is no background service. Live monitoring runs only while a page that shows it is open, and polling and animations stop while the window is minimized. Measured idle CPU is 74% lower (visible window) and 98% lower (minimized) than in 0.2.0. Method and numbers: [docs/PERFORMANS.md](docs/PERFORMANS.md).
-
-## Ivily ecosystem
-
-Ivily Optimizer is fully standalone. For future local integration with Ivily Center it implements the **Ivily Ecosystem Protocol (IEP) 0.1**: `ivily-optimizer.exe --iep describe` prints the app identity, protocol version, capabilities and health as JSON without opening a window. All methods are read-only; there is no background service and no network listener. Specification: [docs/IEP.md](docs/IEP.md).
-
-## System requirements
-
-- Windows 10 (1803 or later) or Windows 11, 64-bit (development and measurements were done on Windows 11)
-- Microsoft Edge WebView2 Runtime (included in Windows 11; downloaded by the installer if missing)
-- About 30 MB of disk space
+There is no background service. Live monitoring runs only while a page that shows it is open, and polling and animations stop while the window is minimized. Measured idle CPU is **74 % lower** (visible window) and **98 % lower** (minimized) than in 0.2.0. Method and numbers: [docs/PERFORMANS.md](docs/PERFORMANS.md).
 
 ## Installation
 
 Download `Ivily.Optimizer_x.y.z_x64-setup.exe` from [GitHub Releases](https://github.com/efecrtgl/ivily-optimizer/releases/latest) and run it. A portable `…_tasinabilir.zip` is also available. Installation is per user and does not require administrator rights. Verify downloads against `SHA256SUMS.txt`. Details (Turkish): [docs/KURULUM.md](docs/KURULUM.md).
 
+**System requirements:** Windows 10 (1803 or later) or Windows 11, 64-bit (development and measurements were done on Windows 11) · Microsoft Edge WebView2 Runtime (included in Windows 11; downloaded by the installer if missing) · about 30 MB of disk space.
+
+## Architecture
+
+```
+Svelte 5 UI (plain JavaScript)   pages · components · state · Ivily Intelligence · api.js
+            │  invoke / events
+Rust core (Tauri 2)              commands → scan · files · cleanup · quarantine · snapshots ·
+                                 oplog · sysmgmt (startup, services, tasks, events, signature…)
+                                 · monitor · jobs · db · ecosystem (IEP)
+```
+
+The UI is Svelte 5 written in **plain JavaScript** (no TypeScript); charts are drawn with plain SVG/HTML. The backend is Rust with Tauri 2. Architecture (Turkish): [docs/MIMARI.md](docs/MIMARI.md).
+
 ## Development
+
+**Requirements:** Rust stable (1.85+) · Node.js 20+ · Visual Studio C++ Build Tools · WebView2.
 
 ```powershell
 npm install
@@ -88,7 +100,22 @@ cd src-tauri; cargo test; cd ..
 npm run tauri build    # production build (NSIS installer; update signing needs the private key)
 ```
 
-The UI is Svelte 5 written in **plain JavaScript** (no TypeScript); the backend is Rust with Tauri 2. Requirements: Rust stable (1.85+), Node.js 20+, Visual Studio C++ Build Tools, WebView2. Architecture: [docs/MIMARI.md](docs/MIMARI.md); development guide: [docs/GELISTIRME.md](docs/GELISTIRME.md).
+Development guide (Turkish): [docs/GELISTIRME.md](docs/GELISTIRME.md).
+
+## The Ivily ecosystem
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/ecosystem/ivily-ecosystem-lineup-dark.svg">
+    <img src="assets/brand/ecosystem/ivily-ecosystem-lineup-light.svg" width="88%" alt="The Ivily ecosystem: Center, Envora, Optimizer, Portly, Structura">
+  </picture>
+</p>
+
+Ivily Optimizer is fully standalone. For local integration with [Ivily Center](https://github.com/efecrtgl/ivily-center-main) it implements the **Ivily Ecosystem Protocol (IEP) 0.1**: `ivily-optimizer.exe --iep describe` prints the app identity, protocol version, capabilities and health as JSON without opening a window. All methods are read-only; there is no background service and no network listener. Specification: [docs/IEP.md](docs/IEP.md).
+
+Other products: [Envora](https://github.com/efecrtgl/ivily-envora) · [Portly](https://github.com/efecrtgl/ivily-portly) · [Structura](https://github.com/efecrtgl/ivily-structura).
+
+**Brand.** The geometric cat that Optimizer introduced is now the parent mark of the whole Ivily ecosystem. Optimizer's own product symbol is the **treemap** — measured storage with one cell worth your review. The in-app cat (`src/lib/brand.js`) and the current application icon are intentionally unchanged; switching is a separate product decision. Logos, icons and usage rules: [`assets/brand/`](assets/brand/README.md).
 
 ## Contributing
 

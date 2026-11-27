@@ -1,34 +1,42 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/ivily-logo-white.svg" />
-    <img src="assets/brand/ivily-logo-black.svg" width="260" alt="Ivily Optimizer" />
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/banners/ivily-optimizer-readme-banner-dark.svg">
+    <img src="assets/brand/banners/ivily-optimizer-readme-banner-light.svg" width="100%" alt="Ivily Optimizer — şeffaf sistem zekâsı, depolama analizi ve güvenli bakım">
   </picture>
 </p>
 
 <p align="center">
-  Windows için yerel, gizlilik odaklı ve şeffaf bir sistem zekâsı, depolama analizi ve bakım uygulaması.
+  <b>Türkçe</b> · <a href="README.en.md">English</a>
+  &nbsp;|&nbsp;
+  <a href="https://github.com/efecrtgl/ivily-optimizer/releases/latest">İndir</a> ·
+  <a href="docs/OZELLIKLER.md">Özellikler</a> ·
+  <a href="docs/TEMIZLIK-GUVENLIGI.md">Temizlik güvenliği</a> ·
+  <a href="ROADMAP.md">Yol haritası</a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/efecrtgl/ivily-optimizer/actions/workflows/ci.yml"><img src="https://github.com/efecrtgl/ivily-optimizer/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
-  <a href="https://github.com/efecrtgl/ivily-optimizer/releases/latest"><img src="https://img.shields.io/github/v/release/efecrtgl/ivily-optimizer?label=s%C3%BCr%C3%BCm" alt="Son sürüm" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/github/license/efecrtgl/ivily-optimizer?label=lisans" alt="Lisans: MIT" /></a>
-  <img src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011%20x64-informational" alt="Platform: Windows 10 | 11 x64" />
+  <a href="https://github.com/efecrtgl/ivily-optimizer/actions/workflows/ci.yml"><img src="https://github.com/efecrtgl/ivily-optimizer/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
+  <a href="https://github.com/efecrtgl/ivily-optimizer/releases/latest"><img src="https://img.shields.io/github/v/release/efecrtgl/ivily-optimizer?label=s%C3%BCr%C3%BCm&color=A15F00" alt="Son sürüm"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/lisans-MIT-111113" alt="Lisans: MIT"></a>
 </p>
 
-<p align="center"><b>Türkçe</b> · <a href="README.en.md">English</a></p>
+**Ivily Optimizer**; bilgisayarınızda neyin yer kapladığını, hangi klasörlerin büyüdüğünü, arka planda nelerin çalıştığını, Windows'un olay günlüklerinde neler kaydedildiğini ve neyin güvenle temizlenebileceğini **gerçek verilere dayanarak** anlamanıza yardımcı olan yerel, gizlilik odaklı bir Windows uygulamasıdır.
 
----
+Modüller birbirine bağlıdır: bir sorun **ölçülür**, Ivily Zekâsı kanıtı ve yorumu **ayrı ayrı açıklar**, ilgili eylem **önerilir**, yapılan işlem **kaydedilir** ve mümkünse **geri alınabilir**.
 
-Ivily Optimizer; bilgisayarınızda neyin yer kapladığını, hangi klasörlerin büyüdüğünü, arka planda nelerin çalıştığını, Windows'un olay günlüklerinde neler kaydedildiğini ve neyin güvenle temizlenebileceğini **gerçek verilere dayanarak** anlamanıza yardımcı olur. Modüller birbirine bağlıdır: bir sorun ölçülür, Ivily Zekâsı kanıtı ve yorumu ayrı ayrı açıklar, ilgili eylem önerilir, yapılan işlem kaydedilir ve mümkünse geri alınabilir.
+> [!IMPORTANT]
+> **Sıradan bir "PC temizleyici" değildir.** Abartılı performans vaatlerinde bulunmaz. RAM "temizleme", kayıt defteri temizliği, toplu servis kapatma ve sahte ölçümler bilerek **yoktur**.
 
-Sıradan bir "PC temizleyici" değildir; abartılı performans vaatlerinde bulunmaz. RAM "temizleme", kayıt defteri temizliği, toplu servis kapatma veya sahte ölçümler bilerek **yoktur**.
+> [!NOTE]
+> **Durum:** Yayımlanan son sürüm **[0.2.0](https://github.com/efecrtgl/ivily-optimizer/releases/tag/v0.2.0)**. `main` dalı **0.3.0** geliştirme sürümüdür (henüz yayımlanmadı): güvenlik sertleştirmesi, veri kurtarma, büyük ölçüde azaltılmış boşta işlemci kullanımı, Türkçe/İngilizce dil altyapısı ve Ivily ekosistemi hazırlığı. Ayrıntılar: [CHANGELOG.md](CHANGELOG.md), [ROADMAP.md](ROADMAP.md), [docs/DENETIM.md](docs/DENETIM.md).
 
-> **Durum:** Son yayımlanan sürüm **0.2.0**. `main` dalı **0.3.0** geliştirme sürümüdür (henüz yayımlanmadı): güvenlik sertleştirmesi, veri kurtarma, büyük ölçüde azaltılmış boşta işlemci kullanımı, Türkçe/İngilizce dil altyapısı ve Ivily ekosistemi hazırlığı. Ayrıntılar: [CHANGELOG.md](CHANGELOG.md), [ROADMAP.md](ROADMAP.md), [docs/DENETIM.md](docs/DENETIM.md).
-
-## Ekran görüntüleri
-
-> Ekran görüntüleri `assets/screenshots/` klasörüne eklenecektir. O zamana kadar uygulamanın görünümü için [docs/TASARIM-SISTEMI.md](docs/TASARIM-SISTEMI.md) belgesine bakın.
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/illustrations/ivily-optimizer-product-visual-dark.svg">
+    <img src="assets/brand/illustrations/ivily-optimizer-product-visual-light.svg" width="88%" alt="Ivily Optimizer disk analizi görünümünün çizimi (ekran görüntüsü değildir)">
+  </picture>
+  <br><sub><i>Çizimdir, ekran görüntüsü değildir. Gerçek ekran görüntüleri <code>assets/screenshots/</code> klasörüne eklenecektir; o zamana kadar uygulamanın görünümü için <a href="docs/TASARIM-SISTEMI.md">docs/TASARIM-SISTEMI.md</a> belgesine bakın.</i></sub>
+</p>
 
 ## Özellikler
 
@@ -48,7 +56,7 @@ Sıradan bir "PC temizleyici" değildir; abartılı performans vaatlerinde bulun
 | **İşlem Geçmişi** | Önceki/yeni durum, onay ve geri alma durumu; arama, dışa aktarma, arka uçta doğrulanan geri alma. |
 | **Performans ve Ağ** | Canlı geçmiş grafikleri, güç planları, bağdaştırıcılar, bağlantı testi, DNS araçları. |
 | **Güncellemeler** | GitHub Releases, kararlı/ön sürüm kanalı, imza doğrulamalı aşamalı kurulum. |
-| **Tasarım** | Tek renkli cam tasarım sistemi, koyu/açık/sistem tema, yenilenen kedi işareti. |
+| **Tasarım** | Tek renkli cam tasarım sistemi, koyu/açık/sistem tema. |
 | **Dil** | Türkçe (birincil). İngilizce: gezinme, ortak bileşenler, tarih/sayı biçimleri ve güncelleme durumları; sayfa içerikleri henüz Türkçe. |
 
 ## Güvenlik felsefesi
@@ -70,21 +78,13 @@ Sıradan bir "PC temizleyici" değildir; abartılı performans vaatlerinde bulun
 
 ## Performans
 
-Arka plan servisi yoktur; canlı izleme yalnızca ilgili sayfa açıkken çalışır, pencere simge durumundayken yoklama ve animasyonlar durur. Ölçülen boşta işlemci kullanımı 0.2.0'a göre görünür pencerede %74, simge durumunda %98 daha düşüktür. Yöntem ve sayılar: [docs/PERFORMANS.md](docs/PERFORMANS.md).
-
-## Ivily ekosistemi
-
-Ivily Optimizer tek başına çalışan bağımsız bir uygulamadır. İleride Ivily Center ile yerel entegrasyon için **Ivily Ekosistem Protokolü (IEP)** hazırlığı yapılmıştır: `ivily-optimizer.exe --iep describe` pencere açmadan uygulama kimliğini, protokol sürümünü, yeteneklerini ve sağlık durumunu JSON olarak verir. Yalnızca okuma yöntemleri vardır; arka plan servisi veya ağ bağlantısı yoktur. Belirtim: [docs/IEP.md](docs/IEP.md).
-
-## Sistem gereksinimleri
-
-- Windows 10 (1803 veya üzeri) ya da Windows 11, 64 bit (geliştirme ve ölçümler Windows 11 üzerinde yapılmıştır)
-- Microsoft Edge WebView2 Çalışma Zamanı (Windows 11'de hazır gelir; yoksa kurulum sırasında otomatik indirilir)
-- Yaklaşık 30 MB disk alanı
+Arka plan servisi yoktur; canlı izleme yalnızca ilgili sayfa açıkken çalışır, pencere simge durumundayken yoklama ve animasyonlar durur. Ölçülen boşta işlemci kullanımı 0.2.0'a göre görünür pencerede **%74**, simge durumunda **%98** daha düşüktür. Yöntem ve sayılar: [docs/PERFORMANS.md](docs/PERFORMANS.md).
 
 ## Kurulum
 
 [GitHub Releases](https://github.com/efecrtgl/ivily-optimizer/releases/latest) sayfasından `Ivily Optimizer_x.y.z_x64-setup.exe` dosyasını indirip çalıştırın. Kurmadan denemek için `…_tasinabilir.zip` dosyasını da kullanabilirsiniz. Kurulum yönetici hakkı gerektirmez ve yalnızca kullanıcı hesabınıza yapılır. Ayrıntılar: [docs/KURULUM.md](docs/KURULUM.md).
+
+**Sistem gereksinimleri:** Windows 10 (1803 veya üzeri) ya da Windows 11, 64 bit (geliştirme ve ölçümler Windows 11 üzerinde yapılmıştır) · Microsoft Edge WebView2 Çalışma Zamanı (Windows 11'de hazır gelir; yoksa kurulum sırasında otomatik indirilir) · yaklaşık 30 MB disk alanı.
 
 ## Kullanım
 
@@ -94,7 +94,21 @@ Ivily Optimizer tek başına çalışan bağımsız bir uygulamadır. İleride I
 
 Ayrıntılı özellik açıklamaları: [docs/OZELLIKLER.md](docs/OZELLIKLER.md).
 
+## Mimari
+
+```
+Svelte 5 arayüzü (düz JavaScript)   pages · lib/components · lib/state · Ivily Zekâsı · api.js
+            │  invoke / olaylar
+Rust çekirdeği (Tauri 2)            commands → scan · files · cleanup · quarantine · snapshots ·
+                                    oplog · sysmgmt (startup, services, tasks, events, signature…)
+                                    · monitor · jobs · db · ecosystem (IEP)
+```
+
+Arayüz Svelte 5 ile **düz JavaScript** kullanılarak yazılmıştır (TypeScript kullanılmaz); grafikler ek kitaplık olmadan SVG/HTML ile çizilir. Arka uç Rust ve Tauri 2'dir. Teknoloji kararları ve katmanlar: [docs/MIMARI.md](docs/MIMARI.md).
+
 ## Geliştirme ve derleme
+
+**Gereksinimler:** Rust (stable, en az 1.85) · Node.js 20+ · Visual Studio C++ Build Tools · WebView2.
 
 ```powershell
 npm install
@@ -105,47 +119,47 @@ cd src-tauri; cargo test; cd ..
 npm run tauri build    # üretim derlemesi (NSIS yükleyici; güncelleme imzası için anahtar gerekir)
 ```
 
-Arayüz Svelte 5 ile **düz JavaScript** kullanılarak yazılmıştır (TypeScript kullanılmaz); arka uç Rust ve Tauri 2'dir. Gereksinimler: Rust (stable, en az 1.85), Node.js 20+, Visual Studio C++ Build Tools, WebView2. Ayrıntılar: [docs/DERLEME.md](docs/DERLEME.md), [docs/GELISTIRME.md](docs/GELISTIRME.md), [docs/MIMARI.md](docs/MIMARI.md).
+Ayrıntılar: [docs/DERLEME.md](docs/DERLEME.md), [docs/GELISTIRME.md](docs/GELISTIRME.md).
 
-## Güncelleme sistemi
+### Güncelleme sistemi
 
 Uygulama GitHub Releases'teki sürümleri denetler, sürümleri anlamsal sürümlemeye (semver) göre karşılaştırır ve yalnızca uygulamaya gömülü minisign genel anahtarıyla doğrulanan yükleyicileri kurar. Ayrıntılar: [docs/GUNCELLEME.md](docs/GUNCELLEME.md), sürüm yayımlama: [docs/SURUM-YAYINLAMA.md](docs/SURUM-YAYINLAMA.md).
 
 ## Dokümantasyon
 
-| Belge | İçerik |
+| Kullanım | Teknik |
 |---|---|
-| [docs/KURULUM.md](docs/KURULUM.md) | Kurulum ve kaldırma |
-| [docs/DERLEME.md](docs/DERLEME.md) | Kaynak koddan derleme |
-| [docs/GELISTIRME.md](docs/GELISTIRME.md) | Geliştirme ortamı, testler, kod düzeni |
-| [docs/MIMARI.md](docs/MIMARI.md) | Mimari ve teknoloji kararları |
-| [docs/PERFORMANS.md](docs/PERFORMANS.md) | Ölçülen kaynak kullanımı ve ölçüm yöntemi |
-| [docs/IEP.md](docs/IEP.md) | Ivily Ekosistem Protokolü: Ivily Center ile yerel entegrasyon hazırlığı |
-| [docs/OZELLIKLER.md](docs/OZELLIKLER.md) | Özelliklerin ayrıntılı açıklaması |
-| [docs/SISTEM-GECMISI.md](docs/SISTEM-GECMISI.md) | Olay günlüğü analizi ve Ivily Zekâsı |
-| [docs/TASARIM-SISTEMI.md](docs/TASARIM-SISTEMI.md) | Tek renkli cam tasarım sistemi |
-| [docs/MARKA.md](docs/MARKA.md) | Marka kimliği ve varlıkları |
-| [docs/TEMIZLIK-GUVENLIGI.md](docs/TEMIZLIK-GUVENLIGI.md) | Temizlik kategorileri ve güvenlik sınırları |
-| [docs/TARAMA-MOTORU.md](docs/TARAMA-MOTORU.md) | Tarama motoru |
-| [docs/ANLIK-GORUNTULER.md](docs/ANLIK-GORUNTULER.md) | Anlık görüntüler ve büyüme analizi |
-| [docs/KARANTINA.md](docs/KARANTINA.md) | Karantina ve geri yükleme |
-| [docs/VERI-VE-KURTARMA.md](docs/VERI-VE-KURTARMA.md) | Veri konumları, yedekler, ayar içe/dışa aktarma ve kurtarma |
-| [docs/GUNCELLEME.md](docs/GUNCELLEME.md) | Güncelleme sistemi |
-| [docs/SURUM-YAYINLAMA.md](docs/SURUM-YAYINLAMA.md) | Sürüm yayımlama süreci |
-| [docs/SORUN-GIDERME.md](docs/SORUN-GIDERME.md) | Sorun giderme |
-| [SECURITY.md](SECURITY.md) | Güvenlik politikası |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Katkı rehberi |
-| [CHANGELOG.md](CHANGELOG.md) | Değişiklik günlüğü |
+| [Kurulum ve kaldırma](docs/KURULUM.md) | [Kaynak koddan derleme](docs/DERLEME.md) |
+| [Özelliklerin ayrıntılı açıklaması](docs/OZELLIKLER.md) | [Geliştirme ortamı, testler, kod düzeni](docs/GELISTIRME.md) |
+| [Olay günlüğü analizi ve Ivily Zekâsı](docs/SISTEM-GECMISI.md) | [Mimari ve teknoloji kararları](docs/MIMARI.md) |
+| [Temizlik kategorileri ve güvenlik sınırları](docs/TEMIZLIK-GUVENLIGI.md) | [Tarama motoru](docs/TARAMA-MOTORU.md) |
+| [Anlık görüntüler ve büyüme analizi](docs/ANLIK-GORUNTULER.md) | [Performans ölçümleri](docs/PERFORMANS.md) |
+| [Karantina ve geri yükleme](docs/KARANTINA.md) | [Ivily Ekosistem Protokolü](docs/IEP.md) |
+| [Veri, yedekler ve kurtarma](docs/VERI-VE-KURTARMA.md) | [Tek renkli cam tasarım sistemi](docs/TASARIM-SISTEMI.md) |
+| [Güncelleme sistemi](docs/GUNCELLEME.md) | [Marka kimliği (kedi işareti)](docs/MARKA.md) |
+| [Sorun giderme](docs/SORUN-GIDERME.md) | [Sürüm yayımlama süreci](docs/SURUM-YAYINLAMA.md) |
+| [Güvenlik politikası](SECURITY.md) | [Katkı rehberi](CONTRIBUTING.md) · [Değişiklik günlüğü](CHANGELOG.md) |
 
-## Yol haritası
+## Ivily ekosistemi
 
-Bkz. [ROADMAP.md](ROADMAP.md).
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/ecosystem/ivily-ecosystem-lineup-dark.svg">
+    <img src="assets/brand/ecosystem/ivily-ecosystem-lineup-light.svg" width="88%" alt="Ivily ekosistemi: Center, Envora, Optimizer, Portly, Structura">
+  </picture>
+</p>
+
+Ivily Optimizer tek başına çalışan bağımsız bir uygulamadır. [Ivily Center](https://github.com/efecrtgl/ivily-center-main) ile yerel entegrasyon için **Ivily Ekosistem Protokolü (IEP)** uygulanmıştır: `ivily-optimizer.exe --iep describe` pencere açmadan uygulama kimliğini, protokol sürümünü, yeteneklerini ve sağlık durumunu JSON olarak verir. Yalnızca okuma yöntemleri vardır; arka plan servisi veya ağ bağlantısı yoktur. Belirtim: [docs/IEP.md](docs/IEP.md).
+
+Diğer ürünler: [Envora](https://github.com/efecrtgl/ivily-envora) · [Portly](https://github.com/efecrtgl/ivily-portly) · [Structura](https://github.com/efecrtgl/ivily-structura).
+
+### Marka
+
+Optimizer'ın tanıttığı **geometrik kedi işareti** artık tüm Ivily ekosisteminin ana işaretidir. Optimizer'ın ürün sembolü **treemap**'tir: ölçülen depolama, içinde incelemeye değer tek bir hücre. Uygulama içindeki kedi işareti (`src/lib/brand.js`) ve mevcut uygulama simgesi bilinçli olarak değiştirilmemiştir; yeni simgeye geçiş ayrı bir ürün kararıdır. Logolar, simgeler ve kullanım kuralları: [`assets/brand/`](assets/brand/README.md).
 
 ## Geliştirici
 
-**efecrtgl** — [github.com/efecrtgl](https://github.com/efecrtgl)
-
-Proje deposu: [github.com/efecrtgl/ivily-optimizer](https://github.com/efecrtgl/ivily-optimizer)
+**efecrtgl** — [github.com/efecrtgl](https://github.com/efecrtgl) · Proje deposu: [github.com/efecrtgl/ivily-optimizer](https://github.com/efecrtgl/ivily-optimizer)
 
 ## Lisans
 
