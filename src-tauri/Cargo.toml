@@ -1,6 +1,6 @@
 [package]
 name = "ivily-optimizer"
-version = "0.2.0"
+version = "0.3.0"
 description = "Ivily Optimizer — Windows için sistem izleme, disk analizi ve bakım aracı"
 authors = ["efecrtgl"]
 license = "MIT"
