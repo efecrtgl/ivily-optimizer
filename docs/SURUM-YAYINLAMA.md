@@ -35,23 +35,24 @@ Ardından `.key.pub` dosyasının içeriğini `tauri.conf.json` > `plugins.updat
 
 1. `CHANGELOG.md` dosyasını güncelleyin.
 2. `package.json` ve `src-tauri/Cargo.toml` sürümlerini artırın; `src-tauri` içinde `cargo check` çalıştırarak `Cargo.lock`'u güncelleyin.
-3. Yerelde doğrulayın: `npm run check`, `npm run build`, `cd src-tauri; cargo test`.
+3. Yerelde doğrulayın: `npm run check`, `npm test`, `npm run build`, `cd src-tauri; cargo fmt --check; cargo clippy --all-targets -- -D warnings; cargo test`.
 4. Commit atın ve etiketleyin:
    ```powershell
-   git commit -am "chore: 0.2.0 sürümünü hazırla"
-   git tag v0.2.0
+   git commit -am "chore: prepare 0.3.0 release"
+   git tag v0.3.0
    git push origin main --tags
    ```
-5. **Sürüm** iş akışı (`.github/workflows/release.yml`) Windows'ta derler, testleri çalıştırır, yükleyiciyi ve güncelleme paketini imzalar, yapıtları doğrular (yükleyici, `.sig` imzası, yükleyici boyutu, uygulama sürümü = etiket) ve `latest.json`, taşınabilir `…_tasinabilir.zip` ile `SHA256SUMS.txt` dosyalarını ekleyerek **taslak** bir GitHub sürümü oluşturur. Etikette `-` varsa (ör. `v0.3.0-beta.1`) ön sürüm olarak işaretlenir. Herhangi bir adım başarısız olursa yapıt yüklenmez.
-6. Taslak sürümü indirip temiz bir sistemde kurulumu, kaldırmayı ve önceki sürümden güncellemeyi test edin.
+5. **Sürüm** iş akışı (`.github/workflows/release.yml`) Windows'ta derler, testleri çalıştırır, yükleyiciyi ve güncelleme paketini imzalar, yapıtları doğrular (yükleyici, `.sig` imzası, yükleyici boyutu, uygulama sürümü = etiket), yükleyiciyi temiz koşucuda **sessizce kurup kaldırarak** sınar (`scripts/test-installer.ps1`) ve `latest.json`, taşınabilir `…_tasinabilir.zip` ile `SHA256SUMS.txt` dosyalarını ekleyerek **taslak** bir GitHub sürümü oluşturur. Etikette `-` varsa (ör. `v0.3.0-beta.1`) ön sürüm olarak işaretlenir. Herhangi bir adım başarısız olursa yapıt yüklenmez.
+6. Taslak sürümü indirip önceki sürümden **uygulama içi güncellemeyi** test edin (otomatik değildir: yayımlanmış ve imzalı bir önceki sürüm gerektirir). Temiz sistemde kurulum/kaldırma CI'da otomatik sınanır; her `main` gönderiminde de `CI > installer` işi aynı testi imzasız bir yükleyiciyle çalıştırır.
 7. Sürüm notlarını Türkçe olarak `CHANGELOG.md`'deki ilgili bölümden (eklenenler, değişenler, düzeltmeler, bilinen sorunlar) ve SHA-256 özetlerinden hazırlayın; taslağı **yayımlayın**. Uygulamalar yalnızca yayımlanmış sürümleri görür.
 
 ## Yayın öncesi denetim listesi
 
 - [ ] Derleme ve tüm testler başarılı, uyarı yok
 - [ ] Sürüm numaraları ve etiket tutarlı
-- [ ] Yükleyici temiz bir Windows'ta kuruluyor, Başlat menüsü kısayolu oluşuyor
-- [ ] Kaldırma uygulamayı ve kısayolları kaldırıyor (kullanıcı verileri `%LOCALAPPDATA%\IvilyOptimizer` içinde kalır)
+- [ ] Yükleyici temiz bir Windows'ta kuruluyor, Başlat menüsü kısayolu oluşuyor (CI: `scripts/test-installer.ps1`)
+- [ ] Kaldırma uygulamayı ve kısayolları kaldırıyor, kullanıcı verileri `%LOCALAPPDATA%\IvilyOptimizer` içinde kalıyor (CI: `scripts/test-installer.ps1`)
+- [ ] `SHA256SUMS.txt` içindeki adlar yüklenen yapıt adlarıyla aynı (`sha256sum -c SHA256SUMS.txt`)
 - [ ] Önceki sürümden uygulama içi güncelleme çalışıyor
 - [ ] Arayüz metinleri Türkçe ve tutarlı
 - [ ] Belgeler güncel; uygulanmamış özellikler "planlanan" olarak işaretli

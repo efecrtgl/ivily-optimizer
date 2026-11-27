@@ -78,6 +78,12 @@ jobs:
           if (-not $appVer.StartsWith($v.Split('-')[0])) { Write-Error "Uygulama sürümü ($appVer) etiketle ($v) eşleşmiyor"; exit 1 }
           Write-Host "Uygulama sürümü: $appVer"
 
+      - name: Kurulum ve kaldırma testi (temiz koşucu)
+        shell: pwsh
+        run: |
+          $v = "${{ github.ref_name }}".TrimStart('v')
+          ./scripts/test-installer.ps1 -Installer "src-tauri/target/release/bundle/nsis/Ivily Optimizer_${v}_x64-setup.exe" -ExpectedVersion $v
+
       - name: Taşınabilir paket ve SHA-256 özetleri
         shell: pwsh
         env:

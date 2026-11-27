@@ -77,3 +77,30 @@ jobs:
         run: |
           cargo install cargo-audit --locked
           cargo audit
+
+  installer:
+    # Yükleyiciyi temiz bir Windows koşucusunda derler, sessizce kurar,
+    # kurulu uygulamayı çalıştırır ve kaldırır (scripts/test-installer.ps1).
+    # Güncelleme imzası gizli anahtar gerektirdiği için burada üretilmez;
+    # imzalı derleme sürüm iş akışında yapılır.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: npm ci
+      - name: Yükleyiciyi derle
+        shell: bash
+        run: npx tauri build --config '{"bundle":{"createUpdaterArtifacts":false}}'
+      - name: Kurulum ve kaldırma testi
+        shell: pwsh
+        run: |
+          $v = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $setup = Get-ChildItem "src-tauri/target/release/bundle/nsis/*_${v}_x64-setup.exe" | Select-Object -First 1
+          ./scripts/test-installer.ps1 -Installer $setup.FullName -ExpectedVersion $v
