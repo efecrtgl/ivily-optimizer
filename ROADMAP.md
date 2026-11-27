@@ -16,8 +16,8 @@ Kapsam ve gerekçeler: [docs/DENETIM.md](docs/DENETIM.md).
 | 6 | Performans: yoklama düzeltmeleri, sayfaların tembel yüklenmesi, ölçümler | ✅ |
 | 7 | Arayüz: Türkçe/İngilizce dil desteği, durum gösterimleri, erişilebilirlik | 🟡 i18n altyapısı ve kabuk çevirisi; sayfa içerikleri Türkçe |
 | 8 | Ivily Ekosistem Protokolü (IEP) hazırlığı | ✅ |
-| 9 | Yükleyici ve güncelleme doğrulaması | ⏳ |
-| 10 | Belgeler ve 0.3.0 sürüm hazırlığı | ⏳ |
+| 9 | Yükleyici ve güncelleme doğrulaması | ✅ kurulum/kaldırma CI testi; uygulama içi güncelleme sürüm sonrası |
+| 10 | Belgeler ve 0.3.0 sürüm hazırlığı | ✅ etiket kullanıcı onayı bekliyor |
 
 ## 0.2.0 geliştirme döngüsü
 

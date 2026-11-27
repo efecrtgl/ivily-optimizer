@@ -62,23 +62,42 @@ Sistem durumunu değiştiren yollar (başlangıç öğesini değiştirme, servis
 - Sistem değiştiren işlemler (servis, görev, başlangıç, güç planı, süreç yeniden başlatma) ve geri alınmaları gerçek sistemde elle test edilmeli.
 - Yükleyicinin temiz bir sistemde kurulumu/kaldırılması ve önceki sürümden uygulama içi güncelleme henüz denenmedi.
 
-## Oturum 3 — 0.3.0 döngüsü (DURAKLATILDI, 26 Kasım 2026)
+## Oturum 3 — 0.3.0 geliştirme döngüsü (26–27 Kasım 2026)
 
-Geliştirme, kullanıcının isteğiyle geçici olarak duraklatıldı. Açık bir talimat gelmeden devam edilmeyecek.
+Ayrıntılı bulgular ve durumları: [docs/DENETIM.md](docs/DENETIM.md). Commit mesajları bu oturumdan itibaren İngilizce Conventional Commits biçimindedir. Oturum bir kez kullanıcı isteğiyle duraklatılıp devam ettirildi.
 
-### Tamamlananlar
+### Yapılanlar (faz sırasıyla)
 
-- **Faz 1 (tamam):** depo ve kod tabanı denetimi, 0.3.0 yol haritası — `docs/DENETIM.md`, `ROADMAP.md` (commit `6750bd9`).
-- **Faz 2 (kısmen):** davranış kuralları, sorun/PR şablonları, Dependabot (`8829ca9`); kaynak ölçüm betiği `scripts/measure-perf.ps1` (`36121c5`).
-- Karar: arayüz Svelte 5 olarak kalır, TypeScript'ten düz JavaScript'e dönüştürülecek (React'e yeniden yazım yok).
+1. **Denetim ve yol haritası** — `docs/DENETIM.md`.
+2. **Depo altyapısı** — davranış kuralları, sorun/PR şablonları, Dependabot; `rustfmt.toml` ile tek seferlik biçimlendirme; 27 Clippy uyarısı giderildi; CI'a biçim, Clippy (`-D warnings`), `npm audit`, `cargo audit` eklendi; başarısız Rust testlerinin çıktısı herkese açık bir hata açıklaması olarak yayımlanır.
+3. **TypeScript → düz JavaScript** (Svelte 5 korundu; kullanıcı kararı). Üretim paketi özeti dönüşümden önce ve sonra aynı. ESLint ve Vitest; Rust komut sözleşmesi testi.
+4. **Güvenlik** — yerel yol doğrulaması, junction/kısa ad çözümleme, kullanıcı kuralları için zorunlu karantina, üzerine yazmayan taşıma, süreç yeniden başlatma ve URL kısıtlamaları, gereksiz yeteneklerin kaldırılması.
+5. **Veri güvenilirliği** — göç öncesi yedek, bozuk/yeni sürüm veritabanı işleme, ayarların kısmi onarımı, ayar içe aktarma, `docs/VERI-VE-KURTARMA.md`.
+6. **Performans** — tek zincirli yoklayıcı, tembel sayfa yükleme, Ivily Zekâsı önbelleği; ölçümler sırasında **sürekli animasyonların** ve **simge durumunun algılanmamasının** boştaki işlemci kullanımının asıl nedeni olduğu bulundu ve düzeltildi (`docs/PERFORMANS.md`).
+7. **Arayüz** — canlı izleme hata uyarısı, ayar kaydı yarışı, onay penceresi, işlenmeyen söz redleri; Türkçe/İngilizce dil altyapısı ve kabuk çevirisi.
+8. **IEP** — `src-tauri/src/ecosystem.rs`, `docs/IEP.md`.
+9. **Yükleyici** — sürüm 0.3.0; `scripts/test-installer.ps1` CI ve sürüm iş akışında temiz koşucuda kurulum/kaldırma testi.
+10. **Belgeler** — README (Türkçe/İngilizce), CHANGELOG 0.3.0, sürüm süreci.
 
-### Yarım kalanlar
+### Doğrulama
 
-- Faz 2'nin kalanı: CI'a clippy, `cargo audit`, `npm audit` eklenmesi; 27 clippy uyarısının giderilmesi; `rustfmt.toml` (`max_width = 120`, `use_small_heuristics = "Max"`) ile tek seferlik biçimlendirme; `rust-version` 1.80 → 1.85 (`ErrorKind::CrossesDevices` 1.85 gerektiriyor).
-- `.github/pull_request_template.md`, henüz var olmayan denetimlere (`npm test`, clippy, İngilizce dil dosyaları) atıf yapıyor; Faz 2–7 tamamlanınca geçerli olacak, aksi halde düzeltilmeli.
-- 0.2.0 performans temel ölçümü yarıda kesildi; sonuç kaydedilmedi. Devam edildiğinde `scripts/measure-perf.ps1` 0.2.0 ikilisiyle yeniden çalıştırılmalı.
-- Faz 3–10 başlamadı (bkz. `docs/DENETIM.md` §11).
+- `cargo test`: 152 başarılı, 1 yok sayılan (ağ gerektiren); `cargo clippy --all-targets -- -D warnings` ve `cargo fmt --check` temiz.
+- `npm run check` (ESLint) temiz; `npm test`: 30 test başarılı; `npm run build` başarılı.
+- `cargo audit`: 0 güvenlik açığı (6 uyarı: bakımsız/Linux'a özgü dolaylı bağımlılıklar).
+- Gerçek uygulama (`tauri build`) ekran görüntüsüyle doğrulandı; 0.2.0 resmi derlemesiyle karşılaştırmalı performans ölçümü yapıldı.
+- **Yükleyici:** 0.2.0 kurulu bir bilgisayarda 0.3.0 yükleyicisi sessizce üzerine kuruldu (sürüm, kayıt, kısayol, veri doğrulandı; uygulama açıldı ve IEP yanıt verdi), ardından resmi 0.2.0 yükleyicisi (SHA-256 doğrulandı) ile özgün ikiliye birebir geri dönüldü; veriler her adımda korundu.
+- IEP: kurulu ikiliyle `--iep describe` ~50 ms; geçersiz yöntemler reddedildi; veritabanı dosyası değişmedi.
 
-### Durum
+### Bir hata ve düzeltmesi
 
-- Kaynak kodda değişiklik yok; 0.2.0 davranışı aynen korunuyor. `cargo test`: 129 başarılı; `npm run check` ve `npm run build`: başarılı (denetim sırasında).
+İlk performans ölçümleri (`9a25470`) `cargo build --release` ile derlenmiş ikililerle yapılmıştı; bu derleme gömülü arayüzü kullanmadığı için uygulama yalnızca bir hata sayfası gösteriyordu ve sonuçlar geçersizdi. Ekran görüntüsüyle fark edildi, belge gerçek derlemelerle yeniden yazıldı ve ölçüm betiğine uyarı eklendi.
+
+### Açık noktalar
+
+- Sayfa içeriklerinin İngilizce çevirisi.
+- Simge durumunda artan özel bellek kullanımının incelenmesi.
+- Önceki sürümden uygulama içi güncellemenin uçtan uca testi (imzalı bir 0.3.0 yayımlandıktan sonra).
+- Sistemi değiştiren işlemlerin (servis, görev, başlangıç, güç planı) sanal makinede elle sınanması.
+- Sekmelerde klavye gezinmesi, Donut grafiğinin klavyeyle erişimi, bazı sayfalarda yükleme durumu.
+- Sistem tepsisi ve Windows bildirimleri (planlandı).
+- `v0.3.0` etiketi ve sürüm yayımlama kullanıcının onayını bekliyor.

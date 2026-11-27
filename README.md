@@ -9,13 +9,26 @@
   Windows için yerel, gizlilik odaklı ve şeffaf bir sistem zekâsı, depolama analizi ve bakım uygulaması.
 </p>
 
+<p align="center">
+  <a href="https://github.com/efecrtgl/ivily-optimizer/actions/workflows/ci.yml"><img src="https://github.com/efecrtgl/ivily-optimizer/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
+  <a href="https://github.com/efecrtgl/ivily-optimizer/releases/latest"><img src="https://img.shields.io/github/v/release/efecrtgl/ivily-optimizer?label=s%C3%BCr%C3%BCm" alt="Son sürüm" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/efecrtgl/ivily-optimizer?label=lisans" alt="Lisans: MIT" /></a>
+  <img src="https://img.shields.io/badge/platform-Windows%2010%20%7C%2011%20x64-informational" alt="Platform: Windows 10 | 11 x64" />
+</p>
+
+<p align="center"><b>Türkçe</b> · <a href="README.en.md">English</a></p>
+
 ---
 
 Ivily Optimizer; bilgisayarınızda neyin yer kapladığını, hangi klasörlerin büyüdüğünü, arka planda nelerin çalıştığını, Windows'un olay günlüklerinde neler kaydedildiğini ve neyin güvenle temizlenebileceğini **gerçek verilere dayanarak** anlamanıza yardımcı olur. Modüller birbirine bağlıdır: bir sorun ölçülür, Ivily Zekâsı kanıtı ve yorumu ayrı ayrı açıklar, ilgili eylem önerilir, yapılan işlem kaydedilir ve mümkünse geri alınabilir.
 
 Sıradan bir "PC temizleyici" değildir; abartılı performans vaatlerinde bulunmaz. RAM "temizleme", kayıt defteri temizliği, toplu servis kapatma veya sahte ölçümler bilerek **yoktur**.
 
-> **Durum:** 0.2.0 sürümü. Uygulanan ve planlanan özelliklerin ayrıntılı listesi için [ROADMAP.md](ROADMAP.md) ve [ILERLEME.md](ILERLEME.md) dosyalarına bakın.
+> **Durum:** Son yayımlanan sürüm **0.2.0**. `main` dalı **0.3.0** geliştirme sürümüdür (henüz yayımlanmadı): güvenlik sertleştirmesi, veri kurtarma, büyük ölçüde azaltılmış boşta işlemci kullanımı, Türkçe/İngilizce dil altyapısı ve Ivily ekosistemi hazırlığı. Ayrıntılar: [CHANGELOG.md](CHANGELOG.md), [ROADMAP.md](ROADMAP.md), [docs/DENETIM.md](docs/DENETIM.md).
+
+## Ekran görüntüleri
+
+> Ekran görüntüleri `assets/screenshots/` klasörüne eklenecektir. O zamana kadar uygulamanın görünümü için [docs/TASARIM-SISTEMI.md](docs/TASARIM-SISTEMI.md) belgesine bakın.
 
 ## Özellikler
 
@@ -45,6 +58,8 @@ Sıradan bir "PC temizleyici" değildir; abartılı performans vaatlerinde bulun
 - Mümkün olduğunda geri alınabilir yöntemler kullanılır: karantina, Geri Dönüşüm Kutusu, başlangıç öğesini silmeden devre dışı bırakma.
 - Windows klasörü, Program Files, sistem önyükleme dosyaları ve benzeri korunan konumlara dokunulmaz ([docs/TEMIZLIK-GUVENLIGI.md](docs/TEMIZLIK-GUVENLIGI.md)).
 - Uygulamanın tamamı yönetici olarak çalışmaz; yönetici hakkı gereken tek bir işlem için yalnızca o komut için Windows onayı (UAC) istenir.
+- Arayüzden gelen her yol yerel bir sürücü yolu olarak doğrulanır; ağ yolları, `..` bölümleri ve junction ile korunan konumlara ulaşma girişimleri reddedilir. Kullanıcı tanımlı temizlik kuralları hiçbir zaman kalıcı silme yapmaz, her zaman karantinaya taşır.
+- Arayüze yalnızca iki Tauri yeteneği verilir (`core:default`, klasör seçme penceresi). Ayrıntılar: [SECURITY.md](SECURITY.md).
 
 ## Gizlilik
 
@@ -53,9 +68,17 @@ Sıradan bir "PC temizleyici" değildir; abartılı performans vaatlerinde bulun
 - İnternet yalnızca güncelleme denetimi ve sizin başlattığınız ağ tanılama testleri için kullanılır.
 - Tüm veriler `%LOCALAPPDATA%\IvilyOptimizer` altında tutulur ve Ayarlar > Gizlilik bölümünden dışa aktarılabilir veya silinebilir.
 
+## Performans
+
+Arka plan servisi yoktur; canlı izleme yalnızca ilgili sayfa açıkken çalışır, pencere simge durumundayken yoklama ve animasyonlar durur. Ölçülen boşta işlemci kullanımı 0.2.0'a göre görünür pencerede %74, simge durumunda %98 daha düşüktür. Yöntem ve sayılar: [docs/PERFORMANS.md](docs/PERFORMANS.md).
+
+## Ivily ekosistemi
+
+Ivily Optimizer tek başına çalışan bağımsız bir uygulamadır. İleride Ivily Center ile yerel entegrasyon için **Ivily Ekosistem Protokolü (IEP)** hazırlığı yapılmıştır: `ivily-optimizer.exe --iep describe` pencere açmadan uygulama kimliğini, protokol sürümünü, yeteneklerini ve sağlık durumunu JSON olarak verir. Yalnızca okuma yöntemleri vardır; arka plan servisi veya ağ bağlantısı yoktur. Belirtim: [docs/IEP.md](docs/IEP.md).
+
 ## Sistem gereksinimleri
 
-- Windows 10 (1803 veya üzeri) ya da Windows 11, 64 bit
+- Windows 10 (1803 veya üzeri) ya da Windows 11, 64 bit (geliştirme ve ölçümler Windows 11 üzerinde yapılmıştır)
 - Microsoft Edge WebView2 Çalışma Zamanı (Windows 11'de hazır gelir; yoksa kurulum sırasında otomatik indirilir)
 - Yaklaşık 30 MB disk alanı
 
@@ -76,10 +99,13 @@ Ayrıntılı özellik açıklamaları: [docs/OZELLIKLER.md](docs/OZELLIKLER.md).
 ```powershell
 npm install
 npm run tauri dev      # geliştirme modu
-npm run tauri build    # üretim derlemesi (NSIS yükleyici)
+npm run check          # ESLint
+npm test               # arayüz testleri (Vitest)
+cd src-tauri; cargo test; cd ..
+npm run tauri build    # üretim derlemesi (NSIS yükleyici; güncelleme imzası için anahtar gerekir)
 ```
 
-Gereksinimler: Rust (stable), Node.js 20+, Visual Studio C++ Build Tools, WebView2. Ayrıntılar: [docs/DERLEME.md](docs/DERLEME.md), [docs/GELISTIRME.md](docs/GELISTIRME.md), [docs/MIMARI.md](docs/MIMARI.md).
+Arayüz Svelte 5 ile **düz JavaScript** kullanılarak yazılmıştır (TypeScript kullanılmaz); arka uç Rust ve Tauri 2'dir. Gereksinimler: Rust (stable, en az 1.85), Node.js 20+, Visual Studio C++ Build Tools, WebView2. Ayrıntılar: [docs/DERLEME.md](docs/DERLEME.md), [docs/GELISTIRME.md](docs/GELISTIRME.md), [docs/MIMARI.md](docs/MIMARI.md).
 
 ## Güncelleme sistemi
 
